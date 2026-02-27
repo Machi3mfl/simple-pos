@@ -1,0 +1,98 @@
+name: Product Backlog Item (PBI)
+description: Alta o refinamiento de un PBI trazable al PRD.
+title: "[PBI-XXX] "
+labels:
+  - backlog
+  - planning
+  - status:candidate
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa este template para historias, enablers o spikes del Product Backlog.
+        Debe mapear a al menos un FR/NFR del PRD.
+
+  - type: input
+    id: pbi_id
+    attributes:
+      label: PBI ID
+      description: Identificador del backlog (ej. PBI-013)
+      placeholder: "PBI-013"
+    validations:
+      required: true
+
+  - type: input
+    id: backlog_doc
+    attributes:
+      label: Backlog Doc Path
+      placeholder: "workflow-manager/docs/planning/003-backlog-simple-pos-draft.md"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pbi_type
+    attributes:
+      label: Tipo de item
+      options:
+        - story
+        - enabler
+        - spike
+        - bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: user_value
+    attributes:
+      label: Valor de negocio / usuario
+      placeholder: |
+        Como [rol], quiero [capacidad] para [beneficio].
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Criterios concretos y testeables
+      placeholder: |
+        - [ ] Given ...
+        - [ ] Given ...
+    validations:
+      required: true
+
+  - type: input
+    id: traceability
+    attributes:
+      label: Trazabilidad PRD
+      description: FR/NFR impactados (ej. FR-007, NFR-004)
+      placeholder: "FR-007, NFR-004"
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies_risks
+    attributes:
+      label: Dependencias y riesgos
+      placeholder: |
+        Dependencias:
+        - ...
+
+        Riesgos:
+        - ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: dor_checklist
+    attributes:
+      label: Definition of Ready
+      options:
+        - label: Problema y valor claros
+          required: true
+        - label: Criterios de aceptacion testeables
+          required: true
+        - label: Dependencias identificadas
+          required: true
+        - label: Contratos API/dominio definidos o linkeados
+          required: true

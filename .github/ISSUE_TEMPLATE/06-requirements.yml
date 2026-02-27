@@ -1,0 +1,68 @@
+name: Requirements / Use-Case Decomposition
+description: Complemento formal de casos de uso (trazo grueso/fino) cuando se requiere detalle extra.
+title: "[REQ-XXX] "
+labels:
+  - requirements
+  - planning
+  - documentation
+  - status:draft
+body:
+  - type: input
+    id: req_doc
+    attributes:
+      label: Requirements Doc Path
+      placeholder: "workflow-manager/docs/planning/001-requirements-...-draft.md"
+    validations:
+      required: true
+
+  - type: input
+    id: linked_prd
+    attributes:
+      label: PRD linkeado
+      placeholder: "workflow-manager/docs/planning/002-prd-...-draft.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_cases_high
+    attributes:
+      label: Use Cases - Trazo Grueso
+      placeholder: |
+        - UC-001 ...
+        - UC-002 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_cases_detail
+    attributes:
+      label: Use Cases - Trazo Fino
+      placeholder: |
+        UC-001:
+        - Main flow:
+        - Alternative flows:
+        - Exception flows:
+    validations:
+      required: true
+
+  - type: textarea
+    id: business_rules
+    attributes:
+      label: Reglas de negocio (BR)
+      placeholder: |
+        - BR-001 ...
+        - BR-002 ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: Casos de uso trazados a FR/NFR
+          required: true
+        - label: Matriz de trazabilidad actualizada
+          required: true
+        - label: Riesgos/preguntas abiertas actualizados
+          required: true

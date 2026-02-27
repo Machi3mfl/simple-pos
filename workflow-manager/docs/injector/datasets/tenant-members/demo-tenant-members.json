@@ -1,0 +1,14 @@
+{
+  "records": [
+    {
+      "tenantRef": "tenant_global_demo",
+      "userRef": "owner_demo",
+      "role": "OWNER"
+    },
+    {
+      "tenantRef": "tenant_regional_demo",
+      "userRef": "manager_demo",
+      "role": "OWNER"
+    }
+  ]
+}

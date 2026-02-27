@@ -1,0 +1,34 @@
+{
+  "records": [
+    {
+      "tenantRef": "tenant_global_demo",
+      "apiClientRef": "api_global_default",
+      "sku": "APPLE-US-10-USD",
+      "serials": [
+        "APL-10-AAA-111",
+        "APL-10-BBB-222",
+        "APL-10-CCC-333"
+      ]
+    },
+    {
+      "tenantRef": "tenant_global_demo",
+      "apiClientRef": "api_global_default",
+      "sku": "STEAM-US-20-USD",
+      "serials": [
+        "STM-20-AAA-111",
+        "STM-20-BBB-222",
+        "STM-20-CCC-333"
+      ]
+    },
+    {
+      "tenantRef": "tenant_regional_demo",
+      "apiClientRef": "api_regional_default",
+      "sku": "XBOX-US-50-USD",
+      "serials": [
+        "XBX-50-AAA-111",
+        "XBX-50-BBB-222",
+        "XBX-50-CCC-333"
+      ]
+    }
+  ]
+}

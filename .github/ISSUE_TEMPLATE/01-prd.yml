@@ -1,0 +1,98 @@
+name: PRD Scope / Approval
+description: Definir o actualizar alcance en el PRD con criterios claros de aprobacion.
+title: "[PRD-XXX] "
+labels:
+  - prd
+  - planning
+  - documentation
+  - status:draft
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa este template para crear o revisar alcance de producto.
+        Mantener trazabilidad con `workflow-manager/docs/planning/`.
+
+  - type: input
+    id: document_id
+    attributes:
+      label: Document ID
+      description: ID del PRD (ej. 002)
+      placeholder: "002"
+    validations:
+      required: true
+
+  - type: input
+    id: document_path
+    attributes:
+      label: Ruta del documento
+      description: Ruta markdown del PRD dentro del repositorio
+      placeholder: "workflow-manager/docs/planning/002-prd-simple-pos-draft.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_and_goal
+    attributes:
+      label: Problema y objetivo
+      description: Que problema resuelve y que resultado de negocio buscamos
+      placeholder: |
+        Problema:
+        Objetivo:
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance (In / Out)
+      description: Limites del MVP para evitar ambiguedad
+      placeholder: |
+        In Scope:
+        - ...
+
+        Out of Scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: FR + NFR principales
+      description: Lista resumida de requisitos funcionales y no funcionales
+      placeholder: |
+        FR:
+        - FR-001 ...
+
+        NFR:
+        - NFR-001 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks_questions
+    attributes:
+      label: Riesgos y preguntas abiertas
+      placeholder: |
+        Riesgos:
+        - R-001 ...
+
+        Preguntas:
+        - Q-001 ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist de calidad
+      options:
+        - label: Alcance de MVP claro y no ambiguo
+          required: true
+        - label: Hay trazabilidad a backlog (o issue de backlog linkeado)
+          required: true
+        - label: Criterios de aceptacion verificables definidos
+          required: true
+        - label: Impacto de arquitectura (Hexagonal) revisado
+          required: true

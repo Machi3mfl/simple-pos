@@ -1,0 +1,75 @@
+name: Epic Delivery
+description: Gestionar un Epic con alcance, resultados y dependencias.
+title: "[EPIC-XXX] "
+labels:
+  - epic
+  - milestone
+  - status:draft
+body:
+  - type: input
+    id: epic_id
+    attributes:
+      label: Epic ID
+      placeholder: "EPIC-001"
+    validations:
+      required: true
+
+  - type: input
+    id: epic_doc
+    attributes:
+      label: Epic Doc Path
+      placeholder: "workflow-manager/docs/epics/001-epic-...-draft.md"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_outcome
+    attributes:
+      label: Resultado esperado
+      placeholder: "Que resultado de negocio/operacion habilita este Epic?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope_boundaries
+    attributes:
+      label: Alcance y limites
+      placeholder: |
+        In Scope:
+        - ...
+
+        Out of Scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: features
+    attributes:
+      label: Features incluidas
+      placeholder: |
+        - FEATURE-001
+        - FEATURE-002
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Riesgos principales
+      placeholder: |
+        - R-001 ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: done
+    attributes:
+      label: Checklist
+      options:
+        - label: Alineado con PRD y Backlog
+          required: true
+        - label: Dependencias y secuencia de features claras
+          required: true
+        - label: Criterios de cierre del Epic definidos
+          required: true

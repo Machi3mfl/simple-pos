@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "key": "order_global_001",
+      "tenantRef": "tenant_global_demo",
+      "apiClientRef": "api_global_default",
+      "externalReference": "global-ext-001",
+      "customerEmail": "buyer-global@test.com",
+      "items": [
+        {
+          "sku": "APPLE-US-10-USD",
+          "quantity": 1,
+          "unitPrice": 10
+        },
+        {
+          "sku": "STEAM-US-20-USD",
+          "quantity": 1,
+          "unitPrice": 20
+        }
+      ]
+    },
+    {
+      "key": "order_regional_001",
+      "tenantRef": "tenant_regional_demo",
+      "apiClientRef": "api_regional_default",
+      "externalReference": "regional-ext-001",
+      "customerEmail": "buyer-regional@test.com",
+      "items": [
+        {
+          "sku": "XBOX-US-50-USD",
+          "quantity": 1,
+          "unitPrice": 50
+        }
+      ]
+    }
+  ]
+}

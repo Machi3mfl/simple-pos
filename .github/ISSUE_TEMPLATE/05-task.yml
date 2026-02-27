@@ -1,0 +1,88 @@
+name: Task Implementation
+description: Tarea atomica implementable y verificable.
+title: "[TASK-XXX] "
+labels:
+  - task
+  - development
+  - status:ready
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task ID
+      placeholder: "TASK-001 o [ENTITY-001]"
+    validations:
+      required: true
+
+  - type: input
+    id: task_doc
+    attributes:
+      label: Task Doc Path
+      placeholder: "workflow-manager/docs/tasks/001-task-...-ready.md"
+    validations:
+      required: true
+
+  - type: input
+    id: linked_feature
+    attributes:
+      label: Feature / PBI linkeado
+      placeholder: "FEATURE-001, PBI-001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: task_scope
+    attributes:
+      label: Alcance de la tarea
+      description: Que incluye y que no incluye
+      placeholder: |
+        Incluye:
+        - ...
+
+        No incluye:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria (BDD)
+      placeholder: |
+        - [ ] Given ...
+        - [ ] Given ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing requerido
+      placeholder: |
+        Unit:
+        Integration:
+        E2E (si aplica):
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencias / bloqueos
+      placeholder: "- ..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: Definition of Done
+      options:
+        - label: Criterios de aceptacion cumplidos
+          required: true
+        - label: Tests requeridos agregados/pasando
+          required: true
+        - label: Documentacion actualizada (feature/task/backlog)
+          required: true
+        - label: Respeta limites de arquitectura hexagonal
+          required: true

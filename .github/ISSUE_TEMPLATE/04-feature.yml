@@ -1,0 +1,84 @@
+name: Feature Delivery
+description: Implementar una feature trazada a PBIs y PRD.
+title: "[FEATURE-XXX] "
+labels:
+  - feature
+  - enhancement
+  - status:draft
+body:
+  - type: input
+    id: feature_id
+    attributes:
+      label: Feature ID
+      placeholder: "FEATURE-001"
+    validations:
+      required: true
+
+  - type: input
+    id: feature_doc
+    attributes:
+      label: Feature Doc Path
+      placeholder: "workflow-manager/docs/features/001-feature-...-draft.md"
+    validations:
+      required: true
+
+  - type: input
+    id: linked_pbis
+    attributes:
+      label: PBIs linkeados
+      placeholder: "PBI-001, PBI-002"
+    validations:
+      required: true
+
+  - type: textarea
+    id: business_value
+    attributes:
+      label: Valor de negocio
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      placeholder: |
+        - [ ] Given ...
+        - [ ] Given ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: architecture_impact
+    attributes:
+      label: Impacto de arquitectura
+      description: Modulos/capas afectadas (domain/application/infrastructure/presentation)
+      placeholder: |
+        - Domain:
+        - Application:
+        - Infrastructure:
+        - Presentation:
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing_plan
+    attributes:
+      label: Plan de testing
+      placeholder: |
+        Unit:
+        Integration:
+        E2E:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Criterios de aceptacion completos
+          required: true
+        - label: Riesgos/dependencias explicitados
+          required: true
+        - label: Tests definidos por capa
+          required: true
