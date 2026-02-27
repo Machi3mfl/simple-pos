@@ -1,3 +1,98 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "extends": ["next/core-web-vitals"],
+  "overrides": [
+    {
+      "files": ["src/modules/*/domain/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/modules/*/application/**",
+                  "@/modules/*/infrastructure/**",
+                  "@/modules/*/presentation/**",
+                  "@/app/**",
+                  "@/components/**",
+                  "@/hooks/**",
+                  "@/infrastructure/**",
+                  "../application/**",
+                  "../infrastructure/**",
+                  "../presentation/**",
+                  "../../application/**",
+                  "../../infrastructure/**",
+                  "../../presentation/**"
+                ],
+                "message": "Domain layer must not depend on application, infrastructure, or presentation layers."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/*/application/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/modules/*/presentation/**",
+                  "@/modules/*/infrastructure/**",
+                  "../presentation/**",
+                  "../infrastructure/**",
+                  "../../presentation/**",
+                  "../../infrastructure/**"
+                ],
+                "message": "Application layer must not depend on presentation or infrastructure."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/*/presentation/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/modules/*/infrastructure/**",
+                  "../infrastructure/**",
+                  "../../infrastructure/**"
+                ],
+                "message": "Presentation layer must not depend on infrastructure directly."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/*/infrastructure/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/modules/*/presentation/**",
+                  "../presentation/**",
+                  "../../presentation/**"
+                ],
+                "message": "Infrastructure layer must not depend on presentation."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

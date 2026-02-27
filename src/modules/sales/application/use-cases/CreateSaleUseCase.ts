@@ -2,7 +2,16 @@ import type { FindOrCreateCustomerUseCase } from "@/modules/customers/applicatio
 
 import { Sale } from "../../domain/entities/Sale";
 import type { SaleRepository } from "../../domain/repositories/SaleRepository";
-import type { CreateSaleDTO } from "../../presentation/dtos/create-sale.dto";
+
+export interface CreateSaleUseCaseInput {
+  readonly items: ReadonlyArray<{
+    readonly productId: string;
+    readonly quantity: number;
+  }>;
+  readonly paymentMethod: "cash" | "on_account";
+  readonly customerId?: string;
+  readonly customerName?: string;
+}
 
 export interface CreateSaleUseCaseOutput {
   readonly saleId: string;
@@ -18,7 +27,7 @@ export class CreateSaleUseCase {
     private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
   ) {}
 
-  async execute(input: CreateSaleDTO): Promise<CreateSaleUseCaseOutput> {
+  async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
     const sale = Sale.create({
       id: crypto.randomUUID(),
       items: input.items,

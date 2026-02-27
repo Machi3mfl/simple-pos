@@ -55,7 +55,7 @@ paths:
 - [ ] OpenAPI/DTO contracts exist for all MVP endpoints.
 - [ ] Mock runtime covers critical happy and error scenarios.
 - [ ] Mock E2E fails when fixture contract diverges from schema.
-- [ ] Architecture guardrails catch invalid cross-layer imports.
+- [x] Architecture guardrails catch invalid cross-layer imports.
 
 ## Current Output
 
@@ -73,4 +73,7 @@ paths:
 - Mock E2E running against intercepted API:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/fixtures/mock-api/*.json`
+- Architecture guardrails:
+  - `.eslintrc.json` layer-boundary `no-restricted-imports` rules for `domain/application/presentation/infrastructure`.
+  - `CreateSaleUseCase` no longer imports DTOs from `presentation`.
 - OpenAPI lint status: `pass` (`npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml`)
