@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `AR-001`  
-**Status**: `draft`  
+**Status**: `in_progress`  
 **GitHub Issue**: #5  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-014`, `PBI-015`, `PBI-016`  
@@ -58,3 +58,13 @@ export interface CreateDebtPaymentDTO {
 - [ ] Debt entries are stored per originating order.
 - [ ] Debt payments create immutable ledger events.
 - [ ] Outstanding balance decreases correctly for partial and full payments.
+
+## Current Output
+
+- `on_account` validation now enforced in:
+  - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
+  - `src/modules/sales/presentation/dtos/create-sale.dto.ts`
+  - `src/modules/sales/application/use-cases/CreateSaleUseCase.ts`
+  - `src/app/api/v1/sales/route.ts`
+- Quick customer assignment flow implemented with:
+  - `src/modules/customers/application/use-cases/FindOrCreateCustomerUseCase.ts`

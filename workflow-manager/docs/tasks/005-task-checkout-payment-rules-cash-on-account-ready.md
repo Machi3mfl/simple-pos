@@ -7,12 +7,12 @@
 **Feature**: `POS-001, AR-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `ready`  
+**Status**: `in_review`  
 **GitHub Issue**: #12  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `10h`  
-**Actual Effort**: `0h`
+**Actual Effort**: `8h`
 
 ### Business Logic Description
 Implement checkout rules so v1 only accepts `cash` and `on_account`, and requires customer selection when using `on_account`.
@@ -27,18 +27,18 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 ## Acceptance Criteria
 
 ### Functional Requirements
-- [ ] **Given** checkout action, **When** payment method is missing, **Then** confirmation is blocked.
-- [ ] **Given** payment method `on_account`, **When** no customer is selected, **Then** checkout is blocked with clear feedback.
-- [ ] **Given** payment method `cash`, **When** checkout is confirmed, **Then** sale is persisted without customer requirement.
+- [x] **Given** checkout action, **When** payment method is missing, **Then** confirmation is blocked.
+- [x] **Given** payment method `on_account`, **When** no customer is selected, **Then** checkout is blocked with clear feedback.
+- [x] **Given** payment method `cash`, **When** checkout is confirmed, **Then** sale is persisted without customer requirement.
 
 ### Non-Functional Requirements
-- [ ] Reliability: rule is enforced consistently in UI and server validation.
-- [ ] Usability: error messages are understandable for non-technical operator.
-- [ ] Maintainability: rule logic is centralized in use case/domain service.
+- [x] Reliability: rule is enforced consistently in UI and server validation.
+- [x] Usability: error messages are understandable for non-technical operator.
+- [x] Maintainability: rule logic is centralized in use case/domain service.
 
 ### Error Handling
-- [ ] **Given** unsupported payment method payload, **When** API receives request, **Then** returns validation error.
-- [ ] **Given** customer lookup failure, **When** `on_account` checkout proceeds, **Then** checkout aborts safely without partial persistence.
+- [x] **Given** unsupported payment method payload, **When** API receives request, **Then** returns validation error.
+- [x] **Given** customer lookup failure, **When** `on_account` checkout proceeds, **Then** checkout aborts safely without partial persistence.
 
 ---
 
@@ -46,10 +46,25 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 
 ### Files to Create/Modify
 - `src/modules/sales/application/use-cases/CreateSaleUseCase.ts` (create/modify)
-- `src/modules/sales/presentation/components/CheckoutPanel.tsx` (create/modify)
-- `src/modules/sales/presentation/dtos/CreateSaleDTO.ts` (create/modify)
+- `src/modules/sales/presentation/components/CheckoutPanel.tsx` (create)
+- `src/modules/sales/presentation/dtos/create-sale.dto.ts` (modify)
 - `src/modules/customers/application/use-cases/FindOrCreateCustomerUseCase.ts` (create/modify)
 - `src/app/api/v1/sales/route.ts` (create/modify)
+
+### Current Output
+- `src/modules/sales/application/use-cases/CreateSaleUseCase.ts`
+- `src/modules/sales/domain/entities/Sale.ts`
+- `src/modules/sales/domain/errors/SaleDomainError.ts`
+- `src/modules/sales/domain/repositories/SaleRepository.ts`
+- `src/modules/sales/presentation/components/CheckoutPanel.tsx`
+- `src/modules/sales/presentation/dtos/create-sale.dto.ts`
+- `src/modules/sales/infrastructure/repositories/InMemorySaleRepository.ts`
+- `src/modules/customers/application/use-cases/FindOrCreateCustomerUseCase.ts`
+- `src/modules/customers/domain/entities/Customer.ts`
+- `src/modules/customers/domain/repositories/CustomerRepository.ts`
+- `src/modules/customers/infrastructure/repositories/InMemoryCustomerRepository.ts`
+- `src/app/api/v1/sales/route.ts`
+- `src/app/api/v1/openapi.yaml` (updated with additive `customerName`)
 
 ### Dependencies
 - `TASK-003`
@@ -62,6 +77,15 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 - [ ] Unit tests for payment method validation.
 - [ ] Integration test for `on_account` customer-required constraint.
 - [ ] UI test for checkout blocking behavior.
+
+Validation evidence:
+
+```bash
+npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml
+npm run lint
+npm run build
+curl -X POST http://localhost:4010/api/v1/sales ...
+```
 
 ---
 
@@ -77,6 +101,6 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 
 ## Definition of Done
 
-- [ ] Payment rule enforced in UI + API.
-- [ ] `on_account` customer requirement enforced.
+- [x] Payment rule enforced in UI + API.
+- [x] `on_account` customer requirement enforced.
 - [ ] Tests and docs updated.

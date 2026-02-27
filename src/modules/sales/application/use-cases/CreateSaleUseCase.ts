@@ -1,0 +1,53 @@
+import type { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
+
+import { Sale } from "../../domain/entities/Sale";
+import type { SaleRepository } from "../../domain/repositories/SaleRepository";
+import type { CreateSaleDTO } from "../../presentation/dtos/create-sale.dto";
+
+export interface CreateSaleUseCaseOutput {
+  readonly saleId: string;
+  readonly paymentMethod: "cash" | "on_account";
+  readonly customerId?: string;
+  readonly total: number;
+  readonly createdAt: string;
+}
+
+export class CreateSaleUseCase {
+  constructor(
+    private readonly saleRepository: SaleRepository,
+    private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
+  ) {}
+
+  async execute(input: CreateSaleDTO): Promise<CreateSaleUseCaseOutput> {
+    const sale = Sale.create({
+      id: crypto.randomUUID(),
+      items: input.items,
+      paymentMethod: input.paymentMethod,
+      createdAt: new Date(),
+    });
+
+    if (input.paymentMethod === "on_account") {
+      const customer = await this.findOrCreateCustomerUseCase.execute({
+        customerId: input.customerId,
+        customerName: input.customerName,
+      });
+
+      if (customer) {
+        sale.assignCustomer(customer.getId());
+      }
+    }
+
+    sale.ensureCheckoutRules();
+    await this.saleRepository.save(sale);
+
+    const total = sale.getItems().reduce((sum, line) => sum + line.quantity * 10, 0);
+
+    return {
+      saleId: sale.getId(),
+      paymentMethod: sale.getPaymentMethod(),
+      customerId: sale.getCustomerId(),
+      total,
+      createdAt: sale.getCreatedAt().toISOString(),
+    };
+  }
+}

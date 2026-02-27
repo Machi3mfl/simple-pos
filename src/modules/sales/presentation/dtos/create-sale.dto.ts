@@ -1,12 +1,32 @@
-export type PaymentMethodDTO = "cash" | "on_account";
+import { z } from "zod";
 
-export interface CreateSaleItemDTO {
-  readonly productId: string;
-  readonly quantity: number;
-}
+export const paymentMethodSchema = z.enum(["cash", "on_account"]);
+export type PaymentMethodDTO = z.infer<typeof paymentMethodSchema>;
 
-export interface CreateSaleDTO {
-  readonly items: CreateSaleItemDTO[];
-  readonly paymentMethod: PaymentMethodDTO;
-  readonly customerId?: string;
-}
+export const createSaleItemDTOSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().int().positive(),
+});
+export type CreateSaleItemDTO = z.infer<typeof createSaleItemDTOSchema>;
+
+export const createSaleDTOSchema = z.object({
+  items: z.array(createSaleItemDTOSchema).min(1),
+  paymentMethod: paymentMethodSchema,
+  customerId: z.string().min(1).optional(),
+  customerName: z.string().min(2).max(120).optional(),
+}).superRefine((payload, context) => {
+  if (
+    payload.paymentMethod === "on_account" &&
+    !payload.customerId &&
+    !payload.customerName
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["customerId"],
+      message:
+        "customerId or customerName is required when paymentMethod is on_account.",
+    });
+  }
+});
+
+export type CreateSaleDTO = z.infer<typeof createSaleDTOSchema>;

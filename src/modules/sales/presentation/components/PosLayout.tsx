@@ -6,7 +6,7 @@ import {
   type CatalogCategory,
   type CatalogProduct,
 } from "./ProductCatalogPanel";
-import { OrderSummaryPanel, type OrderSummaryItem } from "./OrderSummaryPanel";
+import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 
 const navItems: readonly PosNavItem[] = [
   { id: "home", label: "Home", icon: House },
@@ -59,7 +59,7 @@ const products: readonly CatalogProduct[] = [
   },
 ];
 
-const orderItems: readonly OrderSummaryItem[] = [
+const orderItems: readonly CheckoutOrderItem[] = [
   { id: "line-1", name: "Regular Noodles", price: 20, quantity: 2, emoji: "🍜" },
   { id: "line-2", name: "Chicken Noodles", price: 15, quantity: 1, emoji: "🍲" },
   { id: "line-3", name: "Chicken Curry", price: 25, quantity: 1, emoji: "🍛" },
@@ -80,7 +80,7 @@ export function PosLayout(): JSX.Element {
             activeCategoryId="main"
             products={products}
           />
-          <OrderSummaryPanel
+          <CheckoutPanel
             items={orderItems}
             subtotal={subtotal}
             discount={discount}

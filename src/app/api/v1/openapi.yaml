@@ -435,7 +435,7 @@ components:
           type: integer
           minimum: 1
 
-    CreateSaleRequest:
+    CreateCashSaleRequest:
       type: object
       required: [items, paymentMethod]
       properties:
@@ -446,9 +446,36 @@ components:
             $ref: '#/components/schemas/SaleLineInput'
         paymentMethod:
           type: string
-          enum: [cash, on_account]
+          const: cash
         customerId:
           type: [string, 'null']
+        customerName:
+          type: string
+
+    CreateOnAccountSaleRequest:
+      type: object
+      required: [items, paymentMethod]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SaleLineInput'
+        paymentMethod:
+          type: string
+          const: on_account
+        customerId:
+          type: [string, 'null']
+        customerName:
+          type: string
+      anyOf:
+        - required: [customerId]
+        - required: [customerName]
+
+    CreateSaleRequest:
+      oneOf:
+        - $ref: '#/components/schemas/CreateCashSaleRequest'
+        - $ref: '#/components/schemas/CreateOnAccountSaleRequest'
 
     SaleResponse:
       type: object

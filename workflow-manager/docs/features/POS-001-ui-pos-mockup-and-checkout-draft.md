@@ -89,4 +89,8 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
   - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
   - `src/modules/sales/presentation/components/OrderSummaryPanel.tsx`
+  - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
+- Checkout rule integration:
+  - only `cash` and `on_account`
+  - `on_account` requires customer name in UI and API validation

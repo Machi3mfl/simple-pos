@@ -68,4 +68,6 @@ paths:
   - `src/modules/customers/presentation/dtos/*.ts`
   - `src/modules/accounts-receivable/presentation/dtos/*.ts`
   - `src/modules/sync/presentation/dtos/*.ts`
+- Mock runtime endpoint implemented:
+  - `src/app/api/v1/sales/route.ts`
 - OpenAPI lint status: `pass` (`npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml`)
