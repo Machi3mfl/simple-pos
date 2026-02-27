@@ -1,0 +1,314 @@
+classDiagram
+direction LR
+
+%% Shared value objects
+class ProductId {
+  <<value-object>>
+  +value: string
+}
+class SaleId {
+  <<value-object>>
+  +value: string
+}
+class CustomerId {
+  <<value-object>>
+  +value: string
+}
+class Money {
+  <<value-object>>
+  +amount: number
+  +currency: string
+}
+class Quantity {
+  <<value-object>>
+  +value: number
+}
+class Timestamp {
+  <<value-object>>
+  +iso: string
+}
+
+namespace Catalog {
+  class Category {
+    +id: string
+    +name: string
+    +isActive: boolean
+  }
+
+  class Product {
+    <<aggregate-root>>
+    +id: ProductId
+    +sku: string
+    +name: string
+    +categoryId: string
+    +price: Money
+    +isActive: boolean
+    +activate() void
+    +softDisable() void
+    +changePrice(price: Money) void
+  }
+
+  class ProductImage {
+    +id: string
+    +productId: ProductId
+    +kind: string
+    +url: string
+    +source: string
+  }
+
+  class ProductRepository {
+    <<port-interface>>
+    +findById(id: ProductId) Product
+    +findBySku(sku: string) Product
+    +save(product: Product) void
+  }
+}
+
+namespace Sales {
+  class PaymentMethod {
+    <<enum>>
+    cash
+    on_account
+  }
+
+  class Sale {
+    <<aggregate-root>>
+    +id: SaleId
+    +paymentMethod: PaymentMethod
+    +customerId: CustomerId?
+    +status: string
+    +openedAt: Timestamp
+    +addLine(productId: ProductId, qty: Quantity, unitPrice: Money) void
+    +selectPaymentMethod(method: PaymentMethod) void
+    +assignCustomer(customerId: CustomerId) void
+    +confirm() void
+  }
+
+  class SaleLine {
+    +id: string
+    +productId: ProductId
+    +quantity: Quantity
+    +unitPrice: Money
+    +lineTotal() Money
+  }
+
+  class SaleRepository {
+    <<port-interface>>
+    +findById(id: SaleId) Sale
+    +save(sale: Sale) void
+  }
+
+  class CheckoutPolicyService {
+    <<domain-service>>
+    +validatePaymentMethod(method: PaymentMethod) void
+    +validateOnAccountCustomer(method: PaymentMethod, customerId: CustomerId?) void
+  }
+}
+
+namespace Inventory {
+  class StockMovementType {
+    <<enum>>
+    inbound
+    outbound
+    adjustment
+  }
+
+  class InventoryItem {
+    <<aggregate-root>>
+    +id: string
+    +productId: ProductId
+    +onHand: Quantity
+    +weightedAverageCost: Money
+    +applyInbound(qty: Quantity, unitCost: Money) void
+    +applyOutbound(qty: Quantity) void
+    +applyAdjustment(qty: Quantity) void
+  }
+
+  class StockMovement {
+    +id: string
+    +productId: ProductId
+    +type: StockMovementType
+    +quantity: Quantity
+    +unitCost: Money?
+    +reason: string
+    +sourceSaleId: SaleId?
+    +occurredAt: Timestamp
+  }
+
+  class InventoryItemRepository {
+    <<port-interface>>
+    +findByProductId(productId: ProductId) InventoryItem
+    +save(item: InventoryItem) void
+  }
+
+  class StockMovementRepository {
+    <<port-interface>>
+    +save(movement: StockMovement) void
+    +listByProduct(productId: ProductId) StockMovement[]
+  }
+
+  class CostBasisService {
+    <<domain-service>>
+    +recalculateWeightedAverage(currentQty: Quantity, currentAvgCost: Money, inboundQty: Quantity, inboundUnitCost: Money) Money
+  }
+}
+
+namespace AccountsReceivable {
+  class CustomerAccount {
+    <<aggregate-root>>
+    +customerId: CustomerId
+    +outstandingBalance: Money
+    +registerOnAccountSale(saleId: SaleId, amount: Money) void
+    +registerDebtPayment(paymentId: string, amount: Money) void
+  }
+
+  class DebtEntryType {
+    <<enum>>
+    debt
+    payment
+  }
+
+  class DebtLedgerEntry {
+    +id: string
+    +customerId: CustomerId
+    +originSaleId: SaleId?
+    +entryType: DebtEntryType
+    +amount: Money
+    +occurredAt: Timestamp
+  }
+
+  class CustomerAccountRepository {
+    <<port-interface>>
+    +findByCustomerId(customerId: CustomerId) CustomerAccount
+    +save(account: CustomerAccount) void
+  }
+
+  class DebtLedgerRepository {
+    <<port-interface>>
+    +save(entry: DebtLedgerEntry) void
+    +listByCustomer(customerId: CustomerId) DebtLedgerEntry[]
+  }
+
+  class DebtPolicyService {
+    <<domain-service>>
+    +validatePaymentAgainstOutstanding(outstanding: Money, payment: Money) void
+  }
+}
+
+namespace Sync {
+  class SyncStatus {
+    <<enum>>
+    pending_sync
+    synced
+    failed
+  }
+
+  class SyncEvent {
+    <<aggregate-root>>
+    +id: string
+    +aggregateType: string
+    +aggregateId: string
+    +eventType: string
+    +payloadJson: string
+    +idempotencyKey: string
+    +status: SyncStatus
+    +createdAt: Timestamp
+    +markSynced() void
+    +markFailed(reason: string) void
+  }
+
+  class SyncEventRepository {
+    <<port-interface>>
+    +save(event: SyncEvent) void
+    +listPending() SyncEvent[]
+  }
+
+  class SyncReconciliationService {
+    <<domain-service>>
+    +queueEvent(event: SyncEvent) void
+    +reconcilePending() void
+  }
+}
+
+namespace Application {
+  class CreateSaleDTO {
+    <<dto>>
+    +items: object[]
+    +paymentMethod: string
+    +customerId: string?
+  }
+
+  class RegisterStockMovementDTO {
+    <<dto>>
+    +productId: string
+    +movementType: string
+    +quantity: number
+    +unitCost: number?
+  }
+
+  class CreateDebtPaymentDTO {
+    <<dto>>
+    +customerId: string
+    +amount: number
+    +paymentMethod: string
+  }
+
+  class SyncEventsBatchDTO {
+    <<dto>>
+    +events: object[]
+  }
+
+  class CreateSaleUseCase {
+    +execute(input: CreateSaleDTO) SaleId
+  }
+
+  class RegisterStockMovementUseCase {
+    +execute(input: RegisterStockMovementDTO) string
+  }
+
+  class RegisterDebtPaymentUseCase {
+    +execute(input: CreateDebtPaymentDTO) string
+  }
+
+  class SyncPendingEventsUseCase {
+    +execute(input: SyncEventsBatchDTO) void
+  }
+}
+
+%% Aggregate internals
+Catalog.Product "1" o-- "0..*" Catalog.ProductImage : owns
+Catalog.Category "1" <-- "0..*" Catalog.Product : categorizes
+Sales.Sale "1" o-- "1..*" Sales.SaleLine : owns
+Inventory.InventoryItem "1" o-- "0..*" Inventory.StockMovement : records
+AccountsReceivable.CustomerAccount "1" o-- "0..*" AccountsReceivable.DebtLedgerEntry : records
+
+%% ID-based cross-aggregate references (no direct object coupling)
+Sales.SaleLine --> ProductId : productId only
+Inventory.InventoryItem --> ProductId : productId only
+Inventory.StockMovement --> ProductId : productId only
+Inventory.StockMovement --> SaleId : sourceSaleId only
+Sales.Sale --> CustomerId : customerId only
+AccountsReceivable.DebtLedgerEntry --> SaleId : originSaleId only
+AccountsReceivable.CustomerAccount --> CustomerId
+
+%% Ports/services usage from application use cases
+Application.CreateSaleUseCase ..> Sales.SaleRepository
+Application.CreateSaleUseCase ..> Sales.CheckoutPolicyService
+Application.CreateSaleUseCase ..> Sync.SyncReconciliationService
+
+Application.RegisterStockMovementUseCase ..> Inventory.InventoryItemRepository
+Application.RegisterStockMovementUseCase ..> Inventory.StockMovementRepository
+Application.RegisterStockMovementUseCase ..> Inventory.CostBasisService
+Application.RegisterStockMovementUseCase ..> Sync.SyncReconciliationService
+
+Application.RegisterDebtPaymentUseCase ..> AccountsReceivable.CustomerAccountRepository
+Application.RegisterDebtPaymentUseCase ..> AccountsReceivable.DebtLedgerRepository
+Application.RegisterDebtPaymentUseCase ..> AccountsReceivable.DebtPolicyService
+Application.RegisterDebtPaymentUseCase ..> Sync.SyncReconciliationService
+
+Application.SyncPendingEventsUseCase ..> Sync.SyncEventRepository
+Application.SyncPendingEventsUseCase ..> Sync.SyncReconciliationService
+
+note for Sales.SaleLine "Cross-aggregate references are ID-based only."
+note for Inventory.StockMovement "BR-006: inbound movement requires unitCost."
+note for Sync.SyncEvent "BR-013: offline critical events are queued and synchronized."
