@@ -180,9 +180,9 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 
 ### Artifact Links (Current)
 - Class Diagram (MVP Domain): `workflow-manager/docs/planning/diagrams/class-mvp-domain.md` (TASK-001)
-- Sequence Diagram (checkout/debt): `TBD` (TASK-002)
-- Activity Diagram (stock/onboarding): `TBD` (TASK-002)
-- State Diagram (offline sync): `TBD` (TASK-002)
+- Sequence Diagram (checkout/debt): `workflow-manager/docs/planning/diagrams/sequence-checkout-and-debt.md` (TASK-002)
+- Activity Diagram (stock/onboarding): `workflow-manager/docs/planning/diagrams/activity-stock-and-onboarding.md` (TASK-002)
+- State Diagram (offline sync): `workflow-manager/docs/planning/diagrams/state-offline-sync.md` (TASK-002)
 
 ---
 

@@ -7,12 +7,12 @@
 **Feature**: `POS-001, INVENTORY-001, AR-001, OFFLINE-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `ready`  
+**Status**: `in_progress`  
 **GitHub Issue**: #11  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `6h`  
-**Actual Effort**: `0h`
+**Actual Effort**: `3h`
 
 ### Business Logic Description
 Create sequence/activity/state diagrams for checkout, stock movement with cost, debt payment, and offline sync lifecycle to validate behavior before coding.
@@ -49,6 +49,11 @@ Create sequence/activity/state diagrams for checkout, stock movement with cost, 
 - `workflow-manager/docs/planning/diagrams/activity-stock-and-onboarding.md` (create, Mermaid in markdown)
 - `workflow-manager/docs/planning/diagrams/state-offline-sync.md` (create, Mermaid in markdown)
 - `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md` (link diagrams)
+
+### Current Output
+- `workflow-manager/docs/planning/diagrams/sequence-checkout-and-debt.md` (created)
+- `workflow-manager/docs/planning/diagrams/activity-stock-and-onboarding.md` (created)
+- `workflow-manager/docs/planning/diagrams/state-offline-sync.md` (created)
 
 ### Dependencies
 - `TASK-001`
