@@ -4,6 +4,7 @@
 
 **Feature ID**: `POS-001`  
 **Status**: `draft`  
+**GitHub Issue**: #7  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-001`, `PBI-002`, `PBI-005`  
 **Linked FR/NFR**: `FR-001`, `FR-002`, `NFR-002`, `NFR-005`  

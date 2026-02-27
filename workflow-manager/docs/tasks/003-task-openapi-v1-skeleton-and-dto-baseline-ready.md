@@ -6,9 +6,9 @@
 **File Name**: `003-task-openapi-v1-skeleton-and-dto-baseline-ready.md`  
 **Feature**: `API-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #10  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `8h`  

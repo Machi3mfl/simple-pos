@@ -6,9 +6,9 @@
 **File Name**: `002-task-flow-diagrams-checkout-stock-debt-sync-ready.md`  
 **Feature**: `POS-001, INVENTORY-001, AR-001, OFFLINE-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #11  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `6h`  

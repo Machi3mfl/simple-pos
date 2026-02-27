@@ -4,6 +4,7 @@
 
 **Feature ID**: `INVENTORY-001`  
 **Status**: `draft`  
+**GitHub Issue**: #6  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-009`, `PBI-012`  
 **Linked FR/NFR**: `FR-004`, `FR-006`  

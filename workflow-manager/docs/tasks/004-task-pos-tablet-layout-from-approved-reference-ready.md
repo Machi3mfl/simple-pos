@@ -6,9 +6,9 @@
 **File Name**: `004-task-pos-tablet-layout-from-approved-reference-ready.md`  
 **Feature**: `POS-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #14  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `10h`  

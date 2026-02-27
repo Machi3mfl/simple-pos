@@ -6,9 +6,9 @@
 **File Name**: `006-task-playwright-mock-smoke-and-visual-baseline-ready.md`  
 **Feature**: `POS-001, API-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #13  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `8h`  

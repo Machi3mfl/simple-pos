@@ -4,6 +4,7 @@
 
 **Feature ID**: `AR-001`  
 **Status**: `draft`  
+**GitHub Issue**: #5  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-014`, `PBI-015`, `PBI-016`  
 **Linked FR/NFR**: `FR-011`, `FR-012`, `FR-013`, `NFR-006`  

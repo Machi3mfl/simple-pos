@@ -5,6 +5,7 @@
 **Document ID**: `003`  
 **File Name**: `003-backlog-simple-pos-draft.md`  
 **Status**: `draft`  
+**GitHub Issue**: #2  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
 **Version**: `0.5`  

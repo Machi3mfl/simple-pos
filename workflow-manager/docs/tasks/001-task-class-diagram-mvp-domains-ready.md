@@ -6,9 +6,9 @@
 **File Name**: `001-task-class-diagram-mvp-domains-ready.md`  
 **Feature**: `POS-001, INVENTORY-001, AR-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #9  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `4h`  

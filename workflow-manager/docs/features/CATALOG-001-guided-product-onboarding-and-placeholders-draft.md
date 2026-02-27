@@ -4,6 +4,7 @@
 
 **Feature ID**: `CATALOG-001`  
 **Status**: `draft`  
+**GitHub Issue**: #8  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-006`, `PBI-007`  
 **Linked FR/NFR**: `FR-003`, `FR-008`, `FR-009`, `NFR-002`  

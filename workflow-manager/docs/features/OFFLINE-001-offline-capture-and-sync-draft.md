@@ -4,6 +4,7 @@
 
 **Feature ID**: `OFFLINE-001`  
 **Status**: `draft`  
+**GitHub Issue**: #3  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-017`, `PBI-018`  
 **Linked FR/NFR**: `FR-014`, `NFR-007`  

@@ -4,6 +4,7 @@
 
 **Feature ID**: `API-001`  
 **Status**: `draft`  
+**GitHub Issue**: #4  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-003`, `PBI-008`, `PBI-004`, `PBI-010`  
 **Linked FR/NFR**: `FR-007`, `FR-010`, `NFR-004`  

@@ -5,6 +5,7 @@
 **Document ID**: `005`  
 **File Name**: `005-ui-reference-pos-v1-draft.md`  
 **Status**: `draft`  
+**GitHub Issue**: #1  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
 **Version**: `0.1`  

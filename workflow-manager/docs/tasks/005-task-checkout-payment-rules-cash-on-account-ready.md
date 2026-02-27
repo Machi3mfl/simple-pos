@@ -6,9 +6,9 @@
 **File Name**: `005-task-checkout-payment-rules-cash-on-account-ready.md`  
 **Feature**: `POS-001, AR-001`  
 **Entity**: `task`  
-**GitHub Issue**: `TBD`  
 **Pull Request**: `TBD`  
 **Status**: `ready`  
+**GitHub Issue**: #12  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `10h`  
