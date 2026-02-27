@@ -7,7 +7,7 @@
 **Feature**: `POS-001, INVENTORY-001, AR-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `ready`  
+**Status**: `in_progress`  
 **GitHub Issue**: #9  
 **Priority**: `high`  
 **Assignee**: `TBD`  
@@ -48,6 +48,9 @@ Define a single class diagram that reflects aggregate boundaries and core entiti
 - `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd` (create)
 - `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md` (link diagram)
 - `workflow-manager/docs/features/*.md` (link diagram where relevant)
+
+### Current Output
+- `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd` (created)
 
 ### Dependencies
 - `001-requirements-simple-pos-draft.md`

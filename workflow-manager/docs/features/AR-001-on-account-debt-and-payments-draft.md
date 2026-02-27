@@ -9,6 +9,7 @@
 **Linked PBIs**: `PBI-014`, `PBI-015`, `PBI-016`  
 **Linked FR/NFR**: `FR-011`, `FR-012`, `FR-013`, `NFR-006`  
 **Planning Reference**: `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md`
+**Architecture Artifacts**: `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd`
 
 ---
 
@@ -57,4 +58,3 @@ export interface CreateDebtPaymentDTO {
 - [ ] Debt entries are stored per originating order.
 - [ ] Debt payments create immutable ledger events.
 - [ ] Outstanding balance decreases correctly for partial and full payments.
-

@@ -176,6 +176,12 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 Rule: no medium/large feature starts implementation without updated diagrams linked in feature doc and issue.
 
+### Artifact Links (Current)
+- Class Diagram (MVP Domain): `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd` (TASK-001)
+- Sequence Diagram (checkout/debt): `TBD` (TASK-002)
+- Activity Diagram (stock/onboarding): `TBD` (TASK-002)
+- State Diagram (offline sync): `TBD` (TASK-002)
+
 ---
 
 ## 6. Testing and Quality Gates
