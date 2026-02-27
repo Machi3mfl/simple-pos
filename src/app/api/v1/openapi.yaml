@@ -1,0 +1,713 @@
+openapi: 3.1.0
+info:
+  title: simple-pos API
+  version: 1.0.0-draft
+  description: |
+    Contract-first API baseline for MVP.
+    Versioned under /api/v1 and aligned with workflow-manager planning artifacts.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: /api/v1
+    description: Local API base
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Catalog
+    description: Product catalog and price management.
+  - name: Sales
+    description: Sale checkout and payment registration.
+  - name: Inventory
+    description: Stock movement registration and valuation inputs.
+  - name: Reporting
+    description: Read-only business intelligence endpoints.
+  - name: Customers
+    description: Customer records and debt summaries.
+  - name: AccountsReceivable
+    description: Debt payment registration.
+  - name: Sync
+    description: Offline event synchronization.
+
+paths:
+  /products:
+    get:
+      tags: [Catalog]
+      operationId: listProducts
+      summary: List products
+      parameters:
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+        - in: query
+          name: activeOnly
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      tags: [Catalog]
+      operationId: createProduct
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /products/price-batches:
+    post:
+      tags: [Catalog]
+      operationId: applyBulkPriceUpdate
+      summary: Apply bulk price update by scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkPriceUpdateRequest'
+      responses:
+        '200':
+          description: Price batch applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkPriceUpdateResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /sales:
+    post:
+      tags: [Sales]
+      operationId: createSale
+      summary: Register sale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSaleRequest'
+      responses:
+        '201':
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /stock-movements:
+    post:
+      tags: [Inventory]
+      operationId: registerStockMovement
+      summary: Register stock movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStockMovementRequest'
+      responses:
+        '201':
+          description: Stock movement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovementResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/top-products:
+    get:
+      tags: [Reporting]
+      operationId: getTopProducts
+      summary: Get top-selling products
+      parameters:
+        - in: query
+          name: periodStart
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: periodEnd
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Top products report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopProductsResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/profit-summary:
+    get:
+      tags: [Reporting]
+      operationId: getProfitSummary
+      summary: Get revenue/cost/profit summary
+      parameters:
+        - in: query
+          name: periodStart
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: periodEnd
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Profit summary report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfitSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /customers:
+    post:
+      tags: [Customers]
+      operationId: createCustomer
+      summary: Create customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /customers/{id}/debt:
+    get:
+      tags: [Customers]
+      operationId: getCustomerDebtSummary
+      summary: Get customer debt summary and ledger
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: periodStart
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: periodEnd
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Debt summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDebtSummaryResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /debt-payments:
+    post:
+      tags: [AccountsReceivable]
+      operationId: createDebtPayment
+      summary: Register debt payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDebtPaymentRequest'
+      responses:
+        '201':
+          description: Debt payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebtPaymentResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /sync/events:
+    post:
+      tags: [Sync]
+      operationId: syncEvents
+      summary: Synchronize offline queued events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncEventsBatchRequest'
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncEventsResultResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ErrorResponse:
+      description: Standardized API error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    Product:
+      type: object
+      required: [id, name, categoryId, price, isActive]
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: number
+          exclusiveMinimum: 0
+        cost:
+          type: number
+          exclusiveMinimum: 0
+        stock:
+          type: number
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+
+    ProductListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+
+    ProductResponse:
+      type: object
+      required: [item]
+      properties:
+        item:
+          $ref: '#/components/schemas/Product'
+
+    CreateProductRequest:
+      type: object
+      required: [name, categoryId, price, initialStock]
+      properties:
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: number
+          exclusiveMinimum: 0
+        cost:
+          type: number
+          exclusiveMinimum: 0
+        initialStock:
+          type: number
+          minimum: 0
+        imageUrl:
+          type: string
+
+    BulkPriceUpdateScope:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [all, category, selection]
+        categoryId:
+          type: string
+        productIds:
+          type: array
+          items:
+            type: string
+
+    BulkPriceUpdateRequest:
+      type: object
+      required: [scope, mode, value]
+      properties:
+        scope:
+          $ref: '#/components/schemas/BulkPriceUpdateScope'
+        mode:
+          type: string
+          enum: [percentage, fixed_amount]
+        value:
+          type: number
+        previewOnly:
+          type: boolean
+          default: false
+
+    BulkPriceUpdateItemResult:
+      type: object
+      required: [productId, oldPrice, newPrice]
+      properties:
+        productId:
+          type: string
+        oldPrice:
+          type: number
+        newPrice:
+          type: number
+
+    BulkPriceUpdateResponse:
+      type: object
+      required: [batchId, updatedCount, items, appliedAt]
+      properties:
+        batchId:
+          type: string
+        updatedCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkPriceUpdateItemResult'
+        appliedAt:
+          type: string
+          format: date-time
+
+    SaleLineInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+
+    CreateSaleRequest:
+      type: object
+      required: [items, paymentMethod]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SaleLineInput'
+        paymentMethod:
+          type: string
+          enum: [cash, on_account]
+        customerId:
+          type: [string, 'null']
+
+    SaleResponse:
+      type: object
+      required: [saleId, paymentMethod, total, createdAt]
+      properties:
+        saleId:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [cash, on_account]
+        customerId:
+          type: [string, 'null']
+        total:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateInboundStockMovementRequest:
+      type: object
+      required: [productId, movementType, quantity, unitCost]
+      properties:
+        productId:
+          type: string
+        movementType:
+          type: string
+          const: inbound
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+        unitCost:
+          type: number
+          exclusiveMinimum: 0
+        reason:
+          type: string
+
+    CreateNonInboundStockMovementRequest:
+      type: object
+      required: [productId, movementType, quantity]
+      properties:
+        productId:
+          type: string
+        movementType:
+          type: string
+          enum: [outbound, adjustment]
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+        reason:
+          type: string
+
+    CreateStockMovementRequest:
+      oneOf:
+        - $ref: '#/components/schemas/CreateInboundStockMovementRequest'
+        - $ref: '#/components/schemas/CreateNonInboundStockMovementRequest'
+
+    StockMovementResponse:
+      type: object
+      required: [movementId, productId, movementType, quantity, occurredAt]
+      properties:
+        movementId:
+          type: string
+        productId:
+          type: string
+        movementType:
+          type: string
+          enum: [inbound, outbound, adjustment]
+        quantity:
+          type: number
+        unitCost:
+          type: [number, 'null']
+        occurredAt:
+          type: string
+          format: date-time
+
+    TopProductItem:
+      type: object
+      required: [productId, name, quantitySold, revenue]
+      properties:
+        productId:
+          type: string
+        name:
+          type: string
+        quantitySold:
+          type: number
+        revenue:
+          type: number
+
+    TopProductsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopProductItem'
+
+    ProfitSummaryResponse:
+      type: object
+      required: [revenue, cost, profit]
+      properties:
+        revenue:
+          type: number
+        cost:
+          type: number
+        profit:
+          type: number
+
+    CreateCustomerRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        notes:
+          type: string
+
+    CustomerResponse:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: [string, 'null']
+        notes:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+
+    DebtLedgerEntry:
+      type: object
+      required: [entryId, entryType, amount, occurredAt]
+      properties:
+        entryId:
+          type: string
+        entryType:
+          type: string
+          enum: [debt, payment]
+        orderId:
+          type: [string, 'null']
+        amount:
+          type: number
+        occurredAt:
+          type: string
+          format: date-time
+
+    CustomerDebtSummaryResponse:
+      type: object
+      required: [customerId, outstandingBalance, ledger]
+      properties:
+        customerId:
+          type: string
+        outstandingBalance:
+          type: number
+        ledger:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebtLedgerEntry'
+
+    CreateDebtPaymentRequest:
+      type: object
+      required: [customerId, amount, paymentMethod]
+      properties:
+        customerId:
+          type: string
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        paymentMethod:
+          type: string
+          enum: [cash]
+        notes:
+          type: string
+
+    DebtPaymentResponse:
+      type: object
+      required: [paymentId, customerId, amount, createdAt]
+      properties:
+        paymentId:
+          type: string
+        customerId:
+          type: string
+        amount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    SyncEventInput:
+      type: object
+      required: [eventId, eventType, occurredAt, payload, idempotencyKey]
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type: string
+
+    SyncEventsBatchRequest:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncEventInput'
+
+    SyncEventResult:
+      type: object
+      required: [eventId, status]
+      properties:
+        eventId:
+          type: string
+        status:
+          type: string
+          enum: [synced, failed]
+        reason:
+          type: [string, 'null']
+
+    SyncEventsResultResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncEventResult'
+
+    ValidationErrorDetail:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorDetail'

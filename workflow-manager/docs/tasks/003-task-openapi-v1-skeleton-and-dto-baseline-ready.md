@@ -7,12 +7,12 @@
 **Feature**: `API-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `ready`  
+**Status**: `in_review`  
 **GitHub Issue**: #10  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `8h`  
-**Actual Effort**: `0h`
+**Actual Effort**: `6h`
 
 ### Business Logic Description
 Create contract-first API baseline (`/api/v1`) with core schemas for sales, stock movements, debt, and sync so frontend and mock runtime can evolve with stable contracts.
@@ -27,18 +27,18 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
 ## Acceptance Criteria
 
 ### Functional Requirements
-- [ ] **Given** PRD API boundaries, **When** OpenAPI skeleton is created, **Then** all MVP endpoints are listed with request/response schemas.
-- [ ] **Given** payment constraints, **When** sale schema is defined, **Then** only `cash`/`on_account` are accepted.
-- [ ] **Given** offline requirement, **When** sync endpoint schema is added, **Then** it supports idempotency key fields per event.
+- [x] **Given** PRD API boundaries, **When** OpenAPI skeleton is created, **Then** all MVP endpoints are listed with request/response schemas.
+- [x] **Given** payment constraints, **When** sale schema is defined, **Then** only `cash`/`on_account` are accepted.
+- [x] **Given** offline requirement, **When** sync endpoint schema is added, **Then** it supports idempotency key fields per event.
 
 ### Non-Functional Requirements
-- [ ] Maintainability: schemas are reusable and clearly named.
-- [ ] Reliability: contract validation can be used by mocked runtime tests.
-- [ ] Compatibility: changes are additive and backward-compatible in v1.
+- [x] Maintainability: schemas are reusable and clearly named.
+- [x] Reliability: contract validation can be used by mocked runtime tests.
+- [x] Compatibility: changes are additive and backward-compatible in v1.
 
 ### Error Handling
-- [ ] **Given** invalid DTO shape, **When** validation runs, **Then** standardized error shape is returned.
-- [ ] **Given** unsupported payment method, **When** request is submitted, **Then** contract rejects it.
+- [x] **Given** invalid DTO shape, **When** validation runs, **Then** standardized error shape is returned.
+- [x] **Given** unsupported payment method, **When** request is submitted, **Then** contract rejects it.
 
 ---
 
@@ -49,6 +49,17 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
 - `src/modules/**/presentation/dtos/*.ts` (create/modify)
 - `workflow-manager/docs/features/API-001-contracts-v1-and-mock-runtime-draft.md` (update with links)
 
+### Current Output
+- `src/app/api/v1/openapi.yaml` (created)
+- DTO baseline created in:
+  - `src/modules/catalog/presentation/dtos/`
+  - `src/modules/sales/presentation/dtos/`
+  - `src/modules/inventory/presentation/dtos/`
+  - `src/modules/reporting/presentation/dtos/`
+  - `src/modules/customers/presentation/dtos/`
+  - `src/modules/accounts-receivable/presentation/dtos/`
+  - `src/modules/sync/presentation/dtos/`
+
 ### Dependencies
 - `TASK-001`
 - `TASK-002`
@@ -57,9 +68,15 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
 
 ## Testing Requirements
 
-- [ ] Contract lint/validation script passes.
+- [x] Contract lint/validation script passes.
 - [ ] Example payloads validated against schemas.
 - [ ] Mock fixtures mapped to contract shapes.
+
+Validation evidence:
+
+```bash
+npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml
+```
 
 ---
 
@@ -75,6 +92,6 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
 
 ## Definition of Done
 
-- [ ] OpenAPI v1 skeleton committed.
-- [ ] DTO baseline documented.
+- [x] OpenAPI v1 skeleton committed.
+- [x] DTO baseline documented.
 - [ ] Contract review approved.
