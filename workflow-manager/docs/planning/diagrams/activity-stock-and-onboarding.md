@@ -31,7 +31,7 @@ flowchart TD
   T --> U[Enter quantity]
   U --> V{movementType == inbound?}
   V -->|Yes| W[Require unitCost]
-  W --> X{unitCost valid (>0)?}
+  W --> X{unitCost is positive}
   X -->|No| Y[Show validation error]
   Y --> W
   X -->|Yes| AA[Persist movement]
