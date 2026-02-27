@@ -11,14 +11,15 @@ Mobile-friendly navigation map for the full project workflow.
 3. [PRD](./planning/002-prd-simple-pos-draft.md)
 4. [Product Backlog](./planning/003-backlog-simple-pos-draft.md)
 5. [Implementation Plan](./planning/004-implementation-plan-simple-pos-draft.md)
-6. Feature set:
+6. [Daily Execution Runbook (Iteration 0/1)](./runbooks/001-runbook-iteration-0-1-daily-execution-ready.md)
+7. Feature set:
    - [POS-001](./features/POS-001-ui-pos-mockup-and-checkout-draft.md)
    - [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md)
    - [CATALOG-001](./features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md)
    - [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md)
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
-7. Iteration 0/1 execution tasks:
+8. Iteration 0/1 execution tasks:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
    - [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md)
