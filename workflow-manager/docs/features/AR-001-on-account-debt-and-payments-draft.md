@@ -9,7 +9,7 @@
 **Linked PBIs**: `PBI-014`, `PBI-015`, `PBI-016`  
 **Linked FR/NFR**: `FR-011`, `FR-012`, `FR-013`, `NFR-006`  
 **Planning Reference**: `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md`
-**Architecture Artifacts**: `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd`
+**Architecture Artifacts**: `workflow-manager/docs/planning/diagrams/class-mvp-domain.md`
 
 ---
 

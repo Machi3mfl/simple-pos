@@ -18,6 +18,10 @@ This `docs/` workspace is a reusable base for project planning and issue traceab
 - `injector/`: optional sample-data injector scaffold
 - `guides/`: methodology and operating standards (including GitHub issues/PR conventions)
 
+## Diagram Format Rule
+- Use Markdown files (`.md`) with embedded Mermaid blocks (` ```mermaid `).
+- Do not create standalone Mermaid source files with `.mmd` extension.
+
 ## Project-owned folders
 These folders are intentionally empty in this repository and must be filled per project:
 - `features/`

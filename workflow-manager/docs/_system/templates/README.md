@@ -53,6 +53,7 @@ This system provides reusable templates for tracking features, tasks, and progre
 7. **Generate unit tests** based on acceptance criteria
 8. **Use consistent naming conventions**: `[ENTITY-XXX]` format
 9. **Use `requirements-template.md` as optional complement** for deeper use-case decomposition
+10. **For diagrams, use Markdown files with embedded Mermaid fenced blocks** (` ```mermaid `), never standalone `.mmd` files
 
 ### Template Variables:
 - `{feature-name}`: kebab-case feature name

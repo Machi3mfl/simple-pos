@@ -1,3 +1,8 @@
+# Class Diagram: MVP Domain
+
+Source of truth diagram in Mermaid embedded markdown.
+
+```mermaid
 classDiagram
 direction LR
 
@@ -312,3 +317,4 @@ Application.SyncPendingEventsUseCase ..> Sync.SyncReconciliationService
 note for Sales.SaleLine "Cross-aggregate references are ID-based only."
 note for Inventory.StockMovement "BR-006: inbound movement requires unitCost."
 note for Sync.SyncEvent "BR-013: offline critical events are queued and synchronized."
+```

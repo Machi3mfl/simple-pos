@@ -45,9 +45,9 @@ Create sequence/activity/state diagrams for checkout, stock movement with cost, 
 ## Technical Implementation
 
 ### Files to Create/Modify
-- `workflow-manager/docs/planning/diagrams/sequence-checkout-and-debt.mmd` (create)
-- `workflow-manager/docs/planning/diagrams/activity-stock-and-onboarding.mmd` (create)
-- `workflow-manager/docs/planning/diagrams/state-offline-sync.mmd` (create)
+- `workflow-manager/docs/planning/diagrams/sequence-checkout-and-debt.md` (create, Mermaid in markdown)
+- `workflow-manager/docs/planning/diagrams/activity-stock-and-onboarding.md` (create, Mermaid in markdown)
+- `workflow-manager/docs/planning/diagrams/state-offline-sync.md` (create, Mermaid in markdown)
 - `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md` (link diagrams)
 
 ### Dependencies
