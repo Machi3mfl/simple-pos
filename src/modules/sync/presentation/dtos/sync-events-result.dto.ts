@@ -1,11 +1,19 @@
-export type SyncEventResultStatusDTO = "synced" | "failed";
+import { z } from "zod";
 
-export interface SyncEventResultDTO {
-  readonly eventId: string;
-  readonly status: SyncEventResultStatusDTO;
-  readonly reason?: string;
-}
+export const syncEventResultStatusSchema = z.enum(["synced", "failed"]);
+export type SyncEventResultStatusDTO = z.infer<typeof syncEventResultStatusSchema>;
 
-export interface SyncEventsResultResponseDTO {
-  readonly results: SyncEventResultDTO[];
-}
+export const syncEventResultDTOSchema = z.object({
+  eventId: z.string().min(1),
+  status: syncEventResultStatusSchema,
+  reason: z.string().min(1).optional(),
+}).strict();
+
+export const syncEventsResultResponseDTOSchema = z.object({
+  results: z.array(syncEventResultDTOSchema).min(1),
+}).strict();
+
+export type SyncEventResultDTO = z.infer<typeof syncEventResultDTOSchema>;
+export type SyncEventsResultResponseDTO = z.infer<
+  typeof syncEventsResultResponseDTOSchema
+>;

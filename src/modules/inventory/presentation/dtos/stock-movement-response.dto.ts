@@ -1,10 +1,14 @@
-import type { StockMovementTypeDTO } from "./create-stock-movement.dto";
+import { z } from "zod";
 
-export interface StockMovementResponseDTO {
-  readonly movementId: string;
-  readonly productId: string;
-  readonly movementType: StockMovementTypeDTO;
-  readonly quantity: number;
-  readonly unitCost?: number;
-  readonly occurredAt: string;
-}
+import { stockMovementTypeSchema } from "./create-stock-movement.dto";
+
+export const stockMovementResponseDTOSchema = z.object({
+  movementId: z.string().min(1),
+  productId: z.string().min(1),
+  movementType: stockMovementTypeSchema,
+  quantity: z.number().positive(),
+  unitCost: z.number().positive().optional(),
+  occurredAt: z.string().datetime(),
+}).strict();
+
+export type StockMovementResponseDTO = z.infer<typeof stockMovementResponseDTOSchema>;
