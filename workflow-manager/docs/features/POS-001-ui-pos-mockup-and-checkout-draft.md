@@ -77,7 +77,7 @@ curl -X POST /api/v1/sales \
 - [ ] Tablet viewport is primary optimized layout.
 - [ ] Checkout blocks unsupported payment methods.
 - [ ] Checkout summary is visible and understandable for 60+ operator.
-- [ ] Basic checkout happy path is covered by mock E2E.
+- [x] Basic checkout happy path is covered by mock E2E.
 - [ ] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [ ] Product cards, category chips, and checkout action preserve large-target touch usability.
 
@@ -88,9 +88,11 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/PosLayout.tsx`
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
   - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
-  - `src/modules/sales/presentation/components/OrderSummaryPanel.tsx`
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation
+- Mock E2E coverage:
+  - `tests/e2e/pos-checkout-smoke.spec.ts`
+  - `tests/e2e/pos-visual-baseline.spec.ts`

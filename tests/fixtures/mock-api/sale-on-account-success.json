@@ -1,0 +1,7 @@
+{
+  "saleId": "sale-mock-on-account-001",
+  "paymentMethod": "on_account",
+  "customerId": "customer-mock-001",
+  "total": 20,
+  "createdAt": "2026-02-27T00:00:00.000Z"
+}

@@ -70,4 +70,7 @@ paths:
   - `src/modules/sync/presentation/dtos/*.ts`
 - Mock runtime endpoint implemented:
   - `src/app/api/v1/sales/route.ts`
+- Mock E2E running against intercepted API:
+  - `tests/e2e/pos-checkout-smoke.spec.ts`
+  - `tests/fixtures/mock-api/*.json`
 - OpenAPI lint status: `pass` (`npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml`)

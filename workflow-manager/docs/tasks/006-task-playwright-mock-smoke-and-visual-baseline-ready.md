@@ -7,12 +7,12 @@
 **Feature**: `POS-001, API-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `ready`  
+**Status**: `in_review`  
 **GitHub Issue**: #13  
 **Priority**: `high`  
 **Assignee**: `TBD`  
 **Estimated Effort**: `8h`  
-**Actual Effort**: `0h`
+**Actual Effort**: `6h`
 
 ### Business Logic Description
 Create mock-based smoke E2E suite for checkout and add visual baseline assertions to detect unintended UI drift from approved POS design.
@@ -27,18 +27,18 @@ Create mock-based smoke E2E suite for checkout and add visual baseline assertion
 ## Acceptance Criteria
 
 ### Functional Requirements
-- [ ] **Given** mock mode enabled, **When** smoke suite runs, **Then** main checkout path passes.
-- [ ] **Given** unsupported payment method attempt, **When** test executes, **Then** UI/API rejection is observed.
-- [ ] **Given** POS page render, **When** baseline check runs, **Then** left nav, center catalog, and right order panel are present.
+- [x] **Given** mock mode enabled, **When** smoke suite runs, **Then** main checkout path passes.
+- [x] **Given** unsupported payment method attempt, **When** test executes, **Then** UI/API rejection is observed.
+- [x] **Given** POS page render, **When** baseline check runs, **Then** left nav, center catalog, and right order panel are present.
 
 ### Non-Functional Requirements
-- [ ] Reliability: tests are deterministic in CI.
-- [ ] Maintainability: fixtures are readable and contract-aligned.
-- [ ] Auditability: test evidence includes screenshots/traces for failures.
+- [x] Reliability: tests are deterministic in CI.
+- [x] Maintainability: fixtures are readable and contract-aligned.
+- [x] Auditability: test evidence includes screenshots/traces for failures.
 
 ### Error Handling
-- [ ] **Given** mock fixture drift, **When** suite starts, **Then** contract failure is surfaced clearly.
-- [ ] **Given** visual regression, **When** snapshot check fails, **Then** diff evidence is generated.
+- [x] **Given** mock fixture drift, **When** suite starts, **Then** contract failure is surfaced clearly.
+- [x] **Given** visual regression, **When** snapshot check fails, **Then** diff evidence is generated.
 
 ---
 
@@ -49,6 +49,25 @@ Create mock-based smoke E2E suite for checkout and add visual baseline assertion
 - `tests/e2e/pos-visual-baseline.spec.ts` (create)
 - `tests/fixtures/mock-api/*.json` (create/modify)
 - `playwright.config.ts` (create/modify)
+- `tests/e2e/pos-visual-baseline.spec.ts-snapshots/pos-tablet-layout-darwin.png` (create/update)
+- `package.json` (scripts)
+- `.gitignore` (playwright artifacts)
+- `.nvmrc` (node version pinning for local consistency)
+
+### Current Output
+- E2E config: `playwright.config.ts`
+- Smoke suite: `tests/e2e/pos-checkout-smoke.spec.ts`
+- Visual baseline: `tests/e2e/pos-visual-baseline.spec.ts`
+- Visual snapshot: `tests/e2e/pos-visual-baseline.spec.ts-snapshots/pos-tablet-layout-darwin.png`
+- Mock API fixtures:
+  - `tests/fixtures/mock-api/sale-cash-success.json`
+  - `tests/fixtures/mock-api/sale-on-account-success.json`
+  - `tests/fixtures/mock-api/sale-on-account-missing-customer-error.json`
+  - `tests/fixtures/mock-api/sale-unsupported-method-error.json`
+- Scripts:
+  - `npm run test:e2e`
+  - `npm run test:e2e:update`
+  - `npm run test:e2e:ui`
 
 ### Dependencies
 - `TASK-003`
@@ -59,9 +78,16 @@ Create mock-based smoke E2E suite for checkout and add visual baseline assertion
 
 ## Testing Requirements
 
-- [ ] E2E runs locally and in CI mock mode.
-- [ ] Visual comparison threshold documented.
-- [ ] Failure artifacts (trace/screenshot/video) collected.
+- [x] E2E runs locally and in CI mock mode.
+- [x] Visual comparison threshold documented.
+- [x] Failure artifacts (trace/screenshot/video) collected.
+
+Validation evidence:
+
+```bash
+npm run test:e2e:update
+npm run test:e2e
+```
 
 ---
 
@@ -77,6 +103,6 @@ Create mock-based smoke E2E suite for checkout and add visual baseline assertion
 
 ## Definition of Done
 
-- [ ] Smoke E2E suite passes in mock mode.
-- [ ] Visual baseline checks added and stable.
-- [ ] Test evidence integrated into PR template.
+- [x] Smoke E2E suite passes in mock mode.
+- [x] Visual baseline checks added and stable.
+- [x] Test evidence integrated into PR template.
