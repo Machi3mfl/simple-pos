@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `POS-001`  
-**Status**: `draft`  
+**Status**: `in_progress`  
 **GitHub Issue**: #7  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-001`, `PBI-002`, `PBI-005`  
@@ -80,3 +80,13 @@ curl -X POST /api/v1/sales \
 - [ ] Basic checkout happy path is covered by mock E2E.
 - [ ] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [ ] Product cards, category chips, and checkout action preserve large-target touch usability.
+
+## Current Output
+
+- Tablet-first POS mockup route: `src/app/(admin)/pos/page.tsx`
+- Modular UI sections:
+  - `src/modules/sales/presentation/components/PosLayout.tsx`
+  - `src/modules/sales/presentation/components/LeftNavRail.tsx`
+  - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
+  - `src/modules/sales/presentation/components/OrderSummaryPanel.tsx`
+- Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
