@@ -1,11 +1,16 @@
-export interface SyncEventInputDTO {
-  readonly eventId: string;
-  readonly eventType: string;
-  readonly occurredAt: string;
-  readonly payload: Record<string, unknown>;
-  readonly idempotencyKey: string;
-}
+import { z } from "zod";
 
-export interface SyncEventsBatchDTO {
-  readonly events: SyncEventInputDTO[];
-}
+export const syncEventInputDTOSchema = z.object({
+  eventId: z.string().min(1),
+  eventType: z.string().min(1),
+  occurredAt: z.string().datetime(),
+  payload: z.record(z.string(), z.unknown()),
+  idempotencyKey: z.string().min(1),
+}).strict();
+
+export const syncEventsBatchDTOSchema = z.object({
+  events: z.array(syncEventInputDTOSchema).min(1),
+}).strict();
+
+export type SyncEventInputDTO = z.infer<typeof syncEventInputDTOSchema>;
+export type SyncEventsBatchDTO = z.infer<typeof syncEventsBatchDTOSchema>;

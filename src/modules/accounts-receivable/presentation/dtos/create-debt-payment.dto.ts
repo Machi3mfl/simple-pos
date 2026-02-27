@@ -1,6 +1,10 @@
-export interface CreateDebtPaymentDTO {
-  readonly customerId: string;
-  readonly amount: number;
-  readonly paymentMethod: "cash";
-  readonly notes?: string;
-}
+import { z } from "zod";
+
+export const createDebtPaymentDTOSchema = z.object({
+  customerId: z.string().min(1),
+  amount: z.number().positive(),
+  paymentMethod: z.literal("cash"),
+  notes: z.string().max(500).optional(),
+}).strict();
+
+export type CreateDebtPaymentDTO = z.infer<typeof createDebtPaymentDTOSchema>;

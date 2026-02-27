@@ -59,6 +59,9 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
   - `src/modules/customers/presentation/dtos/`
   - `src/modules/accounts-receivable/presentation/dtos/`
   - `src/modules/sync/presentation/dtos/`
+- Contract conformance tests:
+  - `tests/e2e/api-contract-conformance.spec.ts`
+  - `tests/fixtures/mock-api/*.json` mapped to DTO response/error schemas
 
 ### Dependencies
 - `TASK-001`
@@ -69,13 +72,14 @@ Create contract-first API baseline (`/api/v1`) with core schemas for sales, stoc
 ## Testing Requirements
 
 - [x] Contract lint/validation script passes.
-- [ ] Example payloads validated against schemas.
-- [ ] Mock fixtures mapped to contract shapes.
+- [x] Example payloads validated against schemas.
+- [x] Mock fixtures mapped to contract shapes.
 
 Validation evidence:
 
 ```bash
 npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml
+npx playwright test tests/e2e/api-contract-conformance.spec.ts
 ```
 
 ---

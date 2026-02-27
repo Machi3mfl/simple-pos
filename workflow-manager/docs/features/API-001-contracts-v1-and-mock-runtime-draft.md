@@ -52,9 +52,9 @@ paths:
 
 ## Acceptance Criteria
 
-- [ ] OpenAPI/DTO contracts exist for all MVP endpoints.
+- [x] OpenAPI/DTO contracts exist for all MVP endpoints.
 - [ ] Mock runtime covers critical happy and error scenarios.
-- [ ] Mock E2E fails when fixture contract diverges from schema.
+- [x] Mock E2E fails when fixture contract diverges from schema.
 - [x] Architecture guardrails catch invalid cross-layer imports.
 
 ## Current Output
@@ -73,6 +73,10 @@ paths:
 - Mock E2E running against intercepted API:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/fixtures/mock-api/*.json`
+- Contract conformance checks:
+  - `tests/e2e/api-contract-conformance.spec.ts`
+  - Request examples validated against DTO Zod schemas.
+  - Mock fixtures validated against response/error schemas.
 - Architecture guardrails:
   - `.eslintrc.json` layer-boundary `no-restricted-imports` rules for `domain/application/presentation/infrastructure`.
   - `CreateSaleUseCase` no longer imports DTOs from `presentation`.

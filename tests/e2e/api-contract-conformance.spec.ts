@@ -1,0 +1,114 @@
+import { expect, test } from "@playwright/test";
+import { z } from "zod";
+
+import { createDebtPaymentDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
+import { createStockMovementDTOSchema } from "../../src/modules/inventory/presentation/dtos/create-stock-movement.dto";
+import { createSaleDTOSchema } from "../../src/modules/sales/presentation/dtos/create-sale.dto";
+import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
+import { syncEventsBatchDTOSchema } from "../../src/modules/sync/presentation/dtos/sync-events-batch.dto";
+import saleCashSuccessFixture from "../fixtures/mock-api/sale-cash-success.json";
+import saleOnAccountMissingCustomerErrorFixture from "../fixtures/mock-api/sale-on-account-missing-customer-error.json";
+import saleOnAccountSuccessFixture from "../fixtures/mock-api/sale-on-account-success.json";
+import saleUnsupportedMethodErrorFixture from "../fixtures/mock-api/sale-unsupported-method-error.json";
+
+const apiErrorResponseSchema = z.object({
+  code: z.string().min(1),
+  message: z.string().min(1),
+  details: z.array(z.object({
+    field: z.string().min(1),
+    message: z.string().min(1),
+  }).strict()).optional(),
+}).strict();
+
+test.describe("API contract conformance", () => {
+  test("validates request examples against DTO schemas", () => {
+    const validSaleExamples = [
+      {
+        items: [{ productId: "product-001", quantity: 2 }],
+        paymentMethod: "cash",
+      },
+      {
+        items: [{ productId: "product-002", quantity: 1 }],
+        paymentMethod: "on_account",
+        customerName: "Carlos Perez",
+      },
+    ];
+
+    validSaleExamples.forEach((example) => {
+      const result = createSaleDTOSchema.safeParse(example);
+      expect(result.success).toBe(true);
+    });
+
+    const invalidOnAccountWithoutCustomer = createSaleDTOSchema.safeParse({
+      items: [{ productId: "product-003", quantity: 1 }],
+      paymentMethod: "on_account",
+    });
+    expect(invalidOnAccountWithoutCustomer.success).toBe(false);
+
+    const unsupportedPaymentMethod = createSaleDTOSchema.safeParse({
+      items: [{ productId: "product-004", quantity: 1 }],
+      paymentMethod: "card",
+    });
+    expect(unsupportedPaymentMethod.success).toBe(false);
+
+    const validStockExamples = [
+      {
+        productId: "product-005",
+        movementType: "inbound",
+        quantity: 10,
+        unitCost: 2500,
+      },
+      {
+        productId: "product-005",
+        movementType: "outbound",
+        quantity: 2,
+      },
+    ];
+
+    validStockExamples.forEach((example) => {
+      const result = createStockMovementDTOSchema.safeParse(example);
+      expect(result.success).toBe(true);
+    });
+
+    const invalidInboundWithoutUnitCost = createStockMovementDTOSchema.safeParse({
+      productId: "product-006",
+      movementType: "inbound",
+      quantity: 1,
+    });
+    expect(invalidInboundWithoutUnitCost.success).toBe(false);
+
+    const validDebtPayment = createDebtPaymentDTOSchema.safeParse({
+      customerId: "customer-001",
+      amount: 3000,
+      paymentMethod: "cash",
+    });
+    expect(validDebtPayment.success).toBe(true);
+
+    const validSyncBatch = syncEventsBatchDTOSchema.safeParse({
+      events: [
+        {
+          eventId: "evt-001",
+          eventType: "sale_created",
+          occurredAt: "2026-02-27T12:00:00.000Z",
+          payload: { saleId: "sale-001" },
+          idempotencyKey: "idem-evt-001",
+        },
+      ],
+    });
+    expect(validSyncBatch.success).toBe(true);
+  });
+
+  test("validates mocked API fixtures against response schemas", () => {
+    expect(saleResponseDTOSchema.safeParse(saleCashSuccessFixture).success).toBe(true);
+    expect(saleResponseDTOSchema.safeParse(saleOnAccountSuccessFixture).success).toBe(
+      true,
+    );
+
+    expect(
+      apiErrorResponseSchema.safeParse(saleOnAccountMissingCustomerErrorFixture).success,
+    ).toBe(true);
+    expect(apiErrorResponseSchema.safeParse(saleUnsupportedMethodErrorFixture).success).toBe(
+      true,
+    );
+  });
+});

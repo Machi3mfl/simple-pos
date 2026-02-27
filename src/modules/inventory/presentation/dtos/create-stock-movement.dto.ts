@@ -1,22 +1,32 @@
-export type StockMovementTypeDTO = "inbound" | "outbound" | "adjustment";
+import { z } from "zod";
 
-interface BaseStockMovementDTO {
-  readonly productId: string;
-  readonly movementType: StockMovementTypeDTO;
-  readonly quantity: number;
-  readonly reason?: string;
-}
+export const stockMovementTypeSchema = z.enum(["inbound", "outbound", "adjustment"]);
+export type StockMovementTypeDTO = z.infer<typeof stockMovementTypeSchema>;
 
-export interface CreateInboundStockMovementDTO extends BaseStockMovementDTO {
-  readonly movementType: "inbound";
-  readonly unitCost: number;
-}
+const baseStockMovementDTOSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().positive(),
+  reason: z.string().min(1).optional(),
+}).strict();
 
-export interface CreateNonInboundStockMovementDTO extends BaseStockMovementDTO {
-  readonly movementType: "outbound" | "adjustment";
-  readonly unitCost?: never;
-}
+export const createInboundStockMovementDTOSchema = baseStockMovementDTOSchema.extend({
+  movementType: z.literal("inbound"),
+  unitCost: z.number().positive(),
+});
 
-export type CreateStockMovementDTO =
-  | CreateInboundStockMovementDTO
-  | CreateNonInboundStockMovementDTO;
+export const createNonInboundStockMovementDTOSchema = baseStockMovementDTOSchema.extend({
+  movementType: z.enum(["outbound", "adjustment"]),
+});
+
+export const createStockMovementDTOSchema = z.discriminatedUnion("movementType", [
+  createInboundStockMovementDTOSchema,
+  createNonInboundStockMovementDTOSchema,
+]);
+
+export type CreateInboundStockMovementDTO = z.infer<
+  typeof createInboundStockMovementDTOSchema
+>;
+export type CreateNonInboundStockMovementDTO = z.infer<
+  typeof createNonInboundStockMovementDTOSchema
+>;
+export type CreateStockMovementDTO = z.infer<typeof createStockMovementDTOSchema>;
