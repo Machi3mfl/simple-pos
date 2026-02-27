@@ -16,18 +16,18 @@ export function LeftNavRail({
   activeItemId,
 }: LeftNavRailProps): JSX.Element {
   return (
-    <aside className="rounded-[2rem] bg-gradient-to-b from-slate-950 to-slate-900 p-4 text-slate-100 shadow-2xl shadow-slate-900/30 lg:h-full lg:p-5">
-      <div className="flex items-center gap-3 rounded-2xl bg-slate-800/60 p-3">
-        <div className="flex size-11 items-center justify-center rounded-full bg-cyan-400/25 text-sm font-semibold text-cyan-200">
-          MT
+    <aside className="bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:p-6">
+      <div className="mt-4 flex items-center gap-3 px-1">
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#222b3a] text-sm font-semibold text-slate-200">
+          👩🏼
         </div>
         <div>
-          <p className="text-base font-semibold leading-none">Maxi Store</p>
-          <p className="mt-1 text-xs text-slate-300">Cashier</p>
+          <p className="text-[2rem] leading-none font-semibold tracking-tight">Putri</p>
+          <p className="mt-1 text-[0.85rem] text-slate-400">Cashire</p>
         </div>
       </div>
 
-      <nav className="mt-4 flex gap-3 overflow-x-auto pb-1 lg:mt-8 lg:flex-col lg:overflow-visible">
+      <nav className="mt-12 flex gap-3 overflow-x-auto pb-1 lg:mt-12 lg:flex-col lg:overflow-visible">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === activeItemId;
@@ -37,17 +37,24 @@ export function LeftNavRail({
               key={item.id}
               type="button"
               className={[
-                "flex min-h-12 min-w-12 items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm font-medium transition",
+                "flex min-h-[86px] min-w-[90px] flex-col items-center justify-center gap-2 rounded-2xl text-center text-sm font-medium transition",
                 isActive
-                  ? "bg-blue-500 text-white shadow-lg shadow-blue-900/40"
-                  : "bg-slate-800/50 text-slate-200 hover:bg-slate-700/70",
+                  ? "bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-white shadow-[0_12px_24px_rgba(23,104,232,0.45)]"
+                  : "text-slate-200 hover:text-white",
               ].join(" ")}
               aria-label={item.label}
             >
-              <span className="flex size-9 items-center justify-center rounded-xl bg-black/25">
-                <Icon size={18} />
+              <span
+                className={[
+                  "flex size-11 items-center justify-center rounded-full border text-slate-100",
+                  isActive
+                    ? "border-transparent bg-transparent"
+                    : "border-[#2b3342] bg-[#0f1725]",
+                ].join(" ")}
+              >
+                <Icon size={19} />
               </span>
-              <span className="pr-2 lg:block">{item.label}</span>
+              <span className="text-[1.12rem] leading-none lg:block">{item.label}</span>
             </button>
           );
         })}

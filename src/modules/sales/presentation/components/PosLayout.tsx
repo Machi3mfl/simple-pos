@@ -17,17 +17,17 @@ const navItems: readonly PosNavItem[] = [
 ];
 
 const categories: readonly CatalogCategory[] = [
-  { id: "all", label: "All", emoji: "🍱" },
+  { id: "all", label: "All", emoji: "🧃" },
   { id: "main", label: "Main", emoji: "🍜" },
   { id: "drink", label: "Drink", emoji: "🥤" },
   { id: "snack", label: "Snack", emoji: "🍔" },
-  { id: "dessert", label: "Dessert", emoji: "🧁" },
+  { id: "dessert", label: "Dessert", emoji: "🍬" },
 ];
 
 const products: readonly CatalogProduct[] = [
   {
     id: "prod-1",
-    name: "Regular Noodles",
+    name: "Reguler Noodles",
     subtitle: "Instant noodles with egg and vegetables",
     price: 10,
     isAvailable: true,
@@ -43,7 +43,7 @@ const products: readonly CatalogProduct[] = [
   },
   {
     id: "prod-3",
-    name: "Javanese Noodles",
+    name: "Javanes Noodles",
     subtitle: "Noodles with meat and vegetables",
     price: 20,
     isAvailable: false,
@@ -60,33 +60,32 @@ const products: readonly CatalogProduct[] = [
 ];
 
 const orderItems: readonly CheckoutOrderItem[] = [
-  { id: "line-1", name: "Regular Noodles", price: 20, quantity: 2, emoji: "🍜" },
+  { id: "line-1", name: "Reguler Noodles", price: 20, quantity: 2, emoji: "🍜" },
   { id: "line-2", name: "Chicken Noodles", price: 15, quantity: 1, emoji: "🍲" },
   { id: "line-3", name: "Chicken Curry", price: 25, quantity: 1, emoji: "🍛" },
+  { id: "line-4", name: "Ebi Curry", price: 12, quantity: 1, emoji: "🥘" },
 ];
 
 export function PosLayout(): JSX.Element {
-  const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = 85;
   const discount = 5;
   const tax = 8;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#cbd5e1_0%,_#94a3b8_45%,_#64748b_100%)] p-3 sm:p-4 lg:p-6">
-      <div className="mx-auto max-w-[1500px] rounded-[2.4rem] border border-slate-300/40 bg-white/35 p-2 shadow-2xl shadow-slate-900/15 backdrop-blur-sm lg:p-3">
-        <div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 gap-3 lg:grid-cols-[110px_1fr_360px] lg:gap-4">
-          <LeftNavRail items={navItems} activeItemId="menu" />
-          <ProductCatalogPanel
-            categories={categories}
-            activeCategoryId="main"
-            products={products}
-          />
-          <CheckoutPanel
-            items={orderItems}
-            subtotal={subtotal}
-            discount={discount}
-            tax={tax}
-          />
-        </div>
+    <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
+      <div className="grid h-full w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
+        <LeftNavRail items={navItems} activeItemId="menu" />
+        <ProductCatalogPanel
+          categories={categories}
+          activeCategoryId="main"
+          products={products}
+        />
+        <CheckoutPanel
+          items={orderItems}
+          subtotal={subtotal}
+          discount={discount}
+          tax={tax}
+        />
       </div>
     </main>
   );

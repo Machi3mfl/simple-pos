@@ -47,14 +47,15 @@ export function CheckoutPanel({
   discount,
   tax,
 }: CheckoutPanelProps): JSX.Element {
-  const total = useMemo(() => subtotal - discount + tax, [subtotal, discount, tax]);
+  const total = useMemo(() => subtotal - discount - tax, [subtotal, discount, tax]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodDTO>("cash");
   const [customerName, setCustomerName] = useState<string>("");
+  const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  async function handleCheckout(): Promise<void> {
+  async function submitCheckout(): Promise<void> {
     setFeedback(null);
 
     if (paymentMethod === "on_account" && customerName.trim().length < 2) {
@@ -68,9 +69,7 @@ export function CheckoutPanel({
     try {
       const response = await fetch("/api/v1/sales", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           items: items.map((item) => ({
             productId: item.id,
@@ -92,6 +91,7 @@ export function CheckoutPanel({
 
       setIsError(false);
       setFeedback("Checkout completed successfully.");
+      setIsPaymentSheetOpen(false);
       if (paymentMethod === "cash") {
         setCustomerName("");
       }
@@ -104,124 +104,167 @@ export function CheckoutPanel({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-[2rem] bg-white/95 p-5 shadow-xl shadow-slate-300/30 lg:p-6">
-      <header className="mb-4 flex items-baseline justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-900">
+    <section className="min-w-0 border-l border-slate-200 bg-[#f2f2f4] p-5 lg:flex lg:h-full lg:flex-col lg:p-6">
+      <header className="flex items-baseline justify-between gap-2">
+        <h2 className="text-[2.6rem] font-semibold leading-none tracking-tight text-slate-900">
           Order List
         </h2>
-        <p className="text-xs text-slate-500">MVP Demo</p>
       </header>
 
-      <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+      <div className="mt-5 space-y-3 overflow-y-auto pr-1 pb-4 lg:min-h-0 lg:flex-1">
         {items.map((item) => (
           <article
             key={item.id}
-            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
           >
             <div className="flex items-center gap-3">
               <div className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-xl">
                 <span aria-hidden>{item.emoji}</span>
               </div>
-              <div className="flex-1">
-                <p className="text-base font-semibold text-slate-900">{item.name}</p>
-                <p className="text-sm text-slate-500">{currency(item.price)}</p>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[1.03rem] leading-tight font-semibold tracking-tight text-slate-900">
+                  {item.name}
+                </p>
+                <p className="mt-1 text-[0.88rem] text-slate-500">{currency(item.price)}</p>
+                <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[0.72rem] text-slate-500">
+                  <span aria-hidden>🗒️</span>
+                  Add Notes
+                </p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-                x{item.quantity}
-              </span>
+
+              <div className="shrink-0 flex items-center gap-1">
+                <button
+                  type="button"
+                  className="flex size-8 items-center justify-center rounded-full border border-[#5f97f2] text-base font-semibold text-[#3f85ef]"
+                  aria-label={`decrease ${item.name}`}
+                >
+                  -
+                </button>
+                <span className="w-6 text-center text-[1rem] font-semibold text-slate-900">
+                  {item.quantity}
+                </span>
+                <button
+                  type="button"
+                  className="flex size-8 items-center justify-center rounded-full bg-[#3f85ef] text-base font-semibold text-white"
+                  aria-label={`increase ${item.name}`}
+                >
+                  +
+                </button>
+              </div>
             </div>
           </article>
         ))}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-700">Payment Method</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("cash")}
-            className={[
-              "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
-              paymentMethod === "cash"
-                ? "bg-blue-500 text-white"
-                : "border border-slate-300 bg-white text-slate-700",
-            ].join(" ")}
-            disabled={isSubmitting}
-          >
-            Cash
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentMethod("on_account")}
-            className={[
-              "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
-              paymentMethod === "on_account"
-                ? "bg-blue-500 text-white"
-                : "border border-slate-300 bg-white text-slate-700",
-            ].join(" ")}
-            disabled={isSubmitting}
-          >
-            On account
-          </button>
-        </div>
-
-        <label className="mt-3 block">
-          <span className="text-xs font-semibold text-slate-600">
-            Customer {paymentMethod === "on_account" ? "(required)" : "(optional)"}
-          </span>
-          <input
-            type="text"
-            placeholder="e.g. Juan Perez"
-            value={customerName}
-            onChange={(event) => setCustomerName(event.target.value)}
-            disabled={isSubmitting || paymentMethod === "cash"}
-            className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
-          />
-        </label>
-      </div>
-
-      <footer className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="space-y-2 text-sm text-slate-600">
+      <footer className="sticky bottom-0 z-10 mt-4 rounded-2xl bg-[#f2f2f4] p-1">
+        <div className="space-y-2 text-[0.92rem] text-slate-600">
           <div className="flex items-center justify-between">
             <span>Subtotal</span>
             <span className="font-semibold text-slate-900">{currency(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Discount</span>
+            <span>Disc</span>
             <span className="font-semibold text-slate-900">-{currency(discount)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span>Tax</span>
-            <span className="font-semibold text-slate-900">{currency(tax)}</span>
+            <span className="font-semibold text-slate-900">-{currency(tax)}</span>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-slate-200 pt-3">
+        <div className="mt-4 border-t border-slate-300 pt-3">
           <div className="flex items-center justify-between">
-            <p className="text-base font-semibold text-slate-700">Total</p>
-            <p className="text-3xl font-bold text-slate-900">{currency(total)}</p>
+            <p className="text-[1.75rem] font-semibold text-slate-900">Total</p>
+            <p className="text-[2.25rem] leading-none font-bold tracking-tight text-slate-900">
+              {currency(total)}
+            </p>
           </div>
+
           <button
             type="button"
-            onClick={handleCheckout}
-            disabled={isSubmitting}
-            className="mt-4 min-h-12 w-full rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 disabled:cursor-not-allowed disabled:bg-slate-400"
+            onClick={() => setIsPaymentSheetOpen(true)}
+            className="mt-4 min-h-[54px] w-full rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.95rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.4)]"
           >
-            {isSubmitting ? "Processing..." : "Proceed to payment"}
+            Process to Payment
           </button>
-          {feedback ? (
-            <p
-              className={[
-                "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
-                isError
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-emerald-50 text-emerald-700",
-              ].join(" ")}
-            >
-              {feedback}
-            </p>
-          ) : null}
         </div>
+
+        {isPaymentSheetOpen ? (
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_16px_30px_rgba(15,23,42,0.12)]">
+            <p className="text-sm font-semibold text-slate-700">Select Payment Method</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cash")}
+                className={[
+                  "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
+                  paymentMethod === "cash"
+                    ? "bg-blue-500 text-white"
+                    : "border border-slate-300 bg-white text-slate-700",
+                ].join(" ")}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("on_account")}
+                className={[
+                  "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
+                  paymentMethod === "on_account"
+                    ? "bg-blue-500 text-white"
+                    : "border border-slate-300 bg-white text-slate-700",
+                ].join(" ")}
+              >
+                On account
+              </button>
+            </div>
+
+            <label className="mt-3 block">
+              <span className="text-xs font-semibold text-slate-600">
+                Customer {paymentMethod === "on_account" ? "(required)" : "(optional)"}
+              </span>
+              <input
+                type="text"
+                placeholder="e.g. Juan Perez"
+                value={customerName}
+                onChange={(event) => setCustomerName(event.target.value)}
+                disabled={isSubmitting || paymentMethod === "cash"}
+                className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+              />
+            </label>
+
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={submitCheckout}
+                disabled={isSubmitting}
+                className="min-h-11 flex-1 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white disabled:bg-slate-400"
+              >
+                {isSubmitting ? "Processing..." : "Confirm Payment"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPaymentSheetOpen(false)}
+                disabled={isSubmitting}
+                className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {feedback ? (
+          <p
+            className={[
+              "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
+              isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
+            ].join(" ")}
+          >
+            {feedback}
+          </p>
+        ) : null}
       </footer>
     </section>
   );

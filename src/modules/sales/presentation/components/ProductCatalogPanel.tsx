@@ -26,17 +26,18 @@ export function ProductCatalogPanel({
   products,
 }: ProductCatalogPanelProps): JSX.Element {
   return (
-    <section className="rounded-[2rem] bg-white/95 p-5 shadow-xl shadow-slate-300/30 lg:h-full lg:p-7">
+    <section className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+        <h1 className="whitespace-nowrap text-[2.45rem] font-semibold tracking-tight text-slate-900">
           Choose Categories
         </h1>
-        <label className="flex min-h-12 w-full items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 lg:w-80">
-          <span className="text-sm text-slate-500">Search menu</span>
+        <label className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 shadow-[0_10px_30px_rgba(16,24,40,0.05)] lg:w-[300px]">
+          <span className="text-sm text-slate-400">Search Menu</span>
+          <span className="text-xl text-slate-400">⌕</span>
         </label>
       </header>
 
-      <div className="mt-6 flex gap-3 overflow-x-auto pb-2">
+      <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
         {categories.map((category) => {
           const isActive = category.id === activeCategoryId;
 
@@ -45,20 +46,22 @@ export function ProductCatalogPanel({
               key={category.id}
               type="button"
               className={[
-                "min-h-16 min-w-24 rounded-2xl border px-4 py-2 text-sm font-semibold transition",
+                "min-h-[88px] min-w-[102px] rounded-2xl border px-4 py-2 text-sm font-semibold transition",
                 isActive
-                  ? "border-transparent bg-blue-500 text-white shadow-lg shadow-blue-900/30"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  ? "border-transparent bg-gradient-to-b from-[#3d8cff] to-[#1768e9] text-white shadow-[0_16px_28px_rgba(24,103,233,0.35)]"
+                  : "border-slate-200 bg-white text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] hover:bg-slate-50",
               ].join(" ")}
             >
-              <p className="text-xl">{category.emoji}</p>
-              <p className="mt-1">{category.label}</p>
+              <p className="text-2xl">{category.emoji}</p>
+              <p className="mt-1 text-[1.1rem]">{category.label}</p>
             </button>
           );
         })}
       </div>
 
-      <h2 className="mt-8 text-2xl font-semibold text-slate-900">Main Course</h2>
+      <h2 className="mt-10 text-[2.3rem] font-semibold tracking-tight text-slate-900">
+        Main Course
+      </h2>
 
       {products.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
@@ -74,14 +77,14 @@ export function ProductCatalogPanel({
           </button>
         </div>
       ) : (
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {products.map((product) => (
             <button
               key={product.id}
               type="button"
-              className="min-h-64 rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-lg shadow-slate-200/40 transition hover:-translate-y-0.5"
+              className="min-h-[330px] rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5"
             >
-              <div className="mx-auto flex size-28 items-center justify-center rounded-full bg-slate-100 text-5xl">
+              <div className="mx-auto mt-2 flex size-32 items-center justify-center rounded-full bg-slate-100 text-6xl">
                 {product.imageUrl ? (
                   <span
                     role="img"
@@ -93,11 +96,13 @@ export function ProductCatalogPanel({
                   <span aria-hidden>{product.emoji}</span>
                 )}
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-slate-900">{product.name}</h3>
-              <p className="mt-1 min-h-10 text-sm leading-tight text-slate-500">
+              <h3 className="mt-5 text-[1.85rem] leading-tight font-semibold tracking-tight text-slate-900">
+                {product.name}
+              </h3>
+              <p className="mt-2 min-h-12 text-base leading-tight text-slate-500">
                 {product.subtitle}
               </p>
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-7 flex items-center justify-between">
                 <span
                   className={[
                     "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold",
@@ -109,7 +114,7 @@ export function ProductCatalogPanel({
                   <span className="size-2 rounded-full bg-current" />
                   {product.isAvailable ? "Available" : "Not available"}
                 </span>
-                <span className="text-3xl font-bold text-slate-900">
+                <span className="text-[2.1rem] leading-none font-bold tracking-tight text-slate-900">
                   ${product.price.toFixed(0)}
                 </span>
               </div>
