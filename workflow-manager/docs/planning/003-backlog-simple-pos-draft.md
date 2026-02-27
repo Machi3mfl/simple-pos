@@ -64,6 +64,7 @@
 | PBI-016 | EPIC-005 | story | As support admin, I can register debt payments that reduce customer balance. | Debt payment creates ledger movement and updates outstanding total | high | M | ready | PBI-015 | FR-013, NFR-006 |
 | PBI-017 | EPIC-002 | enabler | Implement offline queue and sync orchestration for critical events (sales/debt). | Offline events are persisted as `pending_sync` and synchronized idempotently after reconnect | high | M | ready | PBI-008, PBI-014, PBI-016 | FR-014, NFR-007 |
 | PBI-018 | EPIC-002 | story | Validate offline outage/recovery flows with Playwright + integration tests. | E2E covers offline checkout/debt capture and successful sync reconciliation | high | M | ready | PBI-017 | FR-014, NFR-007 |
+| PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount by scope, shows preview, validates invalid results, and writes audit summary | high | M | ready | PBI-008, PBI-006 | FR-015 |
 
 ---
 
@@ -85,6 +86,7 @@
 - [ ] PBI-016
 - [ ] PBI-017
 - [ ] PBI-018
+- [ ] PBI-019
 
 ### Should-Have (Post-MVP Candidate)
 - [ ] PBI-011
@@ -115,6 +117,7 @@
 - PBI-006
 - PBI-007
 - PBI-009
+- PBI-019
 
 ### Iteration 4 (Customer debt tracking)
 - PBI-014
@@ -160,3 +163,4 @@
 | 2026-02-27 | Added offline-required MVP PBIs and fixed v1 payment methods (`cash`, `on_account`) | maxi |
 | 2026-02-27 | Closed decisions: primary device `tablet`, costing policy `weighted_average` | maxi |
 | 2026-02-27 | Added explicit UI baseline alignment requirement for POS visual implementation | maxi |
+| 2026-02-27 | Added bulk price update scope for fast repricing scenarios (`PBI-019`, `FR-015`) | maxi |

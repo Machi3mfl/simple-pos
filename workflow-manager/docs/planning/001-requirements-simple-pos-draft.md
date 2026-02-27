@@ -44,6 +44,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 - POS UI implementation aligned with user-approved visual reference (layout and visual hierarchy).
 - Sales registration with v1 payment methods: `cash` and `on_account` (no gateway in MVP).
 - Product, category, stock, and stock movement management with mandatory cost capture on inbound stock.
+- Bulk price update for product batches (percentage or fixed amount), with preview before apply.
 - Sales history and baseline analytics.
 - Offline mode for critical MVP operations with automatic sync on reconnection.
 - API contract design in Next.js for current web and future mobile app.
@@ -118,6 +119,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | FR-012 | Accumulate customer debt by originating orders | high | Owner / UC-007 | Debt ledger stores debt entries per order |
 | FR-013 | Register debt payments to reduce customer outstanding balance | high | Owner / UC-007 | Payment records reduce debt consistently |
 | FR-014 | Allow offline operation for critical MVP flows with later synchronization | high | Owner / UC-008 | Sale/debt events can be captured offline and synced without loss |
+| FR-015 | Execute bulk price updates for product batches | high | Owner / UC-009 | Admin can apply percentage/fixed updates to selected products with preview and audit trail |
 
 ---
 
@@ -147,6 +149,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | UC-006 | Run UI-first mock demo | Implementer | Demo or E2E execution | Full flow without production backend | FR-010 |
 | UC-007 | Manage customer debt from on-account sales | Owner/Admin | On-account checkout or debt payment | Debt accrues by order and can be reduced by payments | FR-011, FR-012, FR-013 |
 | UC-008 | Operate critical flows in offline mode | Primary operator / Admin | Internet connection lost | Sale and debt events are captured and synchronized later | FR-014 |
+| UC-009 | Execute bulk price update for product batches | Support admin / owner | Supplier or inflation price change | Selected products receive consistent price update with traceability | FR-015 |
 
 ---
 
@@ -249,8 +252,40 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
   - Stock remains auditable by movement history.
   - Profit calculation has updated cost data when stock is replenished.
 - **Acceptance Criteria (BDD)**:
-  - [ ] **Given** movement type `inbound`, **When** unit cost is missing, **Then** movement cannot be confirmed.
-  - [ ] **Given** valid inbound movement with quantity and cost, **When** movement is saved, **Then** stock and cost basis are updated atomically.
+- [ ] **Given** movement type `inbound`, **When** unit cost is missing, **Then** movement cannot be confirmed.
+- [ ] **Given** valid inbound movement with quantity and cost, **When** movement is saved, **Then** stock and cost basis are updated atomically.
+
+### UC-009 - Bulk price update for product batches
+- **Goal**: update many product prices quickly when market prices change.
+- **Primary Actor**: support admin/owner.
+- **Preconditions**:
+  - User has catalog price-management permissions.
+  - At least one product matches selected filter/scope.
+- **Trigger**: supplier list or inflation change requires mass repricing.
+- **Main Flow**:
+  1. User opens bulk price update screen.
+  2. User selects scope (all products, category, brand, or filtered set).
+  3. User selects update mode (`percentage` or `fixed_amount`) and value.
+  4. System calculates and displays preview (old price vs new price).
+  5. User confirms update.
+  6. System applies prices atomically and stores audit record for the batch.
+- **Alternative Flows**:
+  1. User excludes specific SKUs from selected scope before confirmation.
+  2. User saves preview and aborts apply.
+- **Exception Flows**:
+  1. Calculated price <= 0 for any product blocks confirmation.
+  2. Concurrent conflicting update aborts batch and returns retry instructions.
+- **Business Rules**:
+  - BR-014
+- **Data Inputs/Outputs**:
+  - Input: scope/filter, update mode, update value, optional exclusions.
+  - Output: batch update summary with total updated products and per-product change list.
+- **Postconditions**:
+  - Updated prices are visible in POS/catalog.
+  - Price update audit event is recorded with author/timestamp.
+- **Acceptance Criteria (BDD)**:
+  - [ ] **Given** a category scope and `+10%`, **When** admin confirms bulk update, **Then** all selected products are updated and preview-matched.
+  - [ ] **Given** at least one resulting invalid price, **When** admin tries to confirm, **Then** batch update is blocked with explicit validation message.
 
 ### UC-006 - UI-first mock demo
 - **Goal**: validate UX and end-to-end flow before final backend exists.
@@ -369,6 +404,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | BR-011 | Allowed payment methods in v1 are only `cash` and `on_account` | Scope control and UI simplicity | FR-002, UC-001 |
 | BR-012 | MVP has no configurable debt credit limit per customer | Keep financial policy simple in MVP | FR-011, UC-007 |
 | BR-013 | Offline-confirmed critical events must be queued and synchronized with audit trace | Reliability under connectivity issues | FR-014, UC-001, UC-007, UC-008 |
+| BR-014 | Bulk price updates must support preview and apply atomically with per-product audit trail | Prevent inconsistent repricing and enable rollback analysis | FR-015, UC-009 |
 
 ---
 
@@ -387,6 +423,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 - Customer
 - CustomerDebtLedgerEntry
 - DebtPayment
+- PriceUpdateBatch
 
 ### External Integrations
 - MercadoPago (future): online payment processing and reconciliation.
@@ -430,6 +467,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | FR | FR-012 | UC-007, BR-009 | Integration + E2E |
 | FR | FR-013 | UC-007, BR-010 | Integration + E2E |
 | FR | FR-014 | UC-008, BR-013 | E2E offline + integration |
+| FR | FR-015 | UC-009, BR-014 | API + integration + UI tests |
 | NFR | NFR-001 | UC-001 | Performance test |
 | NFR | NFR-002 | UC-001, UC-002 | Usability session + checklist |
 | NFR | NFR-005 | UC-001 | Responsive E2E |
@@ -439,6 +477,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | BR | BR-006 | FR-004, FR-006, UC-003, UC-004 | Domain/application unit tests + reporting integration tests |
 | BR | BR-011 | FR-002, UC-001 | API contract + UI tests |
 | BR | BR-013 | FR-014, UC-001, UC-007, UC-008 | Offline integration + E2E |
+| BR | BR-014 | FR-015, UC-009 | Catalog application unit + integration tests |
 
 ---
 
@@ -471,7 +510,7 @@ After approval, break this document into execution artifacts:
 Suggested first breakdown:
 - Feature A: `ui-pos-mockup-and-navigation`
 - Feature B: `api-contracts-v1-products-sales-stock`
-- Feature C: `guided-product-onboarding-and-images`
+- Feature C: `guided-product-onboarding-images-and-bulk-price-update`
 - Feature D: `sales-history-and-basic-analytics`
 - Feature E: `customer-debt-on-account-and-payments`
 - Feature F: `offline-sales-and-debt-sync`

@@ -55,7 +55,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 - Mock-first E2E early, real-backend E2E before release gate.
 
 ### Must-Have PBI Scope (from `003`)
-- PBI-001, PBI-002, PBI-003, PBI-004, PBI-005, PBI-006, PBI-007, PBI-008, PBI-009, PBI-013, PBI-014, PBI-015, PBI-016, PBI-017, PBI-018
+- PBI-001, PBI-002, PBI-003, PBI-004, PBI-005, PBI-006, PBI-007, PBI-008, PBI-009, PBI-013, PBI-014, PBI-015, PBI-016, PBI-017, PBI-018, PBI-019
 
 ---
 
@@ -65,7 +65,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 | --- | --- | --- | --- | --- |
 | POS-001 | POS UI mockup and checkout | PBI-001, PBI-002, PBI-005 | FR-001, FR-002, NFR-002, NFR-005 | Iteration 1 |
 | API-001 | API contracts and mocked runtime | PBI-003, PBI-008, PBI-004, PBI-010 | FR-007, FR-010, NFR-004 | Iteration 2 |
-| CATALOG-001 | Guided onboarding and image placeholders | PBI-006, PBI-007 | FR-003, FR-008, FR-009 | Iteration 3 |
+| CATALOG-001 | Guided onboarding, image placeholders, and bulk repricing | PBI-006, PBI-007, PBI-019 | FR-003, FR-008, FR-009, FR-015 | Iteration 3 |
 | INVENTORY-001 | Stock movement + weighted-average profit basis | PBI-009, PBI-012 | FR-004, FR-006 | Iteration 3 + 6 |
 | AR-001 | On-account debt and debt payments | PBI-014, PBI-015, PBI-016 | FR-011, FR-012, FR-013, NFR-006 | Iteration 4 |
 | OFFLINE-001 | Offline queue and sync reconciliation | PBI-017, PBI-018 | FR-014, NFR-007 | Iteration 5 |
@@ -122,12 +122,14 @@ The POS UI must follow the user-approved visual reference image provided in this
 ### Iteration 3 - Catalog and Inventory Core
 **Dates**: `2026-03-23` to `2026-03-27`
 - Guided product onboarding with placeholder strategy.
+- Bulk price update for product batches with preview and audit summary.
 - Stock movement with mandatory inbound `unitCost`.
 - Persist weighted-average cost basis updates per inbound movement.
 
-**PBIs**: PBI-006, PBI-007, PBI-009  
+**PBIs**: PBI-006, PBI-007, PBI-009, PBI-019  
 **Exit Criteria**
 - [ ] Product onboarding complete without real photos.
+- [ ] Bulk repricing flow validated for percentage/fixed updates with preview.
 - [ ] Stock + cost basis update verified by integration tests.
 
 ### Iteration 4 - Customer Debt Flows
@@ -177,7 +179,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 Rule: no medium/large feature starts implementation without updated diagrams linked in feature doc and issue.
 
 ### Artifact Links (Current)
-- Class Diagram (MVP Domain): `workflow-manager/docs/planning/diagrams/class-mvp-domain.mmd` (TASK-001)
+- Class Diagram (MVP Domain): `workflow-manager/docs/planning/diagrams/class-mvp-domain.md` (TASK-001)
 - Sequence Diagram (checkout/debt): `TBD` (TASK-002)
 - Activity Diagram (stock/onboarding): `TBD` (TASK-002)
 - State Diagram (offline sync): `TBD` (TASK-002)
@@ -193,7 +195,7 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 - E2E real backend: required in Iteration 6 before release.
 
 ### Release Gates (Must Pass)
-- [ ] FR coverage: FR-001..FR-014 mapped to implemented PBIs.
+- [ ] FR coverage: FR-001..FR-015 mapped to implemented PBIs.
 - [ ] NFR coverage: NFR-001..NFR-007 validated with evidence.
 - [ ] No critical unresolved risk in planning risk list.
 - [ ] API backward compatibility review completed for `/api/v1`.
@@ -230,6 +232,7 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 | R-PLN-002 | Offline sync complexity delays release | Build sync in dedicated iteration + idempotency from start | Limit offline to sale/debt only in MVP |
 | R-PLN-003 | Tablet UX still complex for operator | Early demos each iteration + usability checklist | Reduce UI options and simplify screens |
 | R-PLN-004 | Cost basis mistakes affect profit trust | Mandatory inbound cost + audit trail + integration tests | Add correction flow with audit entries |
+| R-PLN-005 | Bulk repricing misconfiguration affects many SKUs | Preview + validation + scoped apply + audit summary | Temporary rollback runbook and selective correction batch |
 
 ---
 

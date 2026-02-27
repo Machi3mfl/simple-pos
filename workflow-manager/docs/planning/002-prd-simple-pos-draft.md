@@ -35,6 +35,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 - Validate sale checkout usability with a low-friction visual UI.
 - Cover MVP operations: sales, catalog, stock, history, basic analytics.
 - Ensure profit baseline is reliable through inbound stock cost capture with weighted-average costing.
+- Support fast bulk price updates for batches of products (critical for frequent market price changes).
 - Support customer debt flow: on-account sales, debt accumulation by customer/order, debt payment registration.
 - Support offline operation for critical flows with controlled synchronization.
 - Define versioned API contracts for web now and mobile later.
@@ -62,6 +63,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 - Functional POS mockup UI must follow the approved visual reference selected by the user.
 - Sale registration with v1 payment methods: `cash` and `on_account`.
 - Product catalog management (create/edit/soft-disable) and base stock control with mandatory unit cost on inbound stock.
+- Bulk price update for batches of products (percentage/fixed amount) with preview and audit.
 - Sales history and basic analytics (top products, revenue, baseline profit).
 - Customer debt management:
   - mark checkout as `on_account`
@@ -109,6 +111,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 | J-004 | Sales history and analytics | Kiosk owner | Daily/weekly review | Business decisions based on baseline metrics |
 | J-005 | Customer debt and payment management | Support admin / owner | On-account checkout or debt payment | Debt is tracked per customer and reduced by payments |
 | J-006 | Offline capture and synchronization | Primary operator / support admin | Internet outage | Critical operations continue and synchronize later |
+| J-007 | Bulk product repricing | Support admin / owner | Supplier/inflation price change | Catalog prices are updated consistently in one operation |
 
 ### Key Screens / States
 - POS screen (categories + product grid + cart).
@@ -117,6 +120,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 - Sales history and basic reports.
 - Customer selection/registration in checkout for on-account sales.
 - Customer debt ledger and debt payment registration screen.
+- Bulk price update screen with preview and confirmation.
 - Offline queue/sync status screen.
 - Empty/error states with actionable messages.
 
@@ -141,6 +145,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 | FR-012 | Maintain customer debt ledger accumulated by order | high | Outstanding balance is computed from unpaid order debt entries | J-005 |
 | FR-013 | Register customer debt payments and reduce balance | high | Payment record updates outstanding debt correctly | J-005 |
 | FR-014 | Capture and sync critical operations in offline mode | high | Sale/debt events persist offline and sync when connection returns | J-006 |
+| FR-015 | Execute bulk price updates for product batches | high | Admin can preview and apply percentage/fixed updates with auditability | J-007 |
 
 ### Non-Functional Requirements (NFR)
 | ID | Category | Requirement | Target/Threshold | Validation |
@@ -177,6 +182,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 | `/api/v1/customers` | POST | Create customer | `CreateCustomerDTO` | `CustomerResponse` |
 | `/api/v1/customers/{id}/debt` | GET | Get customer debt summary and ledger | query period | `CustomerDebtSummaryResponse` |
 | `/api/v1/debt-payments` | POST | Register debt payment | `CreateDebtPaymentDTO` | `DebtPaymentResponse` |
+| `/api/v1/products/price-batches` | POST | Apply bulk price updates for product scope | `BulkPriceUpdateDTO` | `BulkPriceUpdateResponse` |
 | `/api/v1/sync/events` | POST | Synchronize offline queued events | `SyncEventsBatchDTO` | `SyncEventsResultDTO` |
 
 ### External Integrations
@@ -238,6 +244,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 | FR-012 | PBI-015 | integration/e2e |
 | FR-013 | PBI-016 | integration/e2e |
 | FR-014 | PBI-017, PBI-018 | offline e2e/integration |
+| FR-015 | PBI-019 | api/integration/e2e |
 | NFR-002 | PBI-005, PBI-006 | usability/e2e |
 | NFR-004 | PBI-010 | architecture review |
 | NFR-006 | PBI-015, PBI-016 | integration tests |
