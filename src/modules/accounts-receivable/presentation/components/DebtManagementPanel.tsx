@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+
 interface SalesHistoryResponse {
   readonly items: ReadonlyArray<{
     readonly paymentMethod: "cash" | "on_account";
@@ -32,6 +34,10 @@ interface ApiErrorPayload {
   readonly message?: string;
 }
 
+interface DebtManagementPanelProps {
+  readonly refreshToken?: number;
+}
+
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -49,7 +55,9 @@ function formatMoney(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-export function DebtManagementPanel(): JSX.Element {
+export function DebtManagementPanel({
+  refreshToken,
+}: DebtManagementPanelProps): JSX.Element {
   const [candidateCustomerIds, setCandidateCustomerIds] = useState<readonly string[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [manualCustomerId, setManualCustomerId] = useState<string>("");
@@ -72,9 +80,12 @@ export function DebtManagementPanel(): JSX.Element {
 
   const loadCustomerCandidates = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch("/api/v1/reports/sales-history");
-      const payload = (await response.json()) as SalesHistoryResponse;
-      if (!response.ok) {
+      const { response, data } = await fetchJsonNoStore<SalesHistoryResponse>(
+        "/api/v1/reports/sales-history?paymentMethod=on_account",
+      );
+      const payload = data;
+
+      if (!response.ok || !payload) {
         return;
       }
 
@@ -87,43 +98,58 @@ export function DebtManagementPanel(): JSX.Element {
       );
 
       setCandidateCustomerIds(ids);
-      if (!selectedCustomerId && ids.length > 0) {
-        setSelectedCustomerId(ids[0]);
-      }
+      setSelectedCustomerId((current) => {
+        if (current && ids.includes(current)) {
+          return current;
+        }
+
+        return ids[0] ?? "";
+      });
     } catch {
       // non-blocking for this panel
     }
-  }, [selectedCustomerId]);
+  }, []);
 
-  const loadSummary = useCallback(async (customerId: string): Promise<void> => {
+  const loadSummary = useCallback(
+    async (
+      customerId: string,
+      options: { readonly clearFeedback?: boolean } = {},
+    ): Promise<void> => {
+      const clearFeedback = options.clearFeedback ?? true;
     setIsLoading(true);
-    setFeedback(null);
-
-    try {
-      const response = await fetch(`/api/v1/customers/${encodeURIComponent(customerId)}/debt`);
-      const payload = (await response.json()) as CustomerDebtSummary | ApiErrorPayload;
-
-      if (!response.ok) {
-        setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Could not load debt summary."));
-        setSummary(null);
-        return;
+      if (clearFeedback) {
+        setFeedback(null);
       }
 
-      setSummary(payload as CustomerDebtSummary);
-      setIsError(false);
-    } catch {
-      setIsError(true);
-      setFeedback("Could not load debt summary.");
-      setSummary(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      try {
+        const { response, data } = await fetchJsonNoStore<CustomerDebtSummary | ApiErrorPayload>(
+          `/api/v1/customers/${encodeURIComponent(customerId)}/debt`,
+        );
+        const payload = data;
+
+        if (!response.ok || !payload) {
+          setIsError(true);
+          setFeedback(resolveApiMessage(payload, "Could not load debt summary."));
+          setSummary(null);
+          return;
+        }
+
+        setSummary(payload as CustomerDebtSummary);
+        setIsError(false);
+      } catch {
+        setIsError(true);
+        setFeedback("Could not load debt summary.");
+        setSummary(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void loadCustomerCandidates();
-  }, [loadCustomerCandidates]);
+  }, [loadCustomerCandidates, refreshToken]);
 
   async function handleLoadSummary(): Promise<void> {
     if (!targetCustomerId) {
@@ -179,7 +205,7 @@ export function DebtManagementPanel(): JSX.Element {
       setFeedback(`Payment registered: ${formatMoney((payload as DebtPaymentResponse).amount)}.`);
       setPaymentAmount("1");
       setPaymentNotes("");
-      await loadSummary(targetCustomerId);
+      await loadSummary(targetCustomerId, { clearFeedback: false });
     } catch {
       setIsError(true);
       setFeedback("Could not register debt payment.");
@@ -203,6 +229,7 @@ export function DebtManagementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Customer candidates</span>
           <select
+            data-testid="debt-customer-candidates-select"
             value={selectedCustomerId}
             onChange={(event) => setSelectedCustomerId(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
@@ -221,6 +248,7 @@ export function DebtManagementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Or type customer id</span>
           <input
+            data-testid="debt-manual-customer-id-input"
             value={manualCustomerId}
             onChange={(event) => setManualCustomerId(event.target.value)}
             placeholder="customer-uuid"
@@ -231,6 +259,7 @@ export function DebtManagementPanel(): JSX.Element {
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
+          data-testid="debt-refresh-candidates-button"
           type="button"
           onClick={() => {
             void loadCustomerCandidates();
@@ -240,6 +269,7 @@ export function DebtManagementPanel(): JSX.Element {
           Refresh candidates
         </button>
         <button
+          data-testid="debt-load-summary-button"
           type="button"
           onClick={() => {
             void handleLoadSummary();
@@ -254,7 +284,7 @@ export function DebtManagementPanel(): JSX.Element {
       {summary ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-slate-500">Outstanding balance</p>
-          <p className="text-lg font-semibold text-slate-900">
+          <p data-testid="debt-outstanding-value" className="text-lg font-semibold text-slate-900">
             {formatMoney(summary.outstandingBalance)}
           </p>
         </div>
@@ -264,6 +294,7 @@ export function DebtManagementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Payment amount</span>
           <input
+            data-testid="debt-payment-amount-input"
             type="number"
             min="0.01"
             step="0.01"
@@ -276,6 +307,7 @@ export function DebtManagementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Notes (optional)</span>
           <input
+            data-testid="debt-payment-notes-input"
             value={paymentNotes}
             onChange={(event) => setPaymentNotes(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
@@ -284,6 +316,7 @@ export function DebtManagementPanel(): JSX.Element {
 
         <div className="md:col-span-2">
           <button
+            data-testid="debt-register-payment-button"
             type="submit"
             disabled={isSubmitting}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
@@ -295,6 +328,7 @@ export function DebtManagementPanel(): JSX.Element {
 
       {feedback ? (
         <p
+          data-testid="debt-feedback"
           className={[
             "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
             isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
@@ -312,6 +346,7 @@ export function DebtManagementPanel(): JSX.Element {
           {summary?.ledger.map((entry) => (
             <li
               key={entry.entryId}
+              data-testid={`debt-ledger-entry-${entry.entryId}`}
               className={[
                 "rounded-lg px-2 py-2 text-xs",
                 entry.entryType === "debt"

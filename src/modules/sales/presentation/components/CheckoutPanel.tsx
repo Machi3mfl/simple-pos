@@ -264,6 +264,7 @@ export function CheckoutPanel({
           </div>
 
           <button
+            data-testid="checkout-open-payment-button"
             type="button"
             disabled={items.length === 0}
             onClick={() => setIsPaymentSheetOpen(true)}
@@ -278,6 +279,7 @@ export function CheckoutPanel({
             <p className="text-sm font-semibold text-slate-700">Select Payment Method</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
+                data-testid="checkout-payment-cash-button"
                 type="button"
                 onClick={() => setPaymentMethod("cash")}
                 className={[
@@ -290,6 +292,7 @@ export function CheckoutPanel({
                 Cash
               </button>
               <button
+                data-testid="checkout-payment-on-account-button"
                 type="button"
                 onClick={() => setPaymentMethod("on_account")}
                 className={[
@@ -308,6 +311,7 @@ export function CheckoutPanel({
                 Customer {paymentMethod === "on_account" ? "(required)" : "(optional)"}
               </span>
               <input
+                data-testid="checkout-customer-name-input"
                 type="text"
                 placeholder="e.g. Juan Perez"
                 value={customerName}
@@ -319,6 +323,7 @@ export function CheckoutPanel({
 
             <div className="mt-3 flex items-center gap-2">
               <button
+                data-testid="checkout-confirm-payment-button"
                 type="button"
                 onClick={submitCheckout}
                 disabled={isSubmitting}
@@ -327,6 +332,7 @@ export function CheckoutPanel({
                 {isSubmitting ? "Processing..." : "Confirm Payment"}
               </button>
               <button
+                data-testid="checkout-cancel-payment-button"
                 type="button"
                 onClick={() => setIsPaymentSheetOpen(false)}
                 disabled={isSubmitting}
@@ -340,6 +346,7 @@ export function CheckoutPanel({
 
         {feedback ? (
           <p
+            data-testid="checkout-feedback"
             className={[
               "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
               isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",

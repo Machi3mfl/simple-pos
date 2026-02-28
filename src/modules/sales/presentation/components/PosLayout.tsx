@@ -184,6 +184,7 @@ function isPosWorkspaceId(value: string): value is PosWorkspaceId {
 export function PosLayout(): JSX.Element {
   const [activeNavItemId, setActiveNavItemId] = useState<PosWorkspaceId>("sales");
   const [catalogRefreshToken, setCatalogRefreshToken] = useState<number>(0);
+  const [salesRefreshToken, setSalesRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -381,6 +382,12 @@ export function PosLayout(): JSX.Element {
     triggerCatalogWorkspaceRefresh();
   }, [refreshCatalog, triggerCatalogWorkspaceRefresh]);
 
+  const handleCheckoutSuccess = useCallback((): void => {
+    setCartItems([]);
+    setHasSeededCart(true);
+    setSalesRefreshToken((current) => current + 1);
+  }, []);
+
   const renderNonSalesWorkspace = (): JSX.Element => {
     if (activeNavItemId === "catalog") {
       return (
@@ -410,7 +417,7 @@ export function PosLayout(): JSX.Element {
     if (activeNavItemId === "receivables") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
-          <DebtManagementPanel />
+          <DebtManagementPanel refreshToken={salesRefreshToken} />
         </section>
       );
     }
@@ -463,10 +470,7 @@ export function PosLayout(): JSX.Element {
               tax={0}
               onIncreaseQuantity={increaseQuantity}
               onDecreaseQuantity={decreaseQuantity}
-              onCheckoutSuccess={() => {
-                setCartItems([]);
-                setHasSeededCart(true);
-              }}
+              onCheckoutSuccess={handleCheckoutSuccess}
             />
           </>
         ) : (
