@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `CATALOG-001`  
-**Status**: `draft`  
+**Status**: `in_progress`  
 **GitHub Issue**: #8  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-006`, `PBI-007`, `PBI-019`  
@@ -61,8 +61,37 @@ export interface BulkPriceUpdateDTO {
 ## Acceptance Criteria
 
 - [ ] Wizard allows product creation in guided mode without technical friction.
-- [ ] Missing image never blocks product creation.
-- [ ] Placeholder assignment is deterministic and test-covered.
+- [x] Missing image never blocks product creation.
+- [x] Placeholder assignment is deterministic and test-covered.
 - [ ] Created product is visible and usable in POS.
-- [ ] Bulk price update supports percentage/fixed amount by scope with preview and validation.
-- [ ] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
+- [x] Bulk price update supports percentage/fixed amount by scope with preview and validation.
+- [x] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
+
+## Current Output
+
+- Product onboarding API implemented:
+  - `GET /api/v1/products`
+  - `POST /api/v1/products`
+  - `POST /api/v1/products/price-batches`
+  - file: `src/app/api/v1/products/route.ts`
+- Bulk repricing API route:
+  - `src/app/api/v1/products/price-batches/route.ts`
+- Repricing application use case:
+  - `src/modules/catalog/application/use-cases/ApplyBulkPriceUpdateUseCase.ts`
+- Shared mock runtime for catalog endpoints:
+  - `src/modules/catalog/infrastructure/runtime/catalogMockRuntime.ts`
+- Catalog module vertical slice created:
+  - Domain entity + errors
+  - Placeholder domain service
+  - Application use cases (`CreateProduct`, `ListProducts`, `ApplyBulkPriceUpdate`)
+  - In-memory repository adapter
+- DTO schemas upgraded to Zod contracts:
+  - `src/modules/catalog/presentation/dtos/create-product.dto.ts`
+  - `src/modules/catalog/presentation/dtos/bulk-price-update.dto.ts`
+  - `src/modules/catalog/presentation/dtos/product-response.dto.ts`
+- Placeholder strategy:
+  - deterministic SVG data URI by category when `imageUrl` is missing
+  - explicit `imageUrl` remains unchanged
+- Test evidence:
+  - `tests/e2e/catalog-onboarding-api.spec.ts`
+  - `tests/e2e/catalog-bulk-price-update-api.spec.ts`
