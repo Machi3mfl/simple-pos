@@ -307,6 +307,10 @@ paths:
                 $ref: '#/components/schemas/DebtPaymentResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
 
   /sync/events:
     post:

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { z } from "zod";
 
 import { createDebtPaymentDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
+import { debtPaymentResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
 import {
   bulkPriceUpdateDTOSchema,
 } from "../../src/modules/catalog/presentation/dtos/bulk-price-update.dto";
@@ -16,6 +17,7 @@ import saleCashSuccessFixture from "../fixtures/mock-api/sale-cash-success.json"
 import saleOnAccountMissingCustomerErrorFixture from "../fixtures/mock-api/sale-on-account-missing-customer-error.json";
 import saleOnAccountSuccessFixture from "../fixtures/mock-api/sale-on-account-success.json";
 import saleUnsupportedMethodErrorFixture from "../fixtures/mock-api/sale-unsupported-method-error.json";
+import { customerDebtSummaryResponseDTOSchema } from "../../src/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
 
 const apiErrorResponseSchema = z.object({
   code: z.string().min(1),
@@ -119,6 +121,35 @@ test.describe("API contract conformance", () => {
       paymentMethod: "cash",
     });
     expect(validDebtPayment.success).toBe(true);
+
+    const validDebtPaymentResponse = debtPaymentResponseDTOSchema.safeParse({
+      paymentId: "payment-001",
+      customerId: "customer-001",
+      amount: 3000,
+      createdAt: "2026-02-27T12:15:00.000Z",
+    });
+    expect(validDebtPaymentResponse.success).toBe(true);
+
+    const validCustomerDebtSummary = customerDebtSummaryResponseDTOSchema.safeParse({
+      customerId: "customer-001",
+      outstandingBalance: 1000,
+      ledger: [
+        {
+          entryId: "entry-001",
+          entryType: "debt",
+          orderId: "sale-001",
+          amount: 3000,
+          occurredAt: "2026-02-27T12:00:00.000Z",
+        },
+        {
+          entryId: "entry-002",
+          entryType: "payment",
+          amount: 2000,
+          occurredAt: "2026-02-27T12:10:00.000Z",
+        },
+      ],
+    });
+    expect(validCustomerDebtSummary.success).toBe(true);
 
     const validCreateProduct = createProductDTOSchema.safeParse({
       name: "Product Example",
