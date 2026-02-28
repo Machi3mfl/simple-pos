@@ -250,12 +250,8 @@ export function ReportingPanel(): JSX.Element {
                   {sale.paymentMethod} • {formatMoney(sale.total)} • {sale.itemCount} items
                 </p>
                 <p className="mt-1">
-                  Sale {sale.saleId.slice(0, 8)}
-                  {sale.customerName
-                    ? ` • Customer ${sale.customerName}`
-                    : sale.customerId
-                      ? ` • Customer ${sale.customerId.slice(0, 8)}`
-                      : ""}
+                  {new Date(sale.createdAt).toLocaleString()}
+                  {sale.customerName ? ` • Customer ${sale.customerName}` : ""}
                 </p>
               </li>
             ))}

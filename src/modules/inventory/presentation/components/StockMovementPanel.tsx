@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
@@ -69,6 +69,13 @@ export function StockMovementPanel({
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const hasProducts = products.length > 0;
+  const productNameById = useMemo(
+    () =>
+      new Map<string, string>(
+        products.map((product) => [product.id, product.name]),
+      ),
+    [products],
+  );
 
   const loadProducts = useCallback(async (): Promise<void> => {
     const { response, data } = await fetchJsonNoStore<ProductListResponse>(
@@ -205,7 +212,7 @@ export function StockMovementPanel({
             {!hasProducts ? <option value="">No products available</option> : null}
             {products.map((product) => (
               <option key={product.id} value={product.id}>
-                {product.name} ({product.id.slice(0, 8)})
+                {product.name}
               </option>
             ))}
           </select>
@@ -320,7 +327,8 @@ export function StockMovementPanel({
                 {movement.movementType} • qty {movement.quantity} • stock {movement.stockOnHandAfter}
               </p>
               <p className="mt-1">
-                Product {movement.productId.slice(0, 8)} • cost {movement.unitCost.toFixed(2)}
+                Product {productNameById.get(movement.productId) ?? "Unknown product"} • cost{" "}
+                {movement.unitCost.toFixed(2)}
               </p>
             </li>
           ))}

@@ -216,7 +216,7 @@ export function DebtManagementPanel({
   async function handleLoadSummary(): Promise<void> {
     if (!targetCustomerId) {
       setIsError(true);
-      setFeedback("Select or type a customer id first.");
+      setFeedback("Select a customer first.");
       return;
     }
 
@@ -228,7 +228,7 @@ export function DebtManagementPanel({
 
     if (!targetCustomerId) {
       setIsError(true);
-      setFeedback("Select or type a customer id first.");
+      setFeedback("Select a customer first.");
       return;
     }
 
@@ -313,21 +313,19 @@ export function DebtManagementPanel({
             ) : null}
             {candidateCustomers.map((customer) => (
               <option key={customer.customerId} value={customer.customerId}>
-                {customer.customerName
-                  ? `${customer.customerName} (${customer.customerId.slice(0, 8)})`
-                  : customer.customerId}
+                {customer.customerName ?? "Unnamed customer"}
               </option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Or type customer id</span>
+          <span className="text-xs font-semibold text-slate-600">Manual customer reference</span>
           <input
             data-testid="debt-manual-customer-id-input"
             value={manualCustomerId}
             onChange={(event) => setManualCustomerId(event.target.value)}
-            placeholder="customer-uuid"
+            placeholder="Optional advanced lookup"
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           />
         </label>
@@ -359,9 +357,7 @@ export function DebtManagementPanel({
 
       {summary ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">
-            Customer {summary.customerName} ({summary.customerId.slice(0, 8)})
-          </p>
+          <p className="text-xs font-semibold text-slate-500">Customer {summary.customerName}</p>
           <p className="text-xs font-semibold text-slate-500">Outstanding balance</p>
           <p data-testid="debt-outstanding-value" className="text-lg font-semibold text-slate-900">
             {formatMoney(summary.outstandingBalance)}
@@ -450,7 +446,6 @@ export function DebtManagementPanel({
                 {entry.entryType === "debt" ? "Debt" : "Payment"} • {formatMoney(entry.amount)}
               </p>
               <p className="mt-1">{new Date(entry.occurredAt).toLocaleString()}</p>
-              {entry.orderId ? <p className="mt-1">Order {entry.orderId.slice(0, 8)}</p> : null}
             </li>
           ))}
 

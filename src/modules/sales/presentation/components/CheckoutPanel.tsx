@@ -149,8 +149,8 @@ export function CheckoutPanel({
 
       const successPayload = responseData as CheckoutSuccessPayload;
       const onAccountConfirmation =
-        successPayload.paymentMethod === "on_account" && successPayload.customerId
-          ? ` Customer ID: ${successPayload.customerId}.`
+        successPayload.paymentMethod === "on_account" && customerName.trim().length > 0
+          ? ` Customer: ${customerName.trim()}.`
           : "";
 
       setIsError(false);

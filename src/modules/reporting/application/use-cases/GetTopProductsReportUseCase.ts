@@ -14,6 +14,18 @@ export interface TopProductReportItem {
   readonly revenue: number;
 }
 
+function resolveProductDisplayName(
+  productId: string,
+  productNameById: ReadonlyMap<string, string>,
+): string {
+  const name = productNameById.get(productId);
+  if (name && name.trim().length > 0) {
+    return name;
+  }
+
+  return "Unknown product";
+}
+
 export class GetTopProductsReportUseCase {
   constructor(
     private readonly saleRepository: SaleRepository,
@@ -58,7 +70,7 @@ export class GetTopProductsReportUseCase {
     return Array.from(aggregateByProductId.entries())
       .map(([productId, summary]) => ({
         productId,
-        name: productNameById.get(productId) ?? productId,
+        name: resolveProductDisplayName(productId, productNameById),
         quantitySold: summary.quantitySold,
         revenue: Number(summary.revenue.toFixed(2)),
       }))

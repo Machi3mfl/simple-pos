@@ -27,23 +27,21 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   const checkoutFeedback = page.getByTestId("checkout-feedback");
   await expect(checkoutFeedback).toContainText("Checkout completed successfully.");
-  await expect(checkoutFeedback).toContainText("Customer ID:");
-
-  const checkoutFeedbackText = (await checkoutFeedback.textContent()) ?? "";
-  const customerIdMatch = checkoutFeedbackText.match(/Customer ID: ([a-zA-Z0-9-]+)\./);
-  expect(customerIdMatch).not.toBeNull();
-  const customerId = customerIdMatch?.[1] ?? "";
+  await expect(checkoutFeedback).toContainText(customerName);
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
 
   await page.getByTestId("debt-refresh-candidates-button").click();
-  await expect(
-    page.locator(`[data-testid=\"debt-customer-candidates-select\"] option[value=\"${customerId}\"]`),
-  ).toHaveCount(1);
+  const customerOption = page
+    .locator('[data-testid="debt-customer-candidates-select"] option')
+    .filter({ hasText: customerName })
+    .first();
+  await expect(customerOption).toHaveCount(1);
+  const customerId = await customerOption.getAttribute("value");
+  expect(customerId).toBeTruthy();
+  await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
   await expect(page.getByTestId("debt-customer-candidates-select")).toContainText(customerName);
-
-  await page.getByTestId("debt-manual-customer-id-input").fill(customerId);
   await page.getByTestId("debt-load-summary-button").click();
 
   const outstandingValue = page.getByTestId("debt-outstanding-value");

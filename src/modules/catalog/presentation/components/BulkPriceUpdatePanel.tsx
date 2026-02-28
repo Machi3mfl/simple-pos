@@ -79,6 +79,13 @@ export function BulkPriceUpdatePanel({
   const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const productNameById = useMemo(
+    () =>
+      new Map<string, string>(
+        products.map((product) => [product.id, product.name]),
+      ),
+    [products],
+  );
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -423,7 +430,9 @@ export function BulkPriceUpdatePanel({
             <ul className="max-h-56 space-y-1 overflow-y-auto p-2">
               {lastResult.items.map((item) => (
                 <li key={item.productId} className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700">
-                  <p className="font-semibold text-slate-900">{item.productId.slice(0, 8)}</p>
+                  <p className="font-semibold text-slate-900">
+                    {productNameById.get(item.productId) ?? "Unknown product"}
+                  </p>
                   <p>
                     {formatMoney(item.oldPrice)} → {formatMoney(item.newPrice)}
                   </p>
@@ -442,7 +451,9 @@ export function BulkPriceUpdatePanel({
             <ul className="max-h-56 space-y-1 overflow-y-auto p-2">
               {lastResult.invalidItems.map((item) => (
                 <li key={`${item.productId}-${item.reason}`} className="rounded-lg bg-rose-50 px-2 py-2 text-xs text-rose-700">
-                  <p className="font-semibold">{item.productId.slice(0, 8)}</p>
+                  <p className="font-semibold">
+                    {productNameById.get(item.productId) ?? "Unknown product"}
+                  </p>
                   <p>{item.reason}</p>
                 </li>
               ))}
