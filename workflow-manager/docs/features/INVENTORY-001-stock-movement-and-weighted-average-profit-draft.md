@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `INVENTORY-001`  
-**Status**: `draft`  
+**Status**: `in_progress`  
 **GitHub Issue**: #6  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-009`, `PBI-012`  
@@ -60,7 +60,34 @@ export function recalcWeightedAverage(
 
 ## Acceptance Criteria
 
-- [ ] Inbound movement cannot be confirmed without `unitCost`.
-- [ ] Stock movement history is auditable by product/date/type.
-- [ ] Weighted-average basis is updated consistently after inbound events.
+- [x] Inbound movement cannot be confirmed without `unitCost`.
+- [x] Stock movement history is auditable by product/date/type.
+- [x] Weighted-average basis is updated consistently after inbound events.
 - [ ] Reporting uses persisted weighted-average basis for profit summary.
+
+## Current Output
+
+- Inventory module vertical slice implemented:
+  - Domain aggregate: `InventoryItem`
+  - Domain entity: `StockMovement`
+  - Domain errors for stock and inbound cost rules
+  - Repository port + in-memory adapter
+  - Use cases:
+    - `RegisterStockMovementUseCase`
+    - `ListStockMovementsUseCase`
+- Shared inventory mock runtime:
+  - `src/modules/inventory/infrastructure/runtime/inventoryMockRuntime.ts`
+- API endpoints:
+  - `POST /api/v1/stock-movements`
+  - `GET /api/v1/stock-movements` with filters `productId`, `movementType`, `dateFrom`, `dateTo`
+- Stock movement response now includes:
+  - `stockOnHandAfter`
+  - `weightedAverageUnitCostAfter`
+  - `inventoryValueAfter`
+- Contracts:
+  - OpenAPI updated in `src/app/api/v1/openapi.yaml`
+  - DTOs:
+    - `stock-movement-response.dto.ts`
+    - `list-stock-movements-response.dto.ts`
+- Test evidence:
+  - `tests/e2e/inventory-stock-movements-api.spec.ts`
