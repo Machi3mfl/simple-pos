@@ -6,6 +6,7 @@ function uniqueMarker(): string {
 
 test("loads reporting UI data and applies payment method filter", async ({ page, request }) => {
   const marker = uniqueMarker();
+  const customerName = `Reporting User ${marker}`;
 
   const productAResponse = await request.post("/api/v1/products", {
     data: {
@@ -45,7 +46,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page,
     data: {
       items: [{ productId: productBBody.item.id, quantity: 1 }],
       paymentMethod: "on_account",
-      customerName: `Reporting User ${marker}`,
+      customerName,
     },
   });
   expect(onAccountSaleResponse.status()).toBe(201);
@@ -68,9 +69,12 @@ test("loads reporting UI data and applies payment method filter", async ({ page,
   await page.getByTestId("reporting-payment-method-select").selectOption("on_account");
   await page.getByTestId("reporting-apply-filters-button").click();
 
-  await expect(page.locator('[data-testid^="reporting-sales-item-"]').first()).toContainText(
-    "on_account",
-  );
+  await expect(
+    page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: "on_account" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: customerName }),
+  ).toHaveCount(1);
   await expect(
     page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: "cash" }),
   ).toHaveCount(0);

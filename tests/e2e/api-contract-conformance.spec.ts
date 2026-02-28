@@ -135,6 +135,7 @@ test.describe("API contract conformance", () => {
 
     const validCustomerDebtSummary = customerDebtSummaryResponseDTOSchema.safeParse({
       customerId: "customer-001",
+      customerName: "Carlos Perez",
       outstandingBalance: 1000,
       ledger: [
         {
@@ -186,6 +187,7 @@ test.describe("API contract conformance", () => {
           saleId: "sale-002",
           paymentMethod: "on_account",
           customerId: "customer-001",
+          customerName: "Carlos Perez",
           total: 20,
           itemCount: 2,
           createdAt: "2026-02-27T12:10:00.000Z",

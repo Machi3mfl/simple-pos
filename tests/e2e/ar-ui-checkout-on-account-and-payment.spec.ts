@@ -41,12 +41,14 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await expect(
     page.locator(`[data-testid=\"debt-customer-candidates-select\"] option[value=\"${customerId}\"]`),
   ).toHaveCount(1);
+  await expect(page.getByTestId("debt-customer-candidates-select")).toContainText(customerName);
 
   await page.getByTestId("debt-manual-customer-id-input").fill(customerId);
   await page.getByTestId("debt-load-summary-button").click();
 
   const outstandingValue = page.getByTestId("debt-outstanding-value");
   await expect(outstandingValue).toBeVisible();
+  await expect(page.getByText(new RegExp(`Customer ${customerName}`))).toBeVisible();
 
   const beforeOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const beforeOutstanding = parseMoneyValue(beforeOutstandingRaw);
