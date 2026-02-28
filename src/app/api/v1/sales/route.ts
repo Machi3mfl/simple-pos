@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/application/services/OnAccountDebtRecorderAdapter";
+import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
+import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
 import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
 import { CreateSaleUseCase } from "@/modules/sales/application/use-cases/CreateSaleUseCase";
@@ -21,10 +24,16 @@ interface ApiErrorResponse {
 
 const customerRepository = new InMemoryCustomerRepository();
 const saleRepository = new InMemorySaleRepository();
+const debtLedgerRepository = new InMemoryDebtLedgerRepository();
 const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
+const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);
+const onAccountDebtRecorder = new OnAccountDebtRecorderAdapter(
+  recordOnAccountDebtUseCase,
+);
 const createSaleUseCase = new CreateSaleUseCase(
   saleRepository,
   findOrCreateCustomerUseCase,
+  onAccountDebtRecorder,
 );
 
 function errorResponse(

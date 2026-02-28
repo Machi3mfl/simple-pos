@@ -1,4 +1,8 @@
 import type { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
+import {
+  NoopOnAccountDebtRecorder,
+  type OnAccountDebtRecorder,
+} from "@/modules/sales/domain/services/OnAccountDebtRecorder";
 
 import { Sale } from "../../domain/entities/Sale";
 import type { SaleRepository } from "../../domain/repositories/SaleRepository";
@@ -25,6 +29,7 @@ export class CreateSaleUseCase {
   constructor(
     private readonly saleRepository: SaleRepository,
     private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
+    private readonly onAccountDebtRecorder: OnAccountDebtRecorder = new NoopOnAccountDebtRecorder(),
   ) {}
 
   async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
@@ -47,9 +52,17 @@ export class CreateSaleUseCase {
     }
 
     sale.ensureCheckoutRules();
+    const total = sale.getItems().reduce((sum, line) => sum + line.quantity * 10, 0);
     await this.saleRepository.save(sale);
 
-    const total = sale.getItems().reduce((sum, line) => sum + line.quantity * 10, 0);
+    if (sale.getPaymentMethod() === "on_account" && sale.getCustomerId()) {
+      await this.onAccountDebtRecorder.recordOnAccountDebt({
+        saleId: sale.getId(),
+        customerId: sale.getCustomerId() as string,
+        amount: total,
+        occurredAt: sale.getCreatedAt(),
+      });
+    }
 
     return {
       saleId: sale.getId(),
