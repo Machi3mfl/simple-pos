@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { z } from "zod";
 
 import { createDebtPaymentDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
+import {
+  bulkPriceUpdateDTOSchema,
+} from "../../src/modules/catalog/presentation/dtos/bulk-price-update.dto";
+import { createProductDTOSchema } from "../../src/modules/catalog/presentation/dtos/create-product.dto";
 import { createStockMovementDTOSchema } from "../../src/modules/inventory/presentation/dtos/create-stock-movement.dto";
 import { createSaleDTOSchema } from "../../src/modules/sales/presentation/dtos/create-sale.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
@@ -83,6 +87,22 @@ test.describe("API contract conformance", () => {
       paymentMethod: "cash",
     });
     expect(validDebtPayment.success).toBe(true);
+
+    const validCreateProduct = createProductDTOSchema.safeParse({
+      name: "Product Example",
+      categoryId: "snack",
+      price: 10,
+      initialStock: 3,
+    });
+    expect(validCreateProduct.success).toBe(true);
+
+    const validBulkPriceUpdate = bulkPriceUpdateDTOSchema.safeParse({
+      scope: { type: "category", categoryId: "snack" },
+      mode: "percentage",
+      value: 10,
+      previewOnly: true,
+    });
+    expect(validBulkPriceUpdate.success).toBe(true);
 
     const validSyncBatch = syncEventsBatchDTOSchema.safeParse({
       events: [

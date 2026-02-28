@@ -409,9 +409,18 @@ components:
         newPrice:
           type: number
 
+    BulkPriceUpdateInvalidItem:
+      type: object
+      required: [productId, reason]
+      properties:
+        productId:
+          type: string
+        reason:
+          type: string
+
     BulkPriceUpdateResponse:
       type: object
-      required: [batchId, updatedCount, items, appliedAt]
+      required: [batchId, updatedCount, items, appliedAt, previewOnly, appliedBy, invalidItems]
       properties:
         batchId:
           type: string
@@ -424,6 +433,14 @@ components:
         appliedAt:
           type: string
           format: date-time
+        previewOnly:
+          type: boolean
+        appliedBy:
+          type: string
+        invalidItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkPriceUpdateInvalidItem'
 
     SaleLineInput:
       type: object
