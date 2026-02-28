@@ -80,6 +80,9 @@ export function recalcWeightedAverage(
 - API endpoints:
   - `POST /api/v1/stock-movements`
   - `GET /api/v1/stock-movements` with filters `productId`, `movementType`, `dateFrom`, `dateTo`
+- Inventory UI surface integrated:
+  - `src/modules/inventory/presentation/components/StockMovementPanel.tsx`
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Inventory`)
 - Reporting integration using persisted cost basis:
   - `GET /api/v1/reports/profit-summary` computes cost from recorded outbound stock movements.
 - Stock movement response now includes:

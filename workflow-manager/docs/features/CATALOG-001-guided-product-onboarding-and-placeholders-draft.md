@@ -60,10 +60,10 @@ export interface BulkPriceUpdateDTO {
 
 ## Acceptance Criteria
 
-- [ ] Wizard allows product creation in guided mode without technical friction.
+- [x] Wizard allows product creation in guided mode without technical friction.
 - [x] Missing image never blocks product creation.
 - [x] Placeholder assignment is deterministic and test-covered.
-- [ ] Created product is visible and usable in POS.
+- [x] Created product is visible and usable in POS.
 - [x] Bulk price update supports percentage/fixed amount by scope with preview and validation.
 - [x] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
 
@@ -74,6 +74,10 @@ export interface BulkPriceUpdateDTO {
   - `POST /api/v1/products`
   - `POST /api/v1/products/price-batches`
   - file: `src/app/api/v1/products/route.ts`
+- Catalog UI surfaces integrated in POS side rail:
+  - `src/modules/catalog/presentation/components/ProductOnboardingPanel.tsx`
+  - `src/modules/catalog/presentation/components/BulkPriceUpdatePanel.tsx`
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Catalog`)
 - Bulk repricing API route:
   - `src/app/api/v1/products/price-batches/route.ts`
 - Repricing application use case:

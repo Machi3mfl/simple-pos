@@ -80,6 +80,7 @@ curl -X POST /api/v1/sales \
 - [x] Basic checkout happy path is covered by mock E2E.
 - [x] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [x] Product cards, category chips, and checkout action preserve large-target touch usability.
+- [x] Side rail navigation opens each module UI surface while preserving `Sales` layout baseline.
 
 ## Current Output
 
@@ -89,6 +90,13 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
   - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
+- Integrated side-rail workspaces in `PosLayout`:
+  - `Sales`: POS catalog + cart + checkout
+  - `Catalog`: onboarding + bulk price update UI
+  - `Inventory`: stock movement UI
+  - `Receivables`: debt management UI
+  - `Reporting`: reporting/history UI
+  - `Sync`: offline queue/sync UI
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
@@ -102,4 +110,5 @@ curl -X POST /api/v1/sales \
 - Mock E2E coverage:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/e2e/pos-visual-baseline.spec.ts`
+  - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - deterministic UI fixtures for product catalog in POS specs

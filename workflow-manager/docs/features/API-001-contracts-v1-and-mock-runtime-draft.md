@@ -77,6 +77,7 @@ paths:
   - `src/app/api/v1/sync/events/route.ts`
 - Mock E2E running against intercepted API:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
+  - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/fixtures/mock-api/*.json`
 - Contract conformance checks:
   - `tests/e2e/api-contract-conformance.spec.ts`

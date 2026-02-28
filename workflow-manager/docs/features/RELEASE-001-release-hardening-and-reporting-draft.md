@@ -57,6 +57,9 @@ export interface SaleFilters {
 
 - Reporting runtime added:
   - `src/modules/reporting/infrastructure/runtime/reportingMockRuntime.ts`
+- Reporting UI surface integrated:
+  - `src/modules/reporting/presentation/components/ReportingPanel.tsx`
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Reporting`)
 - Reporting API routes added:
   - `src/app/api/v1/reports/top-products/route.ts`
   - `src/app/api/v1/reports/profit-summary/route.ts`
@@ -81,6 +84,7 @@ export interface SaleFilters {
 - Test evidence:
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
   - `tests/e2e/api-contract-conformance.spec.ts`
+  - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/e2e/release-gate-real-backend.spec.ts` (gated by `POS_BACKEND_MODE=supabase`)
   - Full suite result: `24 passed` (Playwright mock mode).
   - Real-backend gate result: `1 passed` (Playwright with local Supabase).

@@ -83,6 +83,9 @@ export interface CreateDebtPaymentDTO {
 - New API routes:
   - `POST /api/v1/debt-payments`
   - `GET /api/v1/customers/{id}/debt`
+- AR UI surface integrated:
+  - `src/modules/accounts-receivable/presentation/components/DebtManagementPanel.tsx`
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Receivables`)
 - Sales integration:
   - `CreateSaleUseCase` now records debt entry for `on_account` sales with `orderId = saleId`.
 - Test evidence:

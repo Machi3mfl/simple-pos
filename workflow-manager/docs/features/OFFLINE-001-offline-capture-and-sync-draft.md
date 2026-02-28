@@ -83,6 +83,10 @@ curl -X POST /api/v1/sync/events \
   - `CheckoutPanel` now queues sale events on network outage and retries sync:
     - automatically on `online` event
     - manually via `Retry Offline Sync` action when pending remains
+- Dedicated offline status UI:
+  - `src/modules/sync/presentation/components/OfflineSyncPanel.tsx`
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Sync`)
 - Test evidence:
   - `tests/e2e/sync-idempotency-and-retry-api.spec.ts`
   - `tests/e2e/offline-sync-recovery.spec.ts`
+  - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
