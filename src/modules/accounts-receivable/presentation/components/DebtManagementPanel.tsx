@@ -116,7 +116,7 @@ export function DebtManagementPanel({
       options: { readonly clearFeedback?: boolean } = {},
     ): Promise<void> => {
       const clearFeedback = options.clearFeedback ?? true;
-    setIsLoading(true);
+      setIsLoading(true);
       if (clearFeedback) {
         setFeedback(null);
       }
