@@ -78,6 +78,8 @@ export interface BulkPriceUpdateDTO {
   - `src/modules/catalog/presentation/components/ProductOnboardingPanel.tsx`
   - `src/modules/catalog/presentation/components/BulkPriceUpdatePanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Catalog`)
+  - cross-panel refresh token in `PosLayout` keeps onboarding and bulk list synchronized
+  - empty-scope guard in bulk UI blocks invalid requests and shows guided warning state
 - Bulk repricing API route:
   - `src/app/api/v1/products/price-batches/route.ts`
 - Repricing application use case:
@@ -99,3 +101,4 @@ export interface BulkPriceUpdateDTO {
 - Test evidence:
   - `tests/e2e/catalog-onboarding-api.spec.ts`
   - `tests/e2e/catalog-bulk-price-update-api.spec.ts`
+  - `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`

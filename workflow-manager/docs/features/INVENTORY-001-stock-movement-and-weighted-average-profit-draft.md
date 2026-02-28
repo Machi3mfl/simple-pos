@@ -83,6 +83,7 @@ export function recalcWeightedAverage(
 - Inventory UI surface integrated:
   - `src/modules/inventory/presentation/components/StockMovementPanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Inventory`)
+  - stable UI test selectors (`data-testid`) added for product/type/quantity/cost/reason/history
 - Reporting integration using persisted cost basis:
   - `GET /api/v1/reports/profit-summary` computes cost from recorded outbound stock movements.
 - Stock movement response now includes:
@@ -96,4 +97,5 @@ export function recalcWeightedAverage(
     - `list-stock-movements-response.dto.ts`
 - Test evidence:
   - `tests/e2e/inventory-stock-movements-api.spec.ts`
+  - `tests/e2e/inventory-ui-stock-movement.spec.ts`
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
