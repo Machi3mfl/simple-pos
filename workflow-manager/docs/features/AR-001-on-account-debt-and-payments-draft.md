@@ -54,10 +54,10 @@ export interface CreateDebtPaymentDTO {
 
 ## Acceptance Criteria
 
-- [ ] `on_account` checkout is blocked if customer is missing.
-- [ ] Debt entries are stored per originating order.
-- [ ] Debt payments create immutable ledger events.
-- [ ] Outstanding balance decreases correctly for partial and full payments.
+- [x] `on_account` checkout is blocked if customer is missing.
+- [x] Debt entries are stored per originating order.
+- [x] Debt payments create immutable ledger events.
+- [x] Outstanding balance decreases correctly for partial and full payments.
 
 ## Current Output
 
@@ -68,3 +68,22 @@ export interface CreateDebtPaymentDTO {
   - `src/app/api/v1/sales/route.ts`
 - Quick customer assignment flow implemented with:
   - `src/modules/customers/application/use-cases/FindOrCreateCustomerUseCase.ts`
+- Accounts receivable ledger module added:
+  - Domain:
+    - `src/modules/accounts-receivable/domain/entities/DebtLedgerEntry.ts`
+    - `src/modules/accounts-receivable/domain/services/CalculateOutstandingBalance.ts`
+    - `src/modules/accounts-receivable/domain/repositories/DebtLedgerRepository.ts`
+  - Application:
+    - `RecordOnAccountDebtUseCase`
+    - `RegisterDebtPaymentUseCase`
+    - `GetCustomerDebtSummaryUseCase`
+    - `OnAccountDebtRecorderAdapter`
+  - Infrastructure:
+    - `src/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository.ts`
+- New API routes:
+  - `POST /api/v1/debt-payments`
+  - `GET /api/v1/customers/{id}/debt`
+- Sales integration:
+  - `CreateSaleUseCase` now records debt entry for `on_account` sales with `orderId = saleId`.
+- Test evidence:
+  - `tests/e2e/ar-debt-ledger-and-payments-api.spec.ts`
