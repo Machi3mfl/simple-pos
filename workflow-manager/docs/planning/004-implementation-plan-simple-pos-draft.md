@@ -7,9 +7,9 @@
 **Status**: `planning`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.2`  
+**Version**: `0.3`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-27`  
+**Last Updated**: `2026-02-28`  
 **Input Documents**: `001-requirements-simple-pos-draft.md`, `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
 ---
@@ -53,6 +53,16 @@ The POS UI must follow the user-approved visual reference image provided in this
 - Tablet-first UX checkpoints before expanding responsive behavior.
 - Contract-first API (`/api/v1/...`) with mocked runtime from the beginning.
 - Mock-first E2E early, real-backend E2E before release gate.
+- No FR/UC can close as backend-only; each implemented scope item must have a usable UI entry point.
+
+### Vertical Slice Completion Rule (Mandatory)
+- Every MVP FR/UC must map to a concrete UI surface (screen, panel, or modal) and be delivered as one integrated slice.
+- A slice is only `done` when these four evidences exist in the same iteration:
+  - `UI`: user can execute the target flow from the assigned surface.
+  - `API`: versioned contract endpoint(s) are available and used by that UI flow.
+  - `Domain/Application`: use case logic and invariants are enforced in core/application layers.
+  - `Tests`: unit/integration/E2E evidence covers happy path and key failure branch.
+- Allowed exception type: pure technical governance items (`PBI-010`) and release gate verification (`PBI-013`). Even in these cases, evidence must reference the already integrated UIs they protect/validate.
 
 ### Must-Have PBI Scope (from `003`)
 - PBI-001, PBI-002, PBI-003, PBI-004, PBI-005, PBI-006, PBI-007, PBI-008, PBI-009, PBI-013, PBI-014, PBI-015, PBI-016, PBI-017, PBI-018, PBI-019
@@ -61,15 +71,29 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 ## 3. Feature Decomposition
 
-| Feature ID | Feature Name | Linked PBIs | FR/NFR Coverage | Planned Iteration |
+| Feature ID | Feature Name | Linked PBIs | FR/NFR Coverage | Mandatory UI Surface(s) | Planned Iteration |
+| --- | --- | --- | --- | --- | --- |
+| POS-001 | POS UI mockup and checkout | PBI-001, PBI-002, PBI-005 | FR-001, FR-002, NFR-002, NFR-005 | POS main screen (catalog + cart + checkout footer) | Iteration 1 |
+| API-001 | API contracts and mocked runtime | PBI-003, PBI-008, PBI-004, PBI-010 | FR-007, FR-010, NFR-004 | Existing UI surfaces consume `/api/v1` contracts in mock mode (POS, onboarding, stock, debt, reports) | Iteration 2 |
+| CATALOG-001 | Guided onboarding, image placeholders, and bulk repricing | PBI-006, PBI-007, PBI-019 | FR-003, FR-008, FR-009, FR-015 | Onboarding wizard + bulk price update screen | Iteration 3 |
+| INVENTORY-001 | Stock movement + weighted-average profit basis | PBI-009, PBI-012 | FR-004, FR-006 | Stock movement form + reporting widgets/cards | Iteration 3 + 6 |
+| AR-001 | On-account debt and debt payments | PBI-014, PBI-015, PBI-016 | FR-011, FR-012, FR-013, NFR-006 | Checkout customer selector + customer debt ledger/payment screen | Iteration 4 |
+| OFFLINE-001 | Offline queue and sync reconciliation | PBI-017, PBI-018 | FR-014, NFR-007 | Offline queue/sync state banner + retry/status panel | Iteration 5 |
+| RELEASE-001 | Real-backend release hardening | PBI-013 | NFR-003 + release criteria | Reporting screen (sales history + top products + profit summary) validated against real backend | Iteration 6 |
+
+### 3.1 Use Case to Vertical Slice Coverage (UI Included)
+
+| UC ID | Slice/Feature | UI Surface | API Surface (v1) | Test Evidence |
 | --- | --- | --- | --- | --- |
-| POS-001 | POS UI mockup and checkout | PBI-001, PBI-002, PBI-005 | FR-001, FR-002, NFR-002, NFR-005 | Iteration 1 |
-| API-001 | API contracts and mocked runtime | PBI-003, PBI-008, PBI-004, PBI-010 | FR-007, FR-010, NFR-004 | Iteration 2 |
-| CATALOG-001 | Guided onboarding, image placeholders, and bulk repricing | PBI-006, PBI-007, PBI-019 | FR-003, FR-008, FR-009, FR-015 | Iteration 3 |
-| INVENTORY-001 | Stock movement + weighted-average profit basis | PBI-009, PBI-012 | FR-004, FR-006 | Iteration 3 + 6 |
-| AR-001 | On-account debt and debt payments | PBI-014, PBI-015, PBI-016 | FR-011, FR-012, FR-013, NFR-006 | Iteration 4 |
-| OFFLINE-001 | Offline queue and sync reconciliation | PBI-017, PBI-018 | FR-014, NFR-007 | Iteration 5 |
-| RELEASE-001 | Real-backend release hardening | PBI-013 | NFR-003 + release criteria | Iteration 6 |
+| UC-001 | POS-001 | POS checkout screen | `/api/v1/products`, `/api/v1/sales` | UI + E2E checkout |
+| UC-002 | CATALOG-001 | Guided onboarding wizard | `/api/v1/products` | UI + API + E2E onboarding |
+| UC-003 | INVENTORY-001 | Stock movement screen | `/api/v1/stock-movements` | UI + integration + E2E |
+| UC-004 | RELEASE-001 | Sales history and analytics screen | `/api/v1/reports/*` | UI + API + E2E reporting |
+| UC-005 | API-001 | Web client integration through all module screens | `/api/v1/*` contract set | contract tests + cross-screen E2E |
+| UC-006 | API-001 | Mock-mode execution on module screens | mocked `/api/v1/*` | mock-mode E2E |
+| UC-007 | AR-001 | On-account checkout + debt ledger/payment screen | `/api/v1/customers`, `/api/v1/debt-payments`, `/api/v1/sales` | UI + integration + E2E debt |
+| UC-008 | OFFLINE-001 | Offline queue + sync status UI | `/api/v1/sync/events` | offline E2E + sync integration |
+| UC-009 | CATALOG-001 | Bulk price update screen | `/api/v1/products/price-batches` | UI + API + integration |
 
 ---
 
@@ -81,6 +105,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 - Produce required diagrams (class, sequence, activity, state if needed).
 - Create feature docs and traceability links.
 - Define OpenAPI v1 skeleton and DTO baseline.
+- Publish UC-to-UI-to-API mapping table and get explicit approval.
 
 **Task Batch**
 - `TASK-001` Create MVP Domain Class Diagram
@@ -91,6 +116,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 - [ ] `004` plan approved.
 - [ ] Feature docs created and linked.
 - [ ] Core diagrams published under planning/features docs.
+- [ ] UC-to-UI mapping approved and linked from requirements/backlog.
 
 ### Iteration 1 - Tablet-First POS UI
 **Dates**: `2026-03-09` to `2026-03-13`
@@ -118,6 +144,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 **Exit Criteria**
 - [ ] Contract docs versioned and reviewed.
 - [ ] Mock critical flows green in CI/local.
+- [ ] At least one UI flow per active module is wired to `/api/v1` mock endpoints (no static-only UI path).
 
 ### Iteration 3 - Catalog and Inventory Core
 **Dates**: `2026-03-23` to `2026-03-27`
@@ -131,6 +158,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 - [ ] Product onboarding complete without real photos.
 - [ ] Bulk repricing flow validated for percentage/fixed updates with preview.
 - [ ] Stock + cost basis update verified by integration tests.
+- [ ] Onboarding, stock movement, and bulk repricing UIs execute end-to-end against API contracts.
 
 ### Iteration 4 - Customer Debt Flows
 **Dates**: `2026-03-30` to `2026-04-03`
@@ -142,6 +170,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 **Exit Criteria**
 - [ ] Debt lifecycle works end-to-end in mock and real persistence tests.
 - [ ] Ledger audit checks pass.
+- [ ] On-account checkout UI and debt payment UI are both integrated and demoable.
 
 ### Iteration 5 - Offline Resilience
 **Dates**: `2026-04-06` to `2026-04-10`
@@ -153,6 +182,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 **Exit Criteria**
 - [ ] Confirmed offline events survive outage and sync after reconnect.
 - [ ] Conflict handling and retry policy tested.
+- [ ] Offline state/queue indicators are visible in UI and support manual retry actions.
 
 ### Iteration 6 - Release Hardening and Reporting
 **Dates**: `2026-04-13` to `2026-04-17`
@@ -164,6 +194,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 **Exit Criteria**
 - [ ] Real-backend release gate green.
 - [ ] FR/NFR traceability checks pass.
+- [ ] Reporting/history UI consumes real-backend endpoints with validated data.
 
 ---
 
@@ -243,6 +274,7 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 - [ ] GitHub issues created from PBIs/features.
 - [ ] Diagram artifacts committed and linked.
 - [ ] UI baseline reference linked in POS feature and related issues/PRs.
+- [ ] All FR/UC items mapped to at least one integrated UI surface.
 - [ ] Stakeholder review completed.
 
 ### Sign-off

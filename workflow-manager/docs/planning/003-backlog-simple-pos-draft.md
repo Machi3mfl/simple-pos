@@ -8,9 +8,9 @@
 **GitHub Issue**: #2  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.5`  
+**Version**: `0.6`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-27`  
+**Last Updated**: `2026-02-28`  
 **Linked PRD**: `workflow-manager/docs/planning/002-prd-simple-pos-draft.md`
 
 ---
@@ -27,6 +27,11 @@
 - `in_progress`: in active development.
 - `blocked`: waiting for dependency/decision.
 - `done`: implemented and accepted.
+
+### Vertical Slice Policy (Mandatory)
+- Each PBI linked to FR/UC scope must include a concrete UI surface and be delivered as one integrated slice (`UI + API + domain/application + tests`).
+- A PBI cannot move to `done` if it leaves a static-only UI or backend-only implementation for a user flow.
+- Approved exception type: technical governance/release validation PBIs (`PBI-010`, `PBI-013`). These must still reference the integrated UI flows they validate.
 
 ---
 
@@ -65,6 +70,32 @@
 | PBI-017 | EPIC-002 | enabler | Implement offline queue and sync orchestration for critical events (sales/debt). | Offline events are persisted as `pending_sync` and synchronized idempotently after reconnect | high | M | ready | PBI-008, PBI-014, PBI-016 | FR-014, NFR-007 |
 | PBI-018 | EPIC-002 | story | Validate offline outage/recovery flows with Playwright + integration tests. | E2E covers offline checkout/debt capture and successful sync reconciliation | high | M | ready | PBI-017 | FR-014, NFR-007 |
 | PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount by scope, shows preview, validates invalid results, and writes audit summary | high | M | ready | PBI-008, PBI-006 | FR-015 |
+
+---
+
+## 3.1 PBI to UI Surface Mapping (Required)
+
+| PBI ID | Primary UI Surface | Integration Expectation |
+| --- | --- | --- |
+| PBI-001 | POS catalog and cart area | Product interactions call API/use cases; cart updates are persisted-ready |
+| PBI-002 | Checkout section in order panel | Payment selection and sale confirmation use contract-valid API/domain flow |
+| PBI-003 | POS/onboarding/stock/debt/report screens in mock mode | Same UI flows run with mocked adapters/contracts |
+| PBI-004 | Critical UI journeys (`J-001`, `J-002`) | Playwright validates integrated UI behavior against mocked backend |
+| PBI-005 | POS and checkout interaction surfaces | Touch targets, hierarchy, and readability validated on tablet-first viewport |
+| PBI-006 | Guided onboarding wizard | Wizard submit path validates and persists through API/use case |
+| PBI-007 | Product cards and onboarding preview | Placeholder rendering is visible when photo is missing |
+| PBI-008 | All module screens consuming `/api/v1/*` | Contracts drive real request/response integration for active screens |
+| PBI-009 | Stock movement screen/form | Inbound cost validation and movement persistence work end-to-end |
+| PBI-010 | No standalone UI (`approved exception`) | Architecture guardrails protect all existing UI slices |
+| PBI-011 | Sales history screen | Filter interactions query backend and render consistent results |
+| PBI-012 | Analytics summary screen/cards | KPI widgets render from report endpoints with weighted-average basis |
+| PBI-013 | No new UI (`approved exception`) | Release gate validates integrated UI flows on real backend |
+| PBI-014 | Checkout customer selector/creation panel | On-account flow blocks confirmation until customer is assigned |
+| PBI-015 | Customer debt ledger screen | Ledger entries and outstanding totals render per customer/order |
+| PBI-016 | Debt payment form/modal | Payment registration updates ledger and outstanding balance in UI |
+| PBI-017 | Offline status banner and queue panel | Offline capture state is visible and queued actions are trackable |
+| PBI-018 | Outage/recovery UI scenarios | UI reflects sync recovery and conflict/retry outcomes |
+| PBI-019 | Bulk price update screen | Preview, validation, apply, and audit summary are UI-accessible |
 
 ---
 
@@ -141,11 +172,15 @@
 - [ ] Acceptance criteria are testable.
 - [ ] Dependencies are identified.
 - [ ] Required API/domain contracts are defined.
-- [ ] UX references are available (if UI item).
+- [ ] Primary UI surface and route are identified (or approved technical exception).
+- [ ] UX references are available for the target UI surface.
+- [ ] Integration scenario (`UI -> API -> domain`) is defined for verification.
 
 ## 7. Definition of Done (DoD)
 
 - [ ] Acceptance criteria met.
+- [ ] UI surface is implemented/updated and integrated with API/domain logic (or approved technical exception with referenced UI coverage).
+- [ ] End-to-end flow is demoable from UI for linked FR/UC.
 - [ ] Unit/integration/E2E tests added as required.
 - [ ] Architecture rules respected (Hexagonal boundaries).
 - [ ] Documentation updated (PRD/backlog/feature/task links).
@@ -164,3 +199,4 @@
 | 2026-02-27 | Closed decisions: primary device `tablet`, costing policy `weighted_average` | maxi |
 | 2026-02-27 | Added explicit UI baseline alignment requirement for POS visual implementation | maxi |
 | 2026-02-27 | Added bulk price update scope for fast repricing scenarios (`PBI-019`, `FR-015`) | maxi |
+| 2026-02-28 | Enforced vertical-slice policy so each PBI/UC closes with integrated UI + API + domain + tests | maxi |

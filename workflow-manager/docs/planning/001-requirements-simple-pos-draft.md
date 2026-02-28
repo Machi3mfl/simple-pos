@@ -8,9 +8,9 @@
 **Priority**: `high`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.6`  
+**Version**: `0.7`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-27`  
+**Last Updated**: `2026-02-28`  
 **Related Epic/Feature**: `pending-definition`  
 **Related Planning Doc**: `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
@@ -42,6 +42,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 ### In Scope
 - Functional POS UI mockup with large cards and touch-friendly controls.
 - POS UI implementation aligned with user-approved visual reference (layout and visual hierarchy).
+- Vertical-slice delivery for every FR/UC with mandatory integrated evidence (`UI + API + domain/application + tests`).
 - Sales registration with v1 payment methods: `cash` and `on_account` (no gateway in MVP).
 - Product, category, stock, and stock movement management with mandatory cost capture on inbound stock.
 - Bulk price update for product batches (percentage or fixed amount), with preview before apply.
@@ -75,6 +76,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 - MVP UX is optimized tablet-first.
 - Delivery should prioritize visual validation and core operation.
 - Initial phase avoids unnecessary business rule complexity.
+- FR/UC scope cannot close as backend-only; each must be executable from an assigned UI surface.
 
 ### Dependencies
 - [x] Define primary operation device (desktop/tablet/mobile) - Decision: `tablet`
@@ -139,21 +141,31 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 
 ## 6. Use Cases - High Level
 
-| UC ID | Name | Primary Actor | Trigger | Expected Result | Related FR |
-| --- | --- | --- | --- | --- | --- |
-| UC-001 | Register point-of-sale checkout | Primary operator | Customer purchase | Sale stored with totals and payment method | FR-001, FR-002 |
-| UC-002 | Guided product onboarding | Support admin | New product onboarding | Product activated with minimum data and image policy | FR-003, FR-008, FR-009 |
-| UC-003 | Register stock movement | Support admin | Restock/adjustment | Stock updates with movement traceability and inbound cost registration | FR-004 |
-| UC-004 | Review history and analytics | Kiosk owner | Daily/weekly review | Decision support metrics available | FR-005, FR-006 |
-| UC-005 | Consume API from web/mobile | Frontend/mobile client | Any operation | Channel-agnostic operation through stable contracts | FR-007 |
-| UC-006 | Run UI-first mock demo | Implementer | Demo or E2E execution | Full flow without production backend | FR-010 |
-| UC-007 | Manage customer debt from on-account sales | Owner/Admin | On-account checkout or debt payment | Debt accrues by order and can be reduced by payments | FR-011, FR-012, FR-013 |
-| UC-008 | Operate critical flows in offline mode | Primary operator / Admin | Internet connection lost | Sale and debt events are captured and synchronized later | FR-014 |
-| UC-009 | Execute bulk price update for product batches | Support admin / owner | Supplier or inflation price change | Selected products receive consistent price update with traceability | FR-015 |
+| UC ID | Name | Primary Actor | Trigger | Expected Result | Related FR | Primary UI Surface |
+| --- | --- | --- | --- | --- | --- | --- |
+| UC-001 | Register point-of-sale checkout | Primary operator | Customer purchase | Sale stored with totals and payment method | FR-001, FR-002 | POS screen (catalog, cart, checkout order panel) |
+| UC-002 | Guided product onboarding | Support admin | New product onboarding | Product activated with minimum data and image policy | FR-003, FR-008, FR-009 | Guided onboarding wizard |
+| UC-003 | Register stock movement | Support admin | Restock/adjustment | Stock updates with movement traceability and inbound cost registration | FR-004 | Stock movement form/screen |
+| UC-004 | Review history and analytics | Kiosk owner | Daily/weekly review | Decision support metrics available | FR-005, FR-006 | Sales history + analytics dashboard |
+| UC-005 | Consume API from web/mobile | Frontend/mobile client | Any operation | Channel-agnostic operation through stable contracts | FR-007 | Module UIs consuming `/api/v1/*` contracts |
+| UC-006 | Run UI-first mock demo | Implementer | Demo or E2E execution | Full flow without production backend | FR-010 | Existing module UIs running in mock mode |
+| UC-007 | Manage customer debt from on-account sales | Owner/Admin | On-account checkout or debt payment | Debt accrues by order and can be reduced by payments | FR-011, FR-012, FR-013 | Checkout customer selector + debt ledger/payment screen |
+| UC-008 | Operate critical flows in offline mode | Primary operator / Admin | Internet connection lost | Sale and debt events are captured and synchronized later | FR-014 | Offline queue/sync status UI |
+| UC-009 | Execute bulk price update for product batches | Support admin / owner | Supplier or inflation price change | Selected products receive consistent price update with traceability | FR-015 | Bulk price update screen |
+
+### 6.1 Delivery Rule for All Use Cases
+- Each UC is considered complete only with linked implementation evidence for:
+  - `UI` surface execution (screen/panel/modal is operable),
+  - `API` contract invocation (`/api/v1/...`),
+  - `Domain/Application` rule enforcement via use cases/services,
+  - `Tests` (unit/integration/E2E) for happy path and key failure path.
+- If a technical item has no standalone UI (for example architecture guardrails), it must explicitly reference which existing UIs are being protected/validated.
 
 ---
 
 ## 7. Use Cases - Detailed
+
+Delivery note: each detailed UC below inherits the mandatory integrated-slice evidence defined in section `6.1`.
 
 ### UC-001 - Register point-of-sale checkout
 - **Goal**: complete checkout in very few steps with low cognitive load.
@@ -458,21 +470,21 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 
 | Item Type | ID | Mapped To | Verification |
 | --- | --- | --- | --- |
-| FR | FR-001 | UC-001, BR-001 | UI tests + E2E |
-| FR | FR-003 | UC-002, BR-004 | API contract tests + E2E |
-| FR | FR-004 | UC-003, BR-003, BR-006 | API + integration + E2E |
-| FR | FR-009 | UC-002, BR-005 | UI snapshot + E2E |
-| FR | FR-010 | UC-006, BR-007 | Mock-mode E2E suite |
-| FR | FR-011 | UC-007, BR-008 | API + E2E |
-| FR | FR-012 | UC-007, BR-009 | Integration + E2E |
-| FR | FR-013 | UC-007, BR-010 | Integration + E2E |
-| FR | FR-014 | UC-008, BR-013 | E2E offline + integration |
-| FR | FR-015 | UC-009, BR-014 | API + integration + UI tests |
-| NFR | NFR-001 | UC-001 | Performance test |
-| NFR | NFR-002 | UC-001, UC-002 | Usability session + checklist |
-| NFR | NFR-005 | UC-001 | Responsive E2E |
-| NFR | NFR-006 | UC-007 | Ledger audit tests |
-| NFR | NFR-007 | UC-008 | Offline E2E + sync integration |
+| FR | FR-001 | UC-001, BR-001 | UI interaction tests + API contract + E2E |
+| FR | FR-003 | UC-002, BR-004 | UI wizard tests + API contract + E2E |
+| FR | FR-004 | UC-003, BR-003, BR-006 | UI flow + API + integration + E2E |
+| FR | FR-009 | UC-002, BR-005 | UI placeholder rendering + E2E |
+| FR | FR-010 | UC-006, BR-007 | Mock-mode cross-screen E2E + contract checks |
+| FR | FR-011 | UC-007, BR-008 | Checkout UI validation + API + E2E |
+| FR | FR-012 | UC-007, BR-009 | Debt ledger UI + integration + E2E |
+| FR | FR-013 | UC-007, BR-010 | Debt payment UI + integration + E2E |
+| FR | FR-014 | UC-008, BR-013 | Offline status UI + offline E2E + sync integration |
+| FR | FR-015 | UC-009, BR-014 | Bulk update UI + API + integration + E2E |
+| NFR | NFR-001 | UC-001 | UI performance test |
+| NFR | NFR-002 | UC-001, UC-002 | Usability session + UI checklist |
+| NFR | NFR-005 | UC-001 | Responsive UI E2E |
+| NFR | NFR-006 | UC-007 | Ledger UI audit evidence + integration tests |
+| NFR | NFR-007 | UC-008 | Offline UI E2E + sync integration |
 | BR | BR-003 | FR-004, UC-001, UC-003 | Domain/application unit tests |
 | BR | BR-006 | FR-004, FR-006, UC-003, UC-004 | Domain/application unit tests + reporting integration tests |
 | BR | BR-011 | FR-002, UC-001 | API contract + UI tests |
