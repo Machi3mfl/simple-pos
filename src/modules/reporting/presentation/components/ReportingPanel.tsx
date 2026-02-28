@@ -175,6 +175,7 @@ export function ReportingPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Payment method</span>
           <select
+            data-testid="reporting-payment-method-select"
             value={paymentMethod}
             onChange={(event) =>
               setPaymentMethod(event.target.value as "all" | "cash" | "on_account")
@@ -189,6 +190,7 @@ export function ReportingPanel(): JSX.Element {
 
         <div className="flex items-end">
           <button
+            data-testid="reporting-apply-filters-button"
             type="submit"
             disabled={isLoading}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
@@ -200,6 +202,7 @@ export function ReportingPanel(): JSX.Element {
 
       {feedback ? (
         <p
+          data-testid="reporting-feedback"
           className={[
             "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
             isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
@@ -212,19 +215,19 @@ export function ReportingPanel(): JSX.Element {
       <section className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-slate-500">Revenue</p>
-          <p className="text-lg font-semibold text-slate-900">
+          <p data-testid="reporting-revenue-value" className="text-lg font-semibold text-slate-900">
             {profitSummary ? formatMoney(profitSummary.revenue) : "-"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-slate-500">Cost</p>
-          <p className="text-lg font-semibold text-slate-900">
+          <p data-testid="reporting-cost-value" className="text-lg font-semibold text-slate-900">
             {profitSummary ? formatMoney(profitSummary.cost) : "-"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-slate-500">Profit</p>
-          <p className="text-lg font-semibold text-slate-900">
+          <p data-testid="reporting-profit-value" className="text-lg font-semibold text-slate-900">
             {profitSummary ? formatMoney(profitSummary.profit) : "-"}
           </p>
         </div>
@@ -237,7 +240,11 @@ export function ReportingPanel(): JSX.Element {
           </div>
           <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
             {salesHistory.map((sale) => (
-              <li key={sale.saleId} className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700">
+              <li
+                key={sale.saleId}
+                data-testid={`reporting-sales-item-${sale.saleId}`}
+                className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
+              >
                 <p className="font-semibold text-slate-900">
                   {sale.paymentMethod} • {formatMoney(sale.total)} • {sale.itemCount} items
                 </p>
@@ -259,7 +266,11 @@ export function ReportingPanel(): JSX.Element {
           </div>
           <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
             {topProducts.map((item) => (
-              <li key={item.productId} className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700">
+              <li
+                key={item.productId}
+                data-testid={`reporting-top-product-item-${item.productId}`}
+                className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
+              >
                 <p className="font-semibold text-slate-900">
                   {item.name} • qty {item.quantitySold}
                 </p>
