@@ -3,6 +3,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import {
+  enqueueOfflineSyncEvent,
+  flushOfflineSyncQueue,
+  getPendingOfflineSyncCount,
+} from "@/modules/sync/presentation/offline/offlineSyncQueue";
 
 interface SalesHistoryResponse {
   readonly items: ReadonlyArray<{
@@ -68,6 +73,7 @@ export function DebtManagementPanel({
   const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
 
   const targetCustomerId = useMemo(() => {
     const manualValue = manualCustomerId.trim();
@@ -147,9 +153,41 @@ export function DebtManagementPanel({
     [],
   );
 
+  const refreshPendingSyncCount = useCallback((): void => {
+    setPendingSyncCount(getPendingOfflineSyncCount());
+  }, []);
+
+  const retryOfflineSync = useCallback(async () => {
+    const result = await flushOfflineSyncQueue();
+    refreshPendingSyncCount();
+
+    if (result.synced > 0 && result.failed === 0 && result.pending === 0) {
+      setIsError(false);
+      setFeedback("Offline events synced successfully.");
+      return;
+    }
+
+    if (result.failed > 0 || result.pending > 0) {
+      setIsError(true);
+      setFeedback("Offline sync still has pending/failed events. Retry again.");
+    }
+  }, [refreshPendingSyncCount]);
+
   useEffect(() => {
     void loadCustomerCandidates();
   }, [loadCustomerCandidates, refreshToken]);
+
+  useEffect(() => {
+    refreshPendingSyncCount();
+    const onOnline = (): void => {
+      void retryOfflineSync();
+    };
+
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+    };
+  }, [refreshPendingSyncCount, retryOfflineSync]);
 
   async function handleLoadSummary(): Promise<void> {
     if (!targetCustomerId) {
@@ -171,6 +209,13 @@ export function DebtManagementPanel({
     }
 
     const parsedAmount = Number(paymentAmount);
+    const paymentPayload = {
+      customerId: targetCustomerId,
+      amount: parsedAmount,
+      paymentMethod: "cash" as const,
+      notes: paymentNotes.trim() || undefined,
+    };
+
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       setIsError(true);
       setFeedback("Payment amount must be greater than zero.");
@@ -185,12 +230,7 @@ export function DebtManagementPanel({
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({
-          customerId: targetCustomerId,
-          amount: parsedAmount,
-          paymentMethod: "cash",
-          notes: paymentNotes.trim() || undefined,
-        }),
+        body: JSON.stringify(paymentPayload),
       });
 
       const payload = (await response.json()) as DebtPaymentResponse | ApiErrorPayload;
@@ -205,10 +245,20 @@ export function DebtManagementPanel({
       setFeedback(`Payment registered: ${formatMoney((payload as DebtPaymentResponse).amount)}.`);
       setPaymentAmount("1");
       setPaymentNotes("");
+      refreshPendingSyncCount();
       await loadSummary(targetCustomerId, { clearFeedback: false });
     } catch {
-      setIsError(true);
-      setFeedback("Could not register debt payment.");
+      enqueueOfflineSyncEvent({
+        eventType: "debt_payment_registered",
+        payload: paymentPayload,
+        idempotencyKey: `debt-payment-offline-${crypto.randomUUID()}`,
+      });
+
+      refreshPendingSyncCount();
+      setIsError(false);
+      setFeedback("Debt payment saved offline. Pending sync.");
+      setPaymentAmount("1");
+      setPaymentNotes("");
     } finally {
       setIsSubmitting(false);
     }
@@ -336,6 +386,19 @@ export function DebtManagementPanel({
         >
           {feedback}
         </p>
+      ) : null}
+
+      {pendingSyncCount > 0 ? (
+        <button
+          data-testid="debt-retry-offline-sync-button"
+          type="button"
+          onClick={() => {
+            void retryOfflineSync();
+          }}
+          className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+        >
+          Retry Offline Sync ({pendingSyncCount})
+        </button>
       ) : null}
 
       <div className="mt-4 rounded-xl border border-slate-200">
