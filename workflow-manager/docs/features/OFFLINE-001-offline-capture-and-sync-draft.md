@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `OFFLINE-001`  
-**Status**: `draft`  
+**Status**: `in_progress`  
 **GitHub Issue**: #3  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-017`, `PBI-018`  
@@ -62,8 +62,27 @@ curl -X POST /api/v1/sync/events \
 
 ## Acceptance Criteria
 
-- [ ] Offline-confirmed critical events are never dropped.
-- [ ] Sync uses idempotency keys to avoid duplicate processing.
-- [ ] Failed sync events remain visible and retryable.
-- [ ] Outage and recovery scenarios are covered by E2E + integration tests.
+- [x] Offline-confirmed critical events are never dropped.
+- [x] Sync uses idempotency keys to avoid duplicate processing.
+- [x] Failed sync events remain visible and retryable.
+- [x] Outage and recovery scenarios are covered by E2E + integration tests.
 
+## Current Output
+
+- Sync module vertical slice implemented:
+  - `ProcessSyncEventsBatchUseCase`
+  - `SyncEventRepository` port
+  - `InMemorySyncEventRepository`
+  - `syncMockRuntime`
+- `POST /api/v1/sync/events` now supports:
+  - idempotent replay (`reason: idempotent_replay`)
+  - duplicate key detection in same batch
+  - unsupported event type failures
+- Offline queue for checkout implemented in UI:
+  - `src/modules/sync/presentation/offline/offlineSyncQueue.ts`
+  - `CheckoutPanel` now queues sale events on network outage and retries sync:
+    - automatically on `online` event
+    - manually via `Retry Offline Sync` action when pending remains
+- Test evidence:
+  - `tests/e2e/sync-idempotency-and-retry-api.spec.ts`
+  - `tests/e2e/offline-sync-recovery.spec.ts`
