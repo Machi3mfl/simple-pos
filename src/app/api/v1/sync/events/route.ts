@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { syncMockRuntime } from "@/modules/sync/infrastructure/runtime/syncMockRuntime";
 import { syncEventsBatchDTOSchema } from "@/modules/sync/presentation/dtos/sync-events-batch.dto";
 import { syncEventsResultResponseDTOSchema } from "@/modules/sync/presentation/dtos/sync-events-result.dto";
 
@@ -13,12 +14,7 @@ interface ApiErrorResponse {
   readonly message: string;
   readonly details?: ApiErrorDetail[];
 }
-
-const SUPPORTED_EVENT_TYPES = new Set([
-  "sale_created",
-  "stock_movement_created",
-  "debt_payment_registered",
-]);
+const { processSyncEventsBatchUseCase } = syncMockRuntime;
 
 function errorResponse(
   status: number,
@@ -53,30 +49,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const seenIdempotencyKeys = new Set<string>();
-  const results = parsedRequest.data.events.map((event) => {
-    if (seenIdempotencyKeys.has(event.idempotencyKey)) {
-      return {
-        eventId: event.eventId,
-        status: "failed" as const,
-        reason: "duplicate_idempotency_key_in_batch",
-      };
-    }
-    seenIdempotencyKeys.add(event.idempotencyKey);
-
-    if (!SUPPORTED_EVENT_TYPES.has(event.eventType)) {
-      return {
-        eventId: event.eventId,
-        status: "failed" as const,
-        reason: "unsupported_event_type",
-      };
-    }
-
-    return {
-      eventId: event.eventId,
-      status: "synced" as const,
-    };
-  });
+  const results = await processSyncEventsBatchUseCase.execute(parsedRequest.data);
 
   const responseBody = { results };
   const parsedResponse = syncEventsResultResponseDTOSchema.safeParse(responseBody);
