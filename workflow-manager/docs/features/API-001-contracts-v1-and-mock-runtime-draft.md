@@ -71,6 +71,9 @@ paths:
 - Mock runtime endpoint implemented:
   - `src/app/api/v1/sales/route.ts`
   - `src/app/api/v1/stock-movements/route.ts`
+  - `src/app/api/v1/reports/top-products/route.ts`
+  - `src/app/api/v1/reports/profit-summary/route.ts`
+  - `src/app/api/v1/reports/sales-history/route.ts`
   - `src/app/api/v1/sync/events/route.ts`
 - Mock E2E running against intercepted API:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
@@ -79,10 +82,16 @@ paths:
   - `tests/e2e/api-contract-conformance.spec.ts`
   - Request examples validated against DTO Zod schemas.
   - Mock fixtures validated against response/error schemas.
+- Reporting API E2E coverage:
+  - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
+  - Validates `top-products`, `sales-history`, and `profit-summary` contracts and query validation errors.
 - Mock runtime critical-scenario API checks:
   - `tests/e2e/mock-runtime-critical-scenarios.spec.ts`
   - Covers `sales`, `stock-movements`, and `sync/events` happy/error paths.
 - Architecture guardrails:
   - `.eslintrc.json` layer-boundary `no-restricted-imports` rules for `domain/application/presentation/infrastructure`.
   - `CreateSaleUseCase` no longer imports DTOs from `presentation`.
+- Runtime mode switch prepared for release gate:
+  - `POS_BACKEND_MODE=mock|supabase` with mock as default.
+  - Supabase repositories available for `products`, `stock-movements`, and `sales`.
 - OpenAPI lint status: `pass` (`npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml`)

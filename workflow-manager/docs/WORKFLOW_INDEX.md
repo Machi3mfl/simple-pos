@@ -12,13 +12,15 @@ Mobile-friendly navigation map for the full project workflow.
 4. [Product Backlog](./planning/003-backlog-simple-pos-draft.md)
 5. [Implementation Plan](./planning/004-implementation-plan-simple-pos-draft.md)
 6. [Daily Execution Runbook (Iteration 0/1)](./runbooks/001-runbook-iteration-0-1-daily-execution-ready.md)
-7. Feature set:
+7. [Release Gate Runbook (Iteration 6 real backend)](./runbooks/002-runbook-release-gate-real-backend-ready.md)
+8. Feature set:
    - [POS-001](./features/POS-001-ui-pos-mockup-and-checkout-draft.md)
    - [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md)
    - [CATALOG-001](./features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md)
    - [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md)
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
+   - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)
 8. Iteration 0/1 execution tasks:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
@@ -35,6 +37,7 @@ Mobile-friendly navigation map for the full project workflow.
 | --- | --- | --- |
 | Iteration 0 | Architecture and contract baseline | [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md), [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md), [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md) |
 | Iteration 1 | Tablet-first UI and checkout validation | [TASK-004](./tasks/004-task-pos-tablet-layout-from-approved-reference-ready.md), [TASK-005](./tasks/005-task-checkout-payment-rules-cash-on-account-ready.md), [TASK-006](./tasks/006-task-playwright-mock-smoke-and-visual-baseline-ready.md) |
+| Iteration 6 | Release hardening and reporting baseline | [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md), [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
 
 ---
 

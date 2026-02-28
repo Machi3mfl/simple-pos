@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:update": "playwright test --update-snapshots"
+    "test:e2e:update": "playwright test --update-snapshots",
+    "test:e2e:release-gate:real": "POS_BACKEND_MODE=supabase playwright test tests/e2e/release-gate-real-backend.spec.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

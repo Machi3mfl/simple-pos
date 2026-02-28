@@ -46,6 +46,27 @@ export class Sale {
     return new Sale(props);
   }
 
+  static rehydrate(props: {
+    readonly id: string;
+    readonly items: readonly SaleLineItem[];
+    readonly paymentMethod: SalePaymentMethod;
+    readonly customerId?: string;
+    readonly createdAt: Date;
+  }): Sale {
+    const sale = Sale.create({
+      id: props.id,
+      items: props.items,
+      paymentMethod: props.paymentMethod,
+      createdAt: props.createdAt,
+    });
+
+    if (props.customerId) {
+      sale.assignCustomer(props.customerId);
+    }
+
+    return sale;
+  }
+
   assignCustomer(customerId: string): void {
     this.customerId = customerId;
   }
@@ -74,5 +95,21 @@ export class Sale {
 
   getCreatedAt(): Date {
     return this.createdAt;
+  }
+
+  toPrimitives(): {
+    readonly saleId: string;
+    readonly items: readonly SaleLineItem[];
+    readonly paymentMethod: SalePaymentMethod;
+    readonly customerId?: string;
+    readonly createdAt: string;
+  } {
+    return {
+      saleId: this.id,
+      items: this.items,
+      paymentMethod: this.paymentMethod,
+      customerId: this.customerId,
+      createdAt: this.createdAt.toISOString(),
+    };
   }
 }

@@ -233,6 +233,40 @@ paths:
         '400':
           $ref: '#/components/responses/ErrorResponse'
 
+  /reports/sales-history:
+    get:
+      tags: [Reporting]
+      operationId: getSalesHistory
+      summary: List sales history with date and payment filters
+      parameters:
+        - in: query
+          name: periodStart
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: periodEnd
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: paymentMethod
+          required: false
+          schema:
+            type: string
+            enum: [cash, on_account]
+      responses:
+        '200':
+          description: Sales history report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
   /customers:
     post:
       tags: [Customers]
@@ -658,6 +692,35 @@ components:
           type: number
         profit:
           type: number
+
+    SalesHistoryItem:
+      type: object
+      required: [saleId, paymentMethod, total, itemCount, createdAt]
+      properties:
+        saleId:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [cash, on_account]
+        customerId:
+          type: [string, 'null']
+        total:
+          type: number
+        itemCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+
+    SalesHistoryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesHistoryItem'
 
     CreateCustomerRequest:
       type: object

@@ -79,6 +79,8 @@ web_modules/
 out
 playwright-report
 test-results
+supabase/.temp
+supabase/.branches
 
 # Nuxt.js build / generate output
 .nuxt

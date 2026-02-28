@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { getBackendMode } from "@/infrastructure/config/runtimeMode";
+import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/application/services/OnAccountDebtRecorderAdapter";
 import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
 import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
@@ -8,7 +10,9 @@ import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use
 import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
 import { CreateSaleUseCase } from "@/modules/sales/application/use-cases/CreateSaleUseCase";
 import { SaleDomainError } from "@/modules/sales/domain/errors/SaleDomainError";
+import type { SaleRepository } from "@/modules/sales/domain/repositories/SaleRepository";
 import { InMemorySaleRepository } from "@/modules/sales/infrastructure/repositories/InMemorySaleRepository";
+import { SupabaseSaleRepository } from "@/modules/sales/infrastructure/repositories/SupabaseSaleRepository";
 import { createSaleDTOSchema } from "@/modules/sales/presentation/dtos/create-sale.dto";
 
 interface ApiErrorDetail {
@@ -23,7 +27,10 @@ interface ApiErrorResponse {
 }
 
 const customerRepository = new InMemoryCustomerRepository();
-const saleRepository = new InMemorySaleRepository();
+const saleRepository: SaleRepository =
+  getBackendMode() === "supabase"
+    ? new SupabaseSaleRepository(getSupabaseServerClient())
+    : new InMemorySaleRepository();
 const debtLedgerRepository = new InMemoryDebtLedgerRepository();
 const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
 const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);

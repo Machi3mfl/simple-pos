@@ -85,6 +85,10 @@ export class Product {
     });
   }
 
+  static rehydrate(props: CreateProductProps): Product {
+    return new Product(props);
+  }
+
   reprice(mode: BulkPriceUpdateMode, value: number): Product {
     const nextPrice = this.previewReprice(mode, value);
     if (!Number.isFinite(nextPrice) || nextPrice <= 0) {

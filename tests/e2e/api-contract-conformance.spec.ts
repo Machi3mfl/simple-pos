@@ -10,6 +10,9 @@ import { createProductDTOSchema } from "../../src/modules/catalog/presentation/d
 import { createStockMovementDTOSchema } from "../../src/modules/inventory/presentation/dtos/create-stock-movement.dto";
 import { listStockMovementsResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/list-stock-movements-response.dto";
 import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/stock-movement-response.dto";
+import { profitSummaryResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/profit-summary-response.dto";
+import { salesHistoryResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/sales-history-response.dto";
+import { topProductsResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/top-products-response.dto";
 import { createSaleDTOSchema } from "../../src/modules/sales/presentation/dtos/create-sale.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
 import { syncEventsBatchDTOSchema } from "../../src/modules/sync/presentation/dtos/sync-events-batch.dto";
@@ -150,6 +153,46 @@ test.describe("API contract conformance", () => {
       ],
     });
     expect(validCustomerDebtSummary.success).toBe(true);
+
+    const validTopProductsResponse = topProductsResponseDTOSchema.safeParse({
+      items: [
+        {
+          productId: "product-001",
+          name: "Yerba",
+          quantitySold: 3,
+          revenue: 30,
+        },
+      ],
+    });
+    expect(validTopProductsResponse.success).toBe(true);
+
+    const validProfitSummaryResponse = profitSummaryResponseDTOSchema.safeParse({
+      revenue: 250,
+      cost: 125,
+      profit: 125,
+    });
+    expect(validProfitSummaryResponse.success).toBe(true);
+
+    const validSalesHistoryResponse = salesHistoryResponseDTOSchema.safeParse({
+      items: [
+        {
+          saleId: "sale-001",
+          paymentMethod: "cash",
+          total: 30,
+          itemCount: 3,
+          createdAt: "2026-02-27T12:00:00.000Z",
+        },
+        {
+          saleId: "sale-002",
+          paymentMethod: "on_account",
+          customerId: "customer-001",
+          total: 20,
+          itemCount: 2,
+          createdAt: "2026-02-27T12:10:00.000Z",
+        },
+      ],
+    });
+    expect(validSalesHistoryResponse.success).toBe(true);
 
     const validCreateProduct = createProductDTOSchema.safeParse({
       name: "Product Example",

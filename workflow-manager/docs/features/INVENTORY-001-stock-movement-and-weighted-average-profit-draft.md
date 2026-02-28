@@ -63,7 +63,7 @@ export function recalcWeightedAverage(
 - [x] Inbound movement cannot be confirmed without `unitCost`.
 - [x] Stock movement history is auditable by product/date/type.
 - [x] Weighted-average basis is updated consistently after inbound events.
-- [ ] Reporting uses persisted weighted-average basis for profit summary.
+- [x] Reporting uses persisted weighted-average basis for profit summary.
 
 ## Current Output
 
@@ -80,6 +80,8 @@ export function recalcWeightedAverage(
 - API endpoints:
   - `POST /api/v1/stock-movements`
   - `GET /api/v1/stock-movements` with filters `productId`, `movementType`, `dateFrom`, `dateTo`
+- Reporting integration using persisted cost basis:
+  - `GET /api/v1/reports/profit-summary` computes cost from recorded outbound stock movements.
 - Stock movement response now includes:
   - `stockOnHandAfter`
   - `weightedAverageUnitCostAfter`
@@ -91,3 +93,4 @@ export function recalcWeightedAverage(
     - `list-stock-movements-response.dto.ts`
 - Test evidence:
   - `tests/e2e/inventory-stock-movements-api.spec.ts`
+  - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`

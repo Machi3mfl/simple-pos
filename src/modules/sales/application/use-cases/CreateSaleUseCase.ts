@@ -3,6 +3,7 @@ import {
   NoopOnAccountDebtRecorder,
   type OnAccountDebtRecorder,
 } from "@/modules/sales/domain/services/OnAccountDebtRecorder";
+import { calculateSaleTotal } from "@/modules/sales/domain/policies/SalePricingPolicy";
 
 import { Sale } from "../../domain/entities/Sale";
 import type { SaleRepository } from "../../domain/repositories/SaleRepository";
@@ -52,7 +53,7 @@ export class CreateSaleUseCase {
     }
 
     sale.ensureCheckoutRules();
-    const total = sale.getItems().reduce((sum, line) => sum + line.quantity * 10, 0);
+    const total = calculateSaleTotal(sale.getItems());
     await this.saleRepository.save(sale);
 
     if (sale.getPaymentMethod() === "on_account" && sale.getCustomerId()) {
