@@ -1,19 +1,31 @@
-export interface ProductDTO {
-  readonly id: string;
-  readonly sku?: string;
-  readonly name: string;
-  readonly categoryId: string;
-  readonly price: number;
-  readonly cost?: number;
-  readonly stock?: number;
-  readonly imageUrl?: string;
-  readonly isActive: boolean;
-}
+import { z } from "zod";
 
-export interface ProductListResponseDTO {
-  readonly items: ProductDTO[];
-}
+export const productDTOSchema = z
+  .object({
+    id: z.string().min(1),
+    sku: z.string().min(1).optional(),
+    name: z.string().min(1),
+    categoryId: z.string().min(1),
+    price: z.number().positive(),
+    cost: z.number().positive().optional(),
+    stock: z.number().min(0).optional(),
+    imageUrl: z.string().min(1).optional(),
+    isActive: z.boolean(),
+  })
+  .strict();
 
-export interface ProductResponseDTO {
-  readonly item: ProductDTO;
-}
+export const productListResponseDTOSchema = z
+  .object({
+    items: z.array(productDTOSchema),
+  })
+  .strict();
+
+export const productResponseDTOSchema = z
+  .object({
+    item: productDTOSchema,
+  })
+  .strict();
+
+export type ProductDTO = z.infer<typeof productDTOSchema>;
+export type ProductListResponseDTO = z.infer<typeof productListResponseDTOSchema>;
+export type ProductResponseDTO = z.infer<typeof productResponseDTOSchema>;
