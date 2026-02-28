@@ -39,6 +39,7 @@ export function LeftNavRail({
               key={item.id}
               type="button"
               onClick={() => onItemSelect(item.id)}
+              data-testid={`nav-item-${item.id}`}
               className={[
                 "flex min-h-[86px] min-w-[90px] flex-col items-center justify-center gap-2 rounded-2xl text-center text-sm font-medium transition",
                 isActive
