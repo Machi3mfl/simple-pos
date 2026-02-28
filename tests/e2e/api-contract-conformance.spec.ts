@@ -7,6 +7,8 @@ import {
 } from "../../src/modules/catalog/presentation/dtos/bulk-price-update.dto";
 import { createProductDTOSchema } from "../../src/modules/catalog/presentation/dtos/create-product.dto";
 import { createStockMovementDTOSchema } from "../../src/modules/inventory/presentation/dtos/create-stock-movement.dto";
+import { listStockMovementsResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/list-stock-movements-response.dto";
+import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/stock-movement-response.dto";
 import { createSaleDTOSchema } from "../../src/modules/sales/presentation/dtos/create-sale.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
 import { syncEventsBatchDTOSchema } from "../../src/modules/sync/presentation/dtos/sync-events-batch.dto";
@@ -80,6 +82,36 @@ test.describe("API contract conformance", () => {
       quantity: 1,
     });
     expect(invalidInboundWithoutUnitCost.success).toBe(false);
+
+    const validStockMovementResponse = stockMovementResponseDTOSchema.safeParse({
+      movementId: "mov-001",
+      productId: "product-005",
+      movementType: "inbound",
+      quantity: 10,
+      unitCost: 2500,
+      occurredAt: "2026-02-27T12:10:00.000Z",
+      stockOnHandAfter: 10,
+      weightedAverageUnitCostAfter: 2500,
+      inventoryValueAfter: 25000,
+    });
+    expect(validStockMovementResponse.success).toBe(true);
+
+    const validStockHistoryResponse = listStockMovementsResponseDTOSchema.safeParse({
+      items: [
+        {
+          movementId: "mov-001",
+          productId: "product-005",
+          movementType: "inbound",
+          quantity: 10,
+          unitCost: 2500,
+          occurredAt: "2026-02-27T12:10:00.000Z",
+          stockOnHandAfter: 10,
+          weightedAverageUnitCostAfter: 2500,
+          inventoryValueAfter: 25000,
+        },
+      ],
+    });
+    expect(validStockHistoryResponse.success).toBe(true);
 
     const validDebtPayment = createDebtPaymentDTOSchema.safeParse({
       customerId: "customer-001",

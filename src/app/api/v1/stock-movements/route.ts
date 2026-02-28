@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { InventoryDomainError } from "@/modules/inventory/domain/errors/InventoryDomainError";
+import { inventoryMockRuntime } from "@/modules/inventory/infrastructure/runtime/inventoryMockRuntime";
 import { createStockMovementDTOSchema } from "@/modules/inventory/presentation/dtos/create-stock-movement.dto";
+import { listStockMovementsResponseDTOSchema } from "@/modules/inventory/presentation/dtos/list-stock-movements-response.dto";
 import { stockMovementResponseDTOSchema } from "@/modules/inventory/presentation/dtos/stock-movement-response.dto";
 
 interface ApiErrorDetail {
@@ -14,11 +17,81 @@ interface ApiErrorResponse {
   readonly details?: ApiErrorDetail[];
 }
 
+const { registerStockMovementUseCase, listStockMovementsUseCase } = inventoryMockRuntime;
+
 function errorResponse(
   status: number,
   body: ApiErrorResponse,
 ): NextResponse<ApiErrorResponse> {
   return NextResponse.json(body, { status });
+}
+
+function parseDateQueryParam(value: string | null): Date | null | "invalid" {
+  if (value === null || value.trim().length === 0) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "invalid";
+  }
+
+  return date;
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const productId = url.searchParams.get("productId")?.trim() || undefined;
+  const movementTypeRaw = url.searchParams.get("movementType");
+  const dateFrom = parseDateQueryParam(url.searchParams.get("dateFrom"));
+  const dateTo = parseDateQueryParam(url.searchParams.get("dateTo"));
+
+  if (
+    movementTypeRaw &&
+    !["inbound", "outbound", "adjustment"].includes(movementTypeRaw)
+  ) {
+    return errorResponse(400, {
+      code: "validation_error",
+      message: "movementType must be inbound, outbound, or adjustment.",
+      details: [
+        {
+          field: "movementType",
+          message: "Expected inbound | outbound | adjustment.",
+        },
+      ],
+    });
+  }
+
+  if (dateFrom === "invalid" || dateTo === "invalid") {
+    return errorResponse(400, {
+      code: "validation_error",
+      message: "dateFrom/dateTo must be valid dates when provided.",
+    });
+  }
+
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    return errorResponse(400, {
+      code: "validation_error",
+      message: "dateFrom must be earlier than or equal to dateTo.",
+    });
+  }
+
+  const items = await listStockMovementsUseCase.execute({
+    productId,
+    movementType: movementTypeRaw as "inbound" | "outbound" | "adjustment" | undefined,
+    dateFrom: dateFrom ?? undefined,
+    dateTo: dateTo ?? undefined,
+  });
+
+  const parsedResponse = listStockMovementsResponseDTOSchema.safeParse({ items });
+  if (!parsedResponse.success) {
+    return errorResponse(500, {
+      code: "mock_contract_error",
+      message: "Mock response violates stock movement history contract.",
+    });
+  }
+
+  return NextResponse.json(parsedResponse.data, { status: 200 });
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -47,26 +120,29 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const { productId, movementType, quantity } = parsedRequest.data;
-  const unitCost =
-    movementType === "inbound" ? parsedRequest.data.unitCost : undefined;
+  try {
+    const result = await registerStockMovementUseCase.execute(parsedRequest.data);
+    const parsedResponse = stockMovementResponseDTOSchema.safeParse(result);
 
-  const responseBody = {
-    movementId: `mov-${movementType}-${productId}`,
-    productId,
-    movementType,
-    quantity,
-    unitCost,
-    occurredAt: "2026-02-27T00:00:00.000Z",
-  };
+    if (!parsedResponse.success) {
+      return errorResponse(500, {
+        code: "mock_contract_error",
+        message: "Mock response violates stock movement contract.",
+      });
+    }
 
-  const parsedResponse = stockMovementResponseDTOSchema.safeParse(responseBody);
-  if (!parsedResponse.success) {
+    return NextResponse.json(parsedResponse.data, { status: 201 });
+  } catch (error: unknown) {
+    if (error instanceof InventoryDomainError) {
+      return errorResponse(400, {
+        code: "stock_rule_error",
+        message: error.message,
+      });
+    }
+
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates stock movement contract.",
+      code: "internal_error",
+      message: "Unexpected error while registering stock movement.",
     });
   }
-
-  return NextResponse.json(parsedResponse.data, { status: 201 });
 }

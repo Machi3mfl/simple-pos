@@ -7,8 +7,12 @@ export const stockMovementResponseDTOSchema = z.object({
   productId: z.string().min(1),
   movementType: stockMovementTypeSchema,
   quantity: z.number().positive(),
-  unitCost: z.number().positive().optional(),
+  unitCost: z.number().positive(),
   occurredAt: z.string().datetime(),
+  stockOnHandAfter: z.number().min(0),
+  weightedAverageUnitCostAfter: z.number().min(0),
+  inventoryValueAfter: z.number().min(0),
+  reason: z.string().min(1).optional(),
 }).strict();
 
 export type StockMovementResponseDTO = z.infer<typeof stockMovementResponseDTOSchema>;

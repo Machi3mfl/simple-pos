@@ -120,6 +120,43 @@ paths:
           $ref: '#/components/responses/ErrorResponse'
 
   /stock-movements:
+    get:
+      tags: [Inventory]
+      operationId: listStockMovements
+      summary: List stock movements with filters
+      parameters:
+        - in: query
+          name: productId
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: movementType
+          required: false
+          schema:
+            type: string
+            enum: [inbound, outbound, adjustment]
+        - in: query
+          name: dateFrom
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: dateTo
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Stock movement history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovementHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
     post:
       tags: [Inventory]
       operationId: registerStockMovement
@@ -551,7 +588,7 @@ components:
 
     StockMovementResponse:
       type: object
-      required: [movementId, productId, movementType, quantity, occurredAt]
+      required: [movementId, productId, movementType, quantity, unitCost, occurredAt, stockOnHandAfter, weightedAverageUnitCostAfter, inventoryValueAfter]
       properties:
         movementId:
           type: string
@@ -563,10 +600,27 @@ components:
         quantity:
           type: number
         unitCost:
-          type: [number, 'null']
+          type: number
         occurredAt:
           type: string
           format: date-time
+        stockOnHandAfter:
+          type: number
+        weightedAverageUnitCostAfter:
+          type: number
+        inventoryValueAfter:
+          type: number
+        reason:
+          type: string
+
+    StockMovementHistoryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovementResponse'
 
     TopProductItem:
       type: object
