@@ -83,6 +83,7 @@ export interface SaleFilters {
   - reporting DTOs now use Zod schemas.
 - Test evidence:
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
+  - `tests/e2e/reporting-ui-filters-and-metrics.spec.ts`
   - `tests/e2e/api-contract-conformance.spec.ts`
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/e2e/release-gate-real-backend.spec.ts` (gated by `POS_BACKEND_MODE=supabase`)
