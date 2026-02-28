@@ -53,6 +53,14 @@ npm run test:e2e:release-gate:real
 npm run test:e2e:release-gate:real
 ```
 
+5. Run the real-backend UI suite by module (catalog, inventory, sales, receivables, reporting, sync):
+
+```bash
+npm run test:e2e:ui:real:modules
+```
+
+This command resets the local Supabase DB before executing tests and intentionally does not clean data at the end so generated records remain available for manual inspection.
+
 ## Expected Result
 
 - `tests/e2e/release-gate-real-backend.spec.ts` passes.
