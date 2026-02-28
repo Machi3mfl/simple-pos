@@ -32,6 +32,11 @@ interface CheckoutApiError {
   readonly message?: string;
 }
 
+interface CheckoutSuccessPayload {
+  readonly paymentMethod?: PaymentMethodDTO;
+  readonly customerId?: string;
+}
+
 function currency(amount: number): string {
   return `$${amount.toFixed(0)}`;
 }
@@ -142,8 +147,14 @@ export function CheckoutPanel({
         return;
       }
 
+      const successPayload = responseData as CheckoutSuccessPayload;
+      const onAccountConfirmation =
+        successPayload.paymentMethod === "on_account" && successPayload.customerId
+          ? ` Customer ID: ${successPayload.customerId}.`
+          : "";
+
       setIsError(false);
-      setFeedback("Checkout completed successfully.");
+      setFeedback(`Checkout completed successfully.${onAccountConfirmation}`);
       setIsPaymentSheetOpen(false);
       onCheckoutSuccess();
       if (paymentMethod === "cash") {

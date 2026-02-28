@@ -9,11 +9,13 @@ export interface PosNavItem {
 interface LeftNavRailProps {
   readonly items: readonly PosNavItem[];
   readonly activeItemId: string;
+  readonly onItemSelect: (itemId: string) => void;
 }
 
 export function LeftNavRail({
   items,
   activeItemId,
+  onItemSelect,
 }: LeftNavRailProps): JSX.Element {
   return (
     <aside className="bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:p-6">
@@ -36,6 +38,7 @@ export function LeftNavRail({
             <button
               key={item.id}
               type="button"
+              onClick={() => onItemSelect(item.id)}
               className={[
                 "flex min-h-[86px] min-w-[90px] flex-col items-center justify-center gap-2 rounded-2xl text-center text-sm font-medium transition",
                 isActive
@@ -43,6 +46,7 @@ export function LeftNavRail({
                   : "text-slate-200 hover:text-white",
               ].join(" ")}
               aria-label={item.label}
+              aria-pressed={isActive}
             >
               <span
                 className={[

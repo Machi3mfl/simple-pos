@@ -1,15 +1,29 @@
 "use client";
 
-import { CircleDollarSign, History, House, Percent, UtensilsCrossed } from "lucide-react";
+import {
+  BarChart3,
+  Boxes,
+  CloudOff,
+  Package,
+  ShoppingCart,
+  Wallet,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/components/DebtManagementPanel";
+import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
+import { ProductOnboardingPanel } from "@/modules/catalog/presentation/components/ProductOnboardingPanel";
+import { StockMovementPanel } from "@/modules/inventory/presentation/components/StockMovementPanel";
+import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
+import { OfflineSyncPanel } from "@/modules/sync/presentation/components/OfflineSyncPanel";
+
+import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
 import {
   ProductCatalogPanel,
   type CatalogCategory,
   type CatalogProduct,
 } from "./ProductCatalogPanel";
-import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 
 interface ProductListApiItem {
   readonly id: string;
@@ -31,12 +45,21 @@ interface SeedProductInput {
   readonly initialStock: number;
 }
 
+type PosWorkspaceId =
+  | "sales"
+  | "catalog"
+  | "inventory"
+  | "receivables"
+  | "reporting"
+  | "sync";
+
 const navItems: readonly PosNavItem[] = [
-  { id: "home", label: "Home", icon: House },
-  { id: "menu", label: "Menu", icon: UtensilsCrossed },
-  { id: "history", label: "History", icon: History },
-  { id: "promos", label: "Promos", icon: Percent },
-  { id: "wallet", label: "Wallet", icon: CircleDollarSign },
+  { id: "sales", label: "Sales", icon: ShoppingCart },
+  { id: "catalog", label: "Catalog", icon: Package },
+  { id: "inventory", label: "Inventory", icon: Boxes },
+  { id: "receivables", label: "Receivables", icon: Wallet },
+  { id: "reporting", label: "Reporting", icon: BarChart3 },
+  { id: "sync", label: "Sync", icon: CloudOff },
 ];
 
 const baseCategories: readonly CatalogCategory[] = [
@@ -146,7 +169,19 @@ function buildInitialCartSeed(
     }));
 }
 
+function isPosWorkspaceId(value: string): value is PosWorkspaceId {
+  return [
+    "sales",
+    "catalog",
+    "inventory",
+    "receivables",
+    "reporting",
+    "sync",
+  ].includes(value);
+}
+
 export function PosLayout(): JSX.Element {
+  const [activeNavItemId, setActiveNavItemId] = useState<PosWorkspaceId>("sales");
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -333,33 +368,91 @@ export function PosLayout(): JSX.Element {
     [cartItems],
   );
 
+  const renderNonSalesWorkspace = (): JSX.Element => {
+    if (activeNavItemId === "catalog") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ProductOnboardingPanel onProductCreated={refreshCatalog} />
+            <BulkPriceUpdatePanel onPricesUpdated={refreshCatalog} />
+          </div>
+        </section>
+      );
+    }
+
+    if (activeNavItemId === "inventory") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+          <StockMovementPanel />
+        </section>
+      );
+    }
+
+    if (activeNavItemId === "receivables") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+          <DebtManagementPanel />
+        </section>
+      );
+    }
+
+    if (activeNavItemId === "reporting") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+          <ReportingPanel />
+        </section>
+      );
+    }
+
+    return (
+      <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <OfflineSyncPanel />
+      </section>
+    );
+  };
+
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
       <div className="grid h-full w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
-        <LeftNavRail items={navItems} activeItemId="menu" />
-        <ProductCatalogPanel
-          categories={categories}
-          activeCategoryId={activeCategoryId}
-          products={visibleProducts}
-          searchTerm={searchTerm}
-          isLoading={isLoadingProducts}
-          onSearchTermChange={setSearchTerm}
-          onCategorySelect={setActiveCategoryId}
-          onProductSelect={addProductToCart}
-          onSeedDemoCatalog={seedDemoCatalog}
-        />
-        <CheckoutPanel
-          items={cartItems}
-          subtotal={subtotal}
-          discount={0}
-          tax={0}
-          onIncreaseQuantity={increaseQuantity}
-          onDecreaseQuantity={decreaseQuantity}
-          onCheckoutSuccess={() => {
-            setCartItems([]);
-            setHasSeededCart(true);
+        <LeftNavRail
+          items={navItems}
+          activeItemId={activeNavItemId}
+          onItemSelect={(itemId) => {
+            if (isPosWorkspaceId(itemId)) {
+              setActiveNavItemId(itemId);
+            }
           }}
         />
+
+        {activeNavItemId === "sales" ? (
+          <>
+            <ProductCatalogPanel
+              categories={categories}
+              activeCategoryId={activeCategoryId}
+              products={visibleProducts}
+              searchTerm={searchTerm}
+              isLoading={isLoadingProducts}
+              onSearchTermChange={setSearchTerm}
+              onCategorySelect={setActiveCategoryId}
+              onProductSelect={addProductToCart}
+              onSeedDemoCatalog={seedDemoCatalog}
+            />
+            <CheckoutPanel
+              items={cartItems}
+              subtotal={subtotal}
+              discount={0}
+              tax={0}
+              onIncreaseQuantity={increaseQuantity}
+              onDecreaseQuantity={decreaseQuantity}
+              onCheckoutSuccess={() => {
+                setCartItems([]);
+                setHasSeededCart(true);
+              }}
+            />
+          </>
+        ) : (
+          renderNonSalesWorkspace()
+        )}
       </div>
     </main>
   );

@@ -49,7 +49,7 @@ export function ProductCatalogPanel({
             type="text"
             value={searchTerm}
             onChange={(event) => onSearchTermChange(event.target.value)}
-            placeholder="Search Menu"
+            placeholder="Search products"
             className="w-full bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
             aria-label="Search menu"
           />
