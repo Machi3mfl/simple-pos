@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/components/DebtManagementPanel";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { ProductOnboardingPanel } from "@/modules/catalog/presentation/components/ProductOnboardingPanel";
@@ -182,6 +183,7 @@ function isPosWorkspaceId(value: string): value is PosWorkspaceId {
 
 export function PosLayout(): JSX.Element {
   const [activeNavItemId, setActiveNavItemId] = useState<PosWorkspaceId>("sales");
+  const [catalogRefreshToken, setCatalogRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -211,13 +213,15 @@ export function PosLayout(): JSX.Element {
   }, [catalogProducts]);
 
   const loadCatalogProducts = useCallback(async (): Promise<readonly CatalogProduct[]> => {
-    const response = await fetch("/api/v1/products?activeOnly=true");
-    if (!response.ok) {
+    const { response, data } = await fetchJsonNoStore<ProductListApiResponse>(
+      "/api/v1/products?activeOnly=true",
+    );
+
+    if (!response.ok || !data) {
       throw new Error("Failed to load catalog products.");
     }
 
-    const payload = (await response.json()) as ProductListApiResponse;
-    return payload.items.map(toCatalogProduct);
+    return data.items.map(toCatalogProduct);
   }, []);
 
   const seedDemoCatalog = useCallback(async (): Promise<void> => {
@@ -368,13 +372,28 @@ export function PosLayout(): JSX.Element {
     [cartItems],
   );
 
+  const triggerCatalogWorkspaceRefresh = useCallback((): void => {
+    setCatalogRefreshToken((current) => current + 1);
+  }, []);
+
+  const handleCatalogContentChanged = useCallback(async (): Promise<void> => {
+    await refreshCatalog();
+    triggerCatalogWorkspaceRefresh();
+  }, [refreshCatalog, triggerCatalogWorkspaceRefresh]);
+
   const renderNonSalesWorkspace = (): JSX.Element => {
     if (activeNavItemId === "catalog") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
           <div className="grid gap-4 xl:grid-cols-2">
-            <ProductOnboardingPanel onProductCreated={refreshCatalog} />
-            <BulkPriceUpdatePanel onPricesUpdated={refreshCatalog} />
+            <ProductOnboardingPanel
+              onProductCreated={handleCatalogContentChanged}
+              refreshToken={catalogRefreshToken}
+            />
+            <BulkPriceUpdatePanel
+              onPricesUpdated={handleCatalogContentChanged}
+              refreshToken={catalogRefreshToken}
+            />
           </div>
         </section>
       );
@@ -383,7 +402,7 @@ export function PosLayout(): JSX.Element {
     if (activeNavItemId === "inventory") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
-          <StockMovementPanel />
+          <StockMovementPanel refreshToken={catalogRefreshToken} />
         </section>
       );
     }

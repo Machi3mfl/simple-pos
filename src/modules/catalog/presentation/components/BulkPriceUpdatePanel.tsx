@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+
 interface ProductListItem {
   readonly id: string;
   readonly name: string;
@@ -40,7 +42,10 @@ interface ApiErrorPayload {
 
 interface BulkPriceUpdatePanelProps {
   readonly onPricesUpdated?: () => Promise<void> | void;
+  readonly refreshToken?: number;
 }
+
+const defaultCategoryOptions = ["main", "drink", "snack", "dessert", "other"];
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
@@ -61,6 +66,7 @@ function formatMoney(value: number): string {
 
 export function BulkPriceUpdatePanel({
   onPricesUpdated,
+  refreshToken,
 }: BulkPriceUpdatePanelProps): JSX.Element {
   const [products, setProducts] = useState<readonly ProductListItem[]>([]);
   const [scopeType, setScopeType] = useState<"all" | "category" | "selection">("category");
@@ -72,32 +78,86 @@ export function BulkPriceUpdatePanel({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
+    for (const categoryId of defaultCategoryOptions) {
+      set.add(categoryId);
+    }
     for (const product of products) {
       set.add(product.categoryId);
     }
     return Array.from(set.values());
   }, [products]);
 
+  const scopedProducts = useMemo(() => {
+    if (scopeType === "all") {
+      return products;
+    }
+
+    if (scopeType === "category") {
+      return products.filter((product) => product.categoryId === categoryId);
+    }
+
+    const selected = new Set(selectedProductIds);
+    return products.filter((product) => selected.has(product.id));
+  }, [products, scopeType, categoryId, selectedProductIds]);
+
+  const hasValidScopeSelection = useMemo(() => {
+    if (scopeType === "selection") {
+      return selectedProductIds.length > 0;
+    }
+
+    if (scopeType === "category") {
+      return categoryId.trim().length > 0;
+    }
+
+    return true;
+  }, [scopeType, selectedProductIds, categoryId]);
+
+  const shouldBlockByEmptyScope = hasValidScopeSelection && scopedProducts.length === 0;
+
   const loadProducts = useCallback(async (): Promise<void> => {
-    const response = await fetch("/api/v1/products?activeOnly=true");
-    const payload = (await response.json()) as ProductListResponse;
+    setIsLoadingProducts(true);
+    try {
+      const { response, data } = await fetchJsonNoStore<ProductListResponse>(
+        "/api/v1/products?activeOnly=true",
+      );
+      const payload = data;
 
-    if (!response.ok) {
-      throw new Error("Failed to load products for repricing.");
-    }
+      if (!response.ok || !payload) {
+        throw new Error("Failed to load products for repricing.");
+      }
 
-    setProducts(payload.items);
-    if (payload.items.length > 0 && !categoryId) {
-      setCategoryId(payload.items[0].categoryId);
+      setProducts(payload.items);
+      setCategoryId((current) => {
+        const normalizedCurrent = current.trim();
+        const knownCategories = new Set<string>([
+          ...defaultCategoryOptions,
+          ...payload.items.map((item) => item.categoryId),
+        ]);
+
+        if (normalizedCurrent.length > 0 && knownCategories.has(normalizedCurrent)) {
+          return current;
+        }
+
+        return payload.items[0]?.categoryId ?? defaultCategoryOptions[0];
+      });
+    } finally {
+      setIsLoadingProducts(false);
     }
-  }, [categoryId]);
+  }, []);
 
   useEffect(() => {
     void loadProducts();
-  }, [loadProducts]);
+  }, [loadProducts, refreshToken]);
+
+  useEffect(() => {
+    if (categories.length > 0 && (categoryId.trim().length === 0 || !categories.includes(categoryId))) {
+      setCategoryId(categories[0]);
+    }
+  }, [categories, categoryId]);
 
   function toggleProductSelection(productId: string): void {
     setSelectedProductIds((current) => {
@@ -148,6 +208,12 @@ export function BulkPriceUpdatePanel({
     if (scopeType === "selection" && selectedProductIds.length === 0) {
       setIsError(true);
       setFeedback("Select at least one product for selection scope.");
+      return;
+    }
+
+    if (shouldBlockByEmptyScope) {
+      setIsError(true);
+      setFeedback("No products found for the selected scope. Create or select products first.");
       return;
     }
 
@@ -205,12 +271,22 @@ export function BulkPriceUpdatePanel({
         <p className="mt-1 text-sm text-slate-500">
           UC-009: Preview and apply percentage/fixed updates with audit-ready output.
         </p>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          Eligible products in current scope: {scopedProducts.length}
+        </p>
       </header>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      {isLoadingProducts ? (
+        <p className="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600">
+          Loading products and categories...
+        </p>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 md:grid-cols-5">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Scope</span>
           <select
+            data-testid="bulk-scope-select"
             value={scopeType}
             onChange={(event) =>
               setScopeType(event.target.value as "all" | "category" | "selection")
@@ -226,6 +302,7 @@ export function BulkPriceUpdatePanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Mode</span>
           <select
+            data-testid="bulk-mode-select"
             value={mode}
             onChange={(event) =>
               setMode(event.target.value as "percentage" | "fixed_amount")
@@ -240,6 +317,7 @@ export function BulkPriceUpdatePanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Value</span>
           <input
+            data-testid="bulk-value-input"
             type="number"
             step="0.01"
             value={value}
@@ -248,23 +326,42 @@ export function BulkPriceUpdatePanel({
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-slate-600">Category</span>
+          <select
+            data-testid="bulk-category-select"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            disabled={scopeType !== "category"}
+            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex items-end gap-2">
           <button
+            data-testid="bulk-preview-button"
             type="button"
             onClick={() => {
               void executeRequest(true);
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || shouldBlockByEmptyScope}
             className="min-h-11 rounded-xl border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-700 disabled:border-slate-200 disabled:text-slate-400"
           >
             Preview
           </button>
           <button
+            data-testid="bulk-apply-button"
             type="button"
             onClick={() => {
               void executeRequest(false);
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || shouldBlockByEmptyScope}
             className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
             Apply
@@ -272,23 +369,11 @@ export function BulkPriceUpdatePanel({
         </div>
       </div>
 
-      {scopeType === "category" ? (
-        <div className="mt-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-slate-600">Category</span>
-            <select
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      {shouldBlockByEmptyScope ? (
+        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+          No products available for this scope yet. Create products in the onboarding panel or
+          change scope.
+        </p>
       ) : null}
 
       {scopeType === "selection" ? (
@@ -297,8 +382,12 @@ export function BulkPriceUpdatePanel({
           <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto md:grid-cols-2">
             {products.map((product) => (
               <li key={product.id}>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700">
+                <label
+                  data-testid={`bulk-selection-item-${product.id}`}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
+                >
                   <input
+                    data-testid={`bulk-selection-checkbox-${product.id}`}
                     type="checkbox"
                     checked={selectedProductIds.includes(product.id)}
                     onChange={() => toggleProductSelection(product.id)}
@@ -315,6 +404,7 @@ export function BulkPriceUpdatePanel({
 
       {feedback ? (
         <p
+          data-testid="bulk-feedback"
           className={[
             "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
             isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",

@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+
 interface ProductListItem {
   readonly id: string;
   readonly name: string;
@@ -25,6 +27,7 @@ interface ApiErrorPayload {
 
 interface ProductOnboardingPanelProps {
   readonly onProductCreated?: () => Promise<void> | void;
+  readonly refreshToken?: number;
 }
 
 const defaultCategoryOptions = ["main", "drink", "snack", "dessert", "other"];
@@ -48,6 +51,7 @@ function formatMoney(value: number): string {
 
 export function ProductOnboardingPanel({
   onProductCreated,
+  refreshToken,
 }: ProductOnboardingPanelProps): JSX.Element {
   const [name, setName] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("main");
@@ -72,10 +76,10 @@ export function ProductOnboardingPanel({
   const loadProducts = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/v1/products");
-      const payload = (await response.json()) as ProductListResponse;
+      const { response, data } = await fetchJsonNoStore<ProductListResponse>("/api/v1/products");
+      const payload = data;
 
-      if (!response.ok) {
+      if (!response.ok || !payload) {
         setIsError(true);
         setFeedback("Failed to load products for onboarding.");
         return;
@@ -92,7 +96,17 @@ export function ProductOnboardingPanel({
 
   useEffect(() => {
     void loadProducts();
-  }, [loadProducts]);
+  }, [loadProducts, refreshToken]);
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      return;
+    }
+
+    if (!categories.includes(categoryId)) {
+      setCategoryId(categories[0]);
+    }
+  }, [categories, categoryId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -179,6 +193,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Name</span>
           <input
+            data-testid="onboarding-name-input"
             required
             minLength={2}
             value={name}
@@ -191,6 +206,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Category</span>
           <select
+            data-testid="onboarding-category-select"
             value={categoryId}
             onChange={(event) => setCategoryId(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
@@ -206,6 +222,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Price</span>
           <input
+            data-testid="onboarding-price-input"
             type="number"
             step="0.01"
             min="0.01"
@@ -218,6 +235,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Cost (optional)</span>
           <input
+            data-testid="onboarding-cost-input"
             type="number"
             step="0.01"
             min="0.01"
@@ -230,6 +248,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Initial stock</span>
           <input
+            data-testid="onboarding-stock-input"
             type="number"
             min="0"
             step="1"
@@ -242,6 +261,7 @@ export function ProductOnboardingPanel({
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Image URL (optional)</span>
           <input
+            data-testid="onboarding-image-input"
             value={imageUrl}
             onChange={(event) => setImageUrl(event.target.value)}
             placeholder="https://..."
@@ -251,6 +271,7 @@ export function ProductOnboardingPanel({
 
         <div className="md:col-span-2">
           <button
+            data-testid="onboarding-submit-button"
             type="submit"
             disabled={isSubmitting}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
@@ -262,6 +283,7 @@ export function ProductOnboardingPanel({
 
       {feedback ? (
         <p
+          data-testid="onboarding-feedback"
           className={[
             "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
             isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",

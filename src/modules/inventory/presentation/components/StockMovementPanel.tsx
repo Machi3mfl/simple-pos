@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+
 interface ProductItem {
   readonly id: string;
   readonly name: string;
@@ -32,6 +34,10 @@ interface ApiErrorPayload {
   readonly message?: string;
 }
 
+interface StockMovementPanelProps {
+  readonly refreshToken?: number;
+}
+
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -45,7 +51,9 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export function StockMovementPanel(): JSX.Element {
+export function StockMovementPanel({
+  refreshToken,
+}: StockMovementPanelProps): JSX.Element {
   const [products, setProducts] = useState<readonly ProductItem[]>([]);
   const [movements, setMovements] = useState<readonly StockMovementItem[]>([]);
   const [productId, setProductId] = useState<string>("");
@@ -60,26 +68,34 @@ export function StockMovementPanel(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const loadProducts = useCallback(async (): Promise<void> => {
-    const response = await fetch("/api/v1/products?activeOnly=true");
-    const payload = (await response.json()) as ProductListResponse;
+  const hasProducts = products.length > 0;
 
-    if (!response.ok) {
+  const loadProducts = useCallback(async (): Promise<void> => {
+    const { response, data } = await fetchJsonNoStore<ProductListResponse>(
+      "/api/v1/products?activeOnly=true",
+    );
+    const payload = data;
+
+    if (!response.ok || !payload) {
       throw new Error("Failed to load products.");
     }
 
     setProducts(payload.items);
-
-    if (!productId && payload.items.length > 0) {
-      setProductId(payload.items[0].id);
-    }
-  }, [productId]);
+    setProductId((current) => {
+      if (current && payload.items.some((item) => item.id === current)) {
+        return current;
+      }
+      return payload.items[0]?.id ?? "";
+    });
+  }, []);
 
   const loadMovementHistory = useCallback(async (): Promise<void> => {
-    const response = await fetch("/api/v1/stock-movements");
-    const payload = (await response.json()) as StockMovementListResponse;
+    const { response, data } = await fetchJsonNoStore<StockMovementListResponse>(
+      "/api/v1/stock-movements",
+    );
+    const payload = data;
 
-    if (!response.ok) {
+    if (!response.ok || !payload) {
       throw new Error("Failed to load stock movements.");
     }
 
@@ -100,7 +116,7 @@ export function StockMovementPanel(): JSX.Element {
 
   useEffect(() => {
     void loadData();
-  }, [loadData]);
+  }, [loadData, refreshToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -180,10 +196,13 @@ export function StockMovementPanel(): JSX.Element {
         <label className="flex flex-col gap-1 md:col-span-2">
           <span className="text-xs font-semibold text-slate-600">Product</span>
           <select
+            data-testid="inventory-product-select"
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
+            disabled={isLoading || !hasProducts}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
+            {!hasProducts ? <option value="">No products available</option> : null}
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name} ({product.id.slice(0, 8)})
@@ -195,6 +214,7 @@ export function StockMovementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Movement type</span>
           <select
+            data-testid="inventory-movement-type-select"
             value={movementType}
             onChange={(event) =>
               setMovementType(event.target.value as "inbound" | "outbound" | "adjustment")
@@ -210,9 +230,10 @@ export function StockMovementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Quantity</span>
           <input
+            data-testid="inventory-quantity-input"
             type="number"
             min="0.01"
-            step="1"
+            step="0.01"
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
@@ -222,6 +243,7 @@ export function StockMovementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Unit cost</span>
           <input
+            data-testid="inventory-unit-cost-input"
             type="number"
             min="0.01"
             step="0.01"
@@ -235,6 +257,7 @@ export function StockMovementPanel(): JSX.Element {
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">Reason (optional)</span>
           <input
+            data-testid="inventory-reason-input"
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
@@ -243,8 +266,9 @@ export function StockMovementPanel(): JSX.Element {
 
         <div className="md:col-span-2">
           <button
+            data-testid="inventory-submit-button"
             type="submit"
-            disabled={isSubmitting || isLoading}
+            disabled={isSubmitting || isLoading || !hasProducts}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
             {isSubmitting ? "Saving..." : "Register movement"}
@@ -252,8 +276,15 @@ export function StockMovementPanel(): JSX.Element {
         </div>
       </form>
 
+      {!isLoading && !hasProducts ? (
+        <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+          No products available yet. Create products from Catalog first, then come back.
+        </p>
+      ) : null}
+
       {feedback ? (
         <p
+          data-testid="inventory-feedback"
           className={[
             "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
             isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
@@ -282,6 +313,7 @@ export function StockMovementPanel(): JSX.Element {
           {movements.slice(0, 8).map((movement) => (
             <li
               key={movement.movementId}
+              data-testid={`inventory-history-item-${movement.movementId}`}
               className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
             >
               <p className="font-semibold text-slate-900">
