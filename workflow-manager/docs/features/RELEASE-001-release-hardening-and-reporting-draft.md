@@ -81,6 +81,10 @@ export interface SaleFilters {
 - Contract updates:
   - `src/app/api/v1/openapi.yaml` (`/reports/sales-history`, `SalesHistoryResponse`)
   - reporting DTOs now use Zod schemas.
+- Quality gates revalidated (`2026-02-28`):
+  - `npm run lint` ✅
+  - `npm run build` ✅
+  - `npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml` ✅
 - Test evidence:
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
   - `tests/e2e/reporting-ui-filters-and-metrics.spec.ts`
