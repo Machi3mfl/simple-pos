@@ -37,6 +37,16 @@ export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 export SUPABASE_SERVICE_ROLE_KEY="<local-service-role-key>"
 ```
 
+Alternative (auto-load keys from local Supabase status):
+
+```bash
+eval "$(npx -y supabase status -o env | rg '^[A-Z0-9_]+=')"
+POS_BACKEND_MODE=supabase \
+NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+npm run test:e2e:release-gate:real
+```
+
 4. Run real-backend release-gate tests:
 
 ```bash

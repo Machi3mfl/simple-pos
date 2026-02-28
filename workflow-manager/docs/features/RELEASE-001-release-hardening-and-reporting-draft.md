@@ -87,8 +87,8 @@ export interface SaleFilters {
   - `tests/e2e/api-contract-conformance.spec.ts`
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/e2e/release-gate-real-backend.spec.ts` (gated by `POS_BACKEND_MODE=supabase`)
-  - Full suite result: `24 passed` (Playwright mock mode).
-  - Real-backend gate result: `1 passed` (Playwright with local Supabase).
+  - Full suite result (`2026-02-28`): `30 passed`, `1 skipped` (Playwright mock mode).
+  - Real-backend gate result (`2026-02-28`): `1 passed` (Playwright with local Supabase).
 - Real-backend gate runbook and schema:
   - `workflow-manager/docs/runbooks/002-runbook-release-gate-real-backend-ready.md`
   - `supabase/migrations/20260228000000_simple_pos_core.sql`
