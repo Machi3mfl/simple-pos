@@ -86,7 +86,11 @@ export interface CreateDebtPaymentDTO {
 - AR UI surface integrated:
   - `src/modules/accounts-receivable/presentation/components/DebtManagementPanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Receivables`)
+  - uses `no-store` reads for candidate/summary consistency and supports refresh token from checkout flow
+  - stable UI selectors (`data-testid`) added for candidate/select/load/payment/ledger actions
 - Sales integration:
   - `CreateSaleUseCase` now records debt entry for `on_account` sales with `orderId = saleId`.
+  - `PosLayout` propagates a sales refresh token after checkout success to refresh `Receivables`
 - Test evidence:
   - `tests/e2e/ar-debt-ledger-and-payments-api.spec.ts`
+  - `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`
