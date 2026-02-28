@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
 import type { SalePaymentMethod } from "@/modules/sales/domain/entities/Sale";
 import { reportingMockRuntime } from "@/modules/reporting/infrastructure/runtime/reportingMockRuntime";
 import { salesHistoryResponseDTOSchema } from "@/modules/reporting/presentation/dtos/sales-history-response.dto";
@@ -22,19 +23,6 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-function parseDateQueryParam(value: string | null): Date | null | "invalid" {
-  if (value === null || value.trim().length === 0) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "invalid";
-  }
-
-  return parsed;
-}
-
 function parsePaymentMethodQueryParam(
   value: string | null,
 ): SalePaymentMethod | null | "invalid" {
@@ -51,8 +39,11 @@ function parsePaymentMethodQueryParam(
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const periodStart = parseDateQueryParam(url.searchParams.get("periodStart"));
-  const periodEnd = parseDateQueryParam(url.searchParams.get("periodEnd"));
+  const periodStart = parseDateQueryParam(
+    url.searchParams.get("periodStart"),
+    "start",
+  );
+  const periodEnd = parseDateQueryParam(url.searchParams.get("periodEnd"), "end");
   const paymentMethod = parsePaymentMethodQueryParam(
     url.searchParams.get("paymentMethod"),
   );

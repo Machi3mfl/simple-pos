@@ -13,11 +13,13 @@ interface SalesHistoryResponse {
   readonly items: ReadonlyArray<{
     readonly paymentMethod: "cash" | "on_account";
     readonly customerId?: string;
+    readonly customerName?: string;
   }>;
 }
 
 interface CustomerDebtSummary {
   readonly customerId: string;
+  readonly customerName: string;
   readonly outstandingBalance: number;
   readonly ledger: ReadonlyArray<{
     readonly entryId: string;
@@ -43,6 +45,11 @@ interface DebtManagementPanelProps {
   readonly refreshToken?: number;
 }
 
+interface CustomerCandidate {
+  readonly customerId: string;
+  readonly customerName?: string;
+}
+
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -63,7 +70,7 @@ function formatMoney(value: number): string {
 export function DebtManagementPanel({
   refreshToken,
 }: DebtManagementPanelProps): JSX.Element {
-  const [candidateCustomerIds, setCandidateCustomerIds] = useState<readonly string[]>([]);
+  const [candidateCustomers, setCandidateCustomers] = useState<readonly CustomerCandidate[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [manualCustomerId, setManualCustomerId] = useState<string>("");
   const [summary, setSummary] = useState<CustomerDebtSummary | null>(null);
@@ -95,15 +102,32 @@ export function DebtManagementPanel({
         return;
       }
 
-      const ids = Array.from(
-        new Set(
-          payload.items
-            .filter((item) => item.paymentMethod === "on_account" && Boolean(item.customerId))
-            .map((item) => item.customerId as string),
-        ),
-      );
+      const candidateById = new Map<string, CustomerCandidate>();
+      for (const item of payload.items) {
+        if (item.paymentMethod !== "on_account" || !item.customerId) {
+          continue;
+        }
 
-      setCandidateCustomerIds(ids);
+        const existing = candidateById.get(item.customerId);
+        if (!existing) {
+          candidateById.set(item.customerId, {
+            customerId: item.customerId,
+            customerName: item.customerName,
+          });
+          continue;
+        }
+
+        if (!existing.customerName && item.customerName) {
+          candidateById.set(item.customerId, {
+            customerId: item.customerId,
+            customerName: item.customerName,
+          });
+        }
+      }
+
+      const customers = Array.from(candidateById.values());
+      const ids = customers.map((customer) => customer.customerId);
+      setCandidateCustomers(customers);
       setSelectedCustomerId((current) => {
         if (current && ids.includes(current)) {
           return current;
@@ -284,12 +308,14 @@ export function DebtManagementPanel({
             onChange={(event) => setSelectedCustomerId(event.target.value)}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            {candidateCustomerIds.length === 0 ? (
+            {candidateCustomers.length === 0 ? (
               <option value="">No on-account customers yet</option>
             ) : null}
-            {candidateCustomerIds.map((id) => (
-              <option key={id} value={id}>
-                {id}
+            {candidateCustomers.map((customer) => (
+              <option key={customer.customerId} value={customer.customerId}>
+                {customer.customerName
+                  ? `${customer.customerName} (${customer.customerId.slice(0, 8)})`
+                  : customer.customerId}
               </option>
             ))}
           </select>
@@ -333,6 +359,9 @@ export function DebtManagementPanel({
 
       {summary ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+          <p className="text-xs font-semibold text-slate-500">
+            Customer {summary.customerName} ({summary.customerId.slice(0, 8)})
+          </p>
           <p className="text-xs font-semibold text-slate-500">Outstanding balance</p>
           <p data-testid="debt-outstanding-value" className="text-lg font-semibold text-slate-900">
             {formatMoney(summary.outstandingBalance)}

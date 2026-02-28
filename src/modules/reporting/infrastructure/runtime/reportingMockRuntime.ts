@@ -9,6 +9,9 @@ import type { InventoryRepository } from "@/modules/inventory/domain/repositorie
 import { InMemorySaleRepository } from "@/modules/sales/infrastructure/repositories/InMemorySaleRepository";
 import { SupabaseSaleRepository } from "@/modules/sales/infrastructure/repositories/SupabaseSaleRepository";
 import type { SaleRepository } from "@/modules/sales/domain/repositories/SaleRepository";
+import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
+import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
+import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
 
 import { GetProfitSummaryReportUseCase } from "../../application/use-cases/GetProfitSummaryReportUseCase";
 import { GetSalesHistoryReportUseCase } from "../../application/use-cases/GetSalesHistoryReportUseCase";
@@ -18,6 +21,7 @@ function createRepositories(): {
   saleRepository: SaleRepository;
   productRepository: ProductRepository;
   inventoryRepository: InventoryRepository;
+  customerRepository: CustomerRepository;
 } {
   if (getBackendMode() === "supabase") {
     const client = getSupabaseServerClient();
@@ -25,6 +29,7 @@ function createRepositories(): {
       saleRepository: new SupabaseSaleRepository(client),
       productRepository: new SupabaseProductRepository(client),
       inventoryRepository: new SupabaseInventoryRepository(client),
+      customerRepository: new SupabaseCustomerRepository(client),
     };
   }
 
@@ -32,10 +37,12 @@ function createRepositories(): {
     saleRepository: new InMemorySaleRepository(),
     productRepository: new InMemoryProductRepository(),
     inventoryRepository: new InMemoryInventoryRepository(),
+    customerRepository: new InMemoryCustomerRepository(),
   };
 }
 
-const { saleRepository, productRepository, inventoryRepository } = createRepositories();
+const { saleRepository, productRepository, inventoryRepository, customerRepository } =
+  createRepositories();
 
 export const reportingMockRuntime = {
   getTopProductsReportUseCase: new GetTopProductsReportUseCase(
@@ -46,5 +53,8 @@ export const reportingMockRuntime = {
     saleRepository,
     inventoryRepository,
   ),
-  getSalesHistoryReportUseCase: new GetSalesHistoryReportUseCase(saleRepository),
+  getSalesHistoryReportUseCase: new GetSalesHistoryReportUseCase(
+    saleRepository,
+    customerRepository,
+  ),
 };

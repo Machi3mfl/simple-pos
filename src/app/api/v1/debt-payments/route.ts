@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 
+import { getBackendMode } from "@/infrastructure/config/runtimeMode";
+import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import {
   CustomerNotFoundForDebtError,
   DebtPaymentExceedsOutstandingError,
   AccountsReceivableDomainError,
 } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
+import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
 import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
+import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { createDebtPaymentDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
 import { debtPaymentResponseDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
 import { RegisterDebtPaymentUseCase } from "@/modules/accounts-receivable/application/use-cases/RegisterDebtPaymentUseCase";
+import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
 import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
+import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -22,8 +28,14 @@ interface ApiErrorResponse {
   readonly details?: ApiErrorDetail[];
 }
 
-const customerRepository = new InMemoryCustomerRepository();
-const debtLedgerRepository = new InMemoryDebtLedgerRepository();
+const customerRepository: CustomerRepository =
+  getBackendMode() === "supabase"
+    ? new SupabaseCustomerRepository(getSupabaseServerClient())
+    : new InMemoryCustomerRepository();
+const debtLedgerRepository: DebtLedgerRepository =
+  getBackendMode() === "supabase"
+    ? new SupabaseDebtLedgerRepository(getSupabaseServerClient())
+    : new InMemoryDebtLedgerRepository();
 const registerDebtPaymentUseCase = new RegisterDebtPaymentUseCase(
   debtLedgerRepository,
   customerRepository,

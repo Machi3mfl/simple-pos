@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Wallet,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
@@ -17,6 +18,11 @@ import { ProductOnboardingPanel } from "@/modules/catalog/presentation/component
 import { StockMovementPanel } from "@/modules/inventory/presentation/components/StockMovementPanel";
 import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
 import { OfflineSyncPanel } from "@/modules/sync/presentation/components/OfflineSyncPanel";
+import {
+  isPosWorkspaceId,
+  workspacePathById,
+  type PosWorkspaceId,
+} from "@/modules/sales/presentation/posWorkspace";
 
 import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
@@ -45,14 +51,6 @@ interface SeedProductInput {
   readonly price: number;
   readonly initialStock: number;
 }
-
-type PosWorkspaceId =
-  | "sales"
-  | "catalog"
-  | "inventory"
-  | "receivables"
-  | "reporting"
-  | "sync";
 
 const navItems: readonly PosNavItem[] = [
   { id: "sales", label: "Sales", icon: ShoppingCart },
@@ -170,19 +168,29 @@ function buildInitialCartSeed(
     }));
 }
 
-function isPosWorkspaceId(value: string): value is PosWorkspaceId {
-  return [
-    "sales",
-    "catalog",
-    "inventory",
-    "receivables",
-    "reporting",
-    "sync",
-  ].includes(value);
+function resolveWorkspaceFromPathname(pathname: string | null): PosWorkspaceId | null {
+  if (!pathname) {
+    return null;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeWorkspace = segments[1] ?? "";
+  if (!isPosWorkspaceId(maybeWorkspace)) {
+    return null;
+  }
+
+  return maybeWorkspace;
 }
 
-export function PosLayout(): JSX.Element {
-  const [activeNavItemId, setActiveNavItemId] = useState<PosWorkspaceId>("sales");
+interface PosLayoutProps {
+  readonly initialWorkspace?: PosWorkspaceId;
+}
+
+export function PosLayout({
+  initialWorkspace = "sales",
+}: PosLayoutProps): JSX.Element {
+  const router = useRouter();
+  const pathname = usePathname();
   const [catalogRefreshToken, setCatalogRefreshToken] = useState<number>(0);
   const [salesRefreshToken, setSalesRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
@@ -191,6 +199,10 @@ export function PosLayout(): JSX.Element {
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [hasSeededCart, setHasSeededCart] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
+  const activeNavItemId = useMemo(
+    () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
+    [initialWorkspace, pathname],
+  );
 
   const categories = useMemo(() => {
     const dynamicCategories = new Map<string, CatalogCategory>();
@@ -445,7 +457,7 @@ export function PosLayout(): JSX.Element {
           activeItemId={activeNavItemId}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
-              setActiveNavItemId(itemId);
+              router.push(workspacePathById[itemId]);
             }
           }}
         />

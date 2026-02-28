@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 
+import { getBackendMode } from "@/infrastructure/config/runtimeMode";
+import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
+import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
 import { GetCustomerDebtSummaryUseCase } from "@/modules/accounts-receivable/application/use-cases/GetCustomerDebtSummaryUseCase";
 import { CustomerNotFoundForDebtError } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
+import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
 import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
+import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
+import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
 import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
+import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 import { customerDebtSummaryResponseDTOSchema } from "@/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
 
 interface ApiErrorResponse {
@@ -11,8 +18,14 @@ interface ApiErrorResponse {
   readonly message: string;
 }
 
-const customerRepository = new InMemoryCustomerRepository();
-const debtLedgerRepository = new InMemoryDebtLedgerRepository();
+const customerRepository: CustomerRepository =
+  getBackendMode() === "supabase"
+    ? new SupabaseCustomerRepository(getSupabaseServerClient())
+    : new InMemoryCustomerRepository();
+const debtLedgerRepository: DebtLedgerRepository =
+  getBackendMode() === "supabase"
+    ? new SupabaseDebtLedgerRepository(getSupabaseServerClient())
+    : new InMemoryDebtLedgerRepository();
 const getCustomerDebtSummaryUseCase = new GetCustomerDebtSummaryUseCase(
   debtLedgerRepository,
   customerRepository,
@@ -25,27 +38,17 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-function parseDateQueryParam(value: string | null): Date | null | "invalid" {
-  if (value === null || value.trim().length === 0) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "invalid";
-  }
-
-  return date;
-}
-
 export async function GET(
   request: Request,
   context: { params: { id: string } },
 ): Promise<Response> {
   const customerId = context.params.id;
   const url = new URL(request.url);
-  const periodStart = parseDateQueryParam(url.searchParams.get("periodStart"));
-  const periodEnd = parseDateQueryParam(url.searchParams.get("periodEnd"));
+  const periodStart = parseDateQueryParam(
+    url.searchParams.get("periodStart"),
+    "start",
+  );
+  const periodEnd = parseDateQueryParam(url.searchParams.get("periodEnd"), "end");
 
   if (periodStart === "invalid" || periodEnd === "invalid") {
     return errorResponse(400, {

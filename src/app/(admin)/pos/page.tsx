@@ -1,5 +1,5 @@
-import { PosLayout } from "@/modules/sales/presentation/components/PosLayout";
+import { redirect } from "next/navigation";
 
-export default function PosPage(): JSX.Element {
-  return <PosLayout />;
+export default function PosPage(): null {
+  redirect("/pos/sales");
 }

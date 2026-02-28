@@ -6,6 +6,7 @@ interface SalesHistoryItem {
   readonly saleId: string;
   readonly paymentMethod: "cash" | "on_account";
   readonly customerId?: string;
+  readonly customerName?: string;
   readonly total: number;
   readonly itemCount: number;
   readonly createdAt: string;
@@ -250,7 +251,11 @@ export function ReportingPanel(): JSX.Element {
                 </p>
                 <p className="mt-1">
                   Sale {sale.saleId.slice(0, 8)}
-                  {sale.customerId ? ` • Customer ${sale.customerId.slice(0, 8)}` : ""}
+                  {sale.customerName
+                    ? ` • Customer ${sale.customerName}`
+                    : sale.customerId
+                      ? ` • Customer ${sale.customerId.slice(0, 8)}`
+                      : ""}
                 </p>
               </li>
             ))}

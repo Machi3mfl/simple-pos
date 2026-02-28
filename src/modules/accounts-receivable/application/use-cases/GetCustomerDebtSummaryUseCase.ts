@@ -12,6 +12,7 @@ export interface GetCustomerDebtSummaryUseCaseInput {
 
 export interface GetCustomerDebtSummaryUseCaseOutput {
   readonly customerId: string;
+  readonly customerName: string;
   readonly outstandingBalance: number;
   readonly ledger: ReadonlyArray<{
     readonly entryId: string;
@@ -44,6 +45,7 @@ export class GetCustomerDebtSummaryUseCase {
 
     return {
       customerId: input.customerId,
+      customerName: customer.getName(),
       outstandingBalance: calculateOutstandingBalance(fullLedger),
       ledger: filteredLedger.map((entry) => ({
         entryId: entry.toPrimitives().entryId,

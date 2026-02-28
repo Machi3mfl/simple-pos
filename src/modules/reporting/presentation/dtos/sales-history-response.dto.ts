@@ -5,6 +5,7 @@ export const saleHistoryItemDTOSchema = z
     saleId: z.string().min(1),
     paymentMethod: z.enum(["cash", "on_account"]),
     customerId: z.string().min(1).optional(),
+    customerName: z.string().min(2).max(120).optional(),
     total: z.number().min(0),
     itemCount: z.number().int().min(0),
     createdAt: z.string().datetime(),

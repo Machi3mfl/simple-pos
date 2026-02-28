@@ -16,6 +16,7 @@ export const debtLedgerEntryDTOSchema = z
 export const customerDebtSummaryResponseDTOSchema = z
   .object({
     customerId: z.string().min(1),
+    customerName: z.string().min(2).max(120),
     outstandingBalance: z.number().min(0),
     ledger: z.array(debtLedgerEntryDTOSchema),
   })
