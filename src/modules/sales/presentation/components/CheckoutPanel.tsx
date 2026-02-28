@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { PaymentMethodDTO } from "../dtos/create-sale.dto";
+import {
+  enqueueOfflineSyncEvent,
+  flushOfflineSyncQueue,
+  getPendingOfflineSyncCount,
+} from "@/modules/sync/presentation/offline/offlineSyncQueue";
 
 export interface CheckoutOrderItem {
   readonly id: string;
@@ -54,6 +59,42 @@ export function CheckoutPanel({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+
+  const refreshPendingSyncCount = useCallback(() => {
+    setPendingSyncCount(getPendingOfflineSyncCount());
+  }, []);
+
+  const retryOfflineSync = useCallback(async () => {
+    const result = await flushOfflineSyncQueue();
+    refreshPendingSyncCount();
+
+    if (result.synced > 0 && result.failed === 0 && result.pending === 0) {
+      setIsError(false);
+      setFeedback("Offline events synced successfully.");
+      return;
+    }
+
+    if (result.failed > 0 || result.pending > 0) {
+      setIsError(true);
+      setFeedback("Offline sync still has pending/failed events. Retry again.");
+    }
+  }, [refreshPendingSyncCount]);
+
+  useEffect(() => {
+    refreshPendingSyncCount();
+
+    void retryOfflineSync();
+
+    const onOnline = (): void => {
+      void retryOfflineSync();
+    };
+
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+    };
+  }, [refreshPendingSyncCount, retryOfflineSync]);
 
   async function submitCheckout(): Promise<void> {
     setFeedback(null);
@@ -96,8 +137,22 @@ export function CheckoutPanel({
         setCustomerName("");
       }
     } catch {
-      setIsError(true);
-      setFeedback("Network error while creating sale.");
+      enqueueOfflineSyncEvent({
+        eventType: "sale_created",
+        payload: {
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+          paymentMethod,
+          customerName: paymentMethod === "on_account" ? customerName.trim() : undefined,
+        },
+        idempotencyKey: `sale-offline-${crypto.randomUUID()}`,
+      });
+      refreshPendingSyncCount();
+      setIsError(false);
+      setFeedback("Sale saved offline. Pending sync.");
+      setIsPaymentSheetOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -264,6 +319,18 @@ export function CheckoutPanel({
           >
             {feedback}
           </p>
+        ) : null}
+
+        {pendingSyncCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              void retryOfflineSync();
+            }}
+            className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+          >
+            Retry Offline Sync ({pendingSyncCount})
+          </button>
         ) : null}
       </footer>
     </section>
