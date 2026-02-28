@@ -7,6 +7,7 @@ export interface CatalogCategory {
 export interface CatalogProduct {
   readonly id: string;
   readonly name: string;
+  readonly categoryId: string;
   readonly subtitle: string;
   readonly price: number;
   readonly isAvailable: boolean;
@@ -18,12 +19,24 @@ interface ProductCatalogPanelProps {
   readonly categories: readonly CatalogCategory[];
   readonly activeCategoryId: string;
   readonly products: readonly CatalogProduct[];
+  readonly searchTerm: string;
+  readonly isLoading: boolean;
+  readonly onSearchTermChange: (value: string) => void;
+  readonly onCategorySelect: (categoryId: string) => void;
+  readonly onProductSelect: (productId: string) => void;
+  readonly onSeedDemoCatalog: () => Promise<void>;
 }
 
 export function ProductCatalogPanel({
   categories,
   activeCategoryId,
   products,
+  searchTerm,
+  isLoading,
+  onSearchTermChange,
+  onCategorySelect,
+  onProductSelect,
+  onSeedDemoCatalog,
 }: ProductCatalogPanelProps): JSX.Element {
   return (
     <section className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8">
@@ -32,8 +45,15 @@ export function ProductCatalogPanel({
           Choose Categories
         </h1>
         <label className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 shadow-[0_10px_30px_rgba(16,24,40,0.05)] lg:w-[300px]">
-          <span className="text-sm text-slate-400">Search Menu</span>
-          <span className="text-xl text-slate-400">⌕</span>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => onSearchTermChange(event.target.value)}
+            placeholder="Search Menu"
+            className="w-full bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
+            aria-label="Search menu"
+          />
+          <span className="ml-2 text-xl text-slate-400">⌕</span>
         </label>
       </header>
 
@@ -45,6 +65,7 @@ export function ProductCatalogPanel({
             <button
               key={category.id}
               type="button"
+              onClick={() => onCategorySelect(category.id)}
               className={[
                 "min-h-[88px] min-w-[102px] rounded-2xl border px-4 py-2 text-sm font-semibold transition",
                 isActive
@@ -71,9 +92,13 @@ export function ProductCatalogPanel({
           </p>
           <button
             type="button"
+            onClick={() => {
+              void onSeedDemoCatalog();
+            }}
+            disabled={isLoading}
             className="mt-4 min-h-12 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white"
           >
-            Open onboarding
+            {isLoading ? "Loading..." : "Open onboarding"}
           </button>
         </div>
       ) : (
@@ -82,7 +107,10 @@ export function ProductCatalogPanel({
             <button
               key={product.id}
               type="button"
-              className="min-h-[330px] rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5"
+              onClick={() => onProductSelect(product.id)}
+              disabled={!product.isAvailable}
+              data-testid={`product-card-${product.id}`}
+              className="min-h-[330px] rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <div className="mx-auto mt-2 flex size-32 items-center justify-center rounded-full bg-slate-100 text-6xl">
                 {product.imageUrl ? (

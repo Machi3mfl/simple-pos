@@ -74,12 +74,12 @@ curl -X POST /api/v1/sales \
 
 ## Acceptance Criteria
 
-- [ ] Tablet viewport is primary optimized layout.
-- [ ] Checkout blocks unsupported payment methods.
-- [ ] Checkout summary is visible and understandable for 60+ operator.
+- [x] Tablet viewport is primary optimized layout.
+- [x] Checkout blocks unsupported payment methods.
+- [x] Checkout summary is visible and understandable for 60+ operator.
 - [x] Basic checkout happy path is covered by mock E2E.
-- [ ] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
-- [ ] Product cards, category chips, and checkout action preserve large-target touch usability.
+- [x] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
+- [x] Product cards, category chips, and checkout action preserve large-target touch usability.
 
 ## Current Output
 
@@ -90,9 +90,16 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
+- UI interaction wiring added:
+  - Catalog loaded from `GET /api/v1/products?activeOnly=true`
+  - Category and search filtering in catalog panel
+  - Product card click adds/increments cart lines
+  - Cart quantity controls (`+` / `-`) update totals in real time
+  - Checkout uses real product IDs from catalog data
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation
 - Mock E2E coverage:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/e2e/pos-visual-baseline.spec.ts`
+  - deterministic UI fixtures for product catalog in POS specs

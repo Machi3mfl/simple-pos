@@ -1,6 +1,21 @@
 import { expect, test } from "@playwright/test";
 
+import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
+
 test("renders tablet three-zone layout baseline", async ({ page }) => {
+  await page.route("**/api/v1/products**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(productsListSuccess),
+    });
+  });
+
   await page.goto("/pos");
 
   await expect(page.getByRole("button", { name: "Menu" })).toBeVisible();

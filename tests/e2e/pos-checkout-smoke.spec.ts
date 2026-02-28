@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import cashSuccess from "../fixtures/mock-api/sale-cash-success.json";
 import onAccountMissingCustomer from "../fixtures/mock-api/sale-on-account-missing-customer-error.json";
 import onAccountSuccess from "../fixtures/mock-api/sale-on-account-success.json";
+import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
 import unsupportedMethod from "../fixtures/mock-api/sale-unsupported-method-error.json";
 
 interface CreateSaleRequestPayload {
@@ -60,7 +61,23 @@ async function mockSalesEndpoint(page: Page): Promise<void> {
   });
 }
 
+async function mockProductsEndpoint(page: Page): Promise<void> {
+  await page.route("**/api/v1/products**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(productsListSuccess),
+    });
+  });
+}
+
 test.beforeEach(async ({ page }) => {
+  await mockProductsEndpoint(page);
   await mockSalesEndpoint(page);
 });
 
@@ -69,11 +86,14 @@ test("runs checkout smoke in mock mode for cash and on_account", async ({ page }
 
   await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+  await expect(page.getByTestId("product-card-product-001")).toBeVisible();
+  await page.getByTestId("product-card-product-001").click();
 
   await page.getByRole("button", { name: "Process to Payment" }).click();
   await page.getByRole("button", { name: "Confirm Payment" }).click();
   await expect(page.getByText("Checkout completed successfully.")).toBeVisible();
 
+  await page.getByTestId("product-card-product-002").click();
   await page.getByRole("button", { name: "Process to Payment" }).click();
   await page.getByRole("button", { name: "On account" }).click();
   await page.getByRole("button", { name: "Confirm Payment" }).click();

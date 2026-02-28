@@ -22,6 +22,9 @@ interface CheckoutPanelProps {
   readonly subtotal: number;
   readonly discount: number;
   readonly tax: number;
+  readonly onIncreaseQuantity: (productId: string) => void;
+  readonly onDecreaseQuantity: (productId: string) => void;
+  readonly onCheckoutSuccess: () => void;
 }
 
 interface CheckoutApiError {
@@ -51,8 +54,11 @@ export function CheckoutPanel({
   subtotal,
   discount,
   tax,
+  onIncreaseQuantity,
+  onDecreaseQuantity,
+  onCheckoutSuccess,
 }: CheckoutPanelProps): JSX.Element {
-  const total = useMemo(() => subtotal - discount - tax, [subtotal, discount, tax]);
+  const total = useMemo(() => subtotal - discount + tax, [subtotal, discount, tax]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodDTO>("cash");
   const [customerName, setCustomerName] = useState<string>("");
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState<boolean>(false);
@@ -99,6 +105,12 @@ export function CheckoutPanel({
   async function submitCheckout(): Promise<void> {
     setFeedback(null);
 
+    if (items.length === 0) {
+      setIsError(true);
+      setFeedback("Add at least one product before checkout.");
+      return;
+    }
+
     if (paymentMethod === "on_account" && customerName.trim().length < 2) {
       setIsError(true);
       setFeedback("For on-account payment, assign a customer name first.");
@@ -133,6 +145,7 @@ export function CheckoutPanel({
       setIsError(false);
       setFeedback("Checkout completed successfully.");
       setIsPaymentSheetOpen(false);
+      onCheckoutSuccess();
       if (paymentMethod === "cash") {
         setCustomerName("");
       }
@@ -170,6 +183,7 @@ export function CheckoutPanel({
         {items.map((item) => (
           <article
             key={item.id}
+            data-testid={`order-item-${item.id}`}
             className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
           >
             <div className="flex items-center gap-3">
@@ -191,6 +205,7 @@ export function CheckoutPanel({
               <div className="shrink-0 flex items-center gap-1">
                 <button
                   type="button"
+                  onClick={() => onDecreaseQuantity(item.id)}
                   className="flex size-8 items-center justify-center rounded-full border border-[#5f97f2] text-base font-semibold text-[#3f85ef]"
                   aria-label={`decrease ${item.name}`}
                 >
@@ -201,6 +216,7 @@ export function CheckoutPanel({
                 </span>
                 <button
                   type="button"
+                  onClick={() => onIncreaseQuantity(item.id)}
                   className="flex size-8 items-center justify-center rounded-full bg-[#3f85ef] text-base font-semibold text-white"
                   aria-label={`increase ${item.name}`}
                 >
@@ -238,8 +254,9 @@ export function CheckoutPanel({
 
           <button
             type="button"
+            disabled={items.length === 0}
             onClick={() => setIsPaymentSheetOpen(true)}
-            className="mt-4 min-h-[54px] w-full rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.95rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.4)]"
+            className="mt-4 min-h-[54px] w-full rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.95rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.4)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
           >
             Process to Payment
           </button>

@@ -1,4 +1,7 @@
+"use client";
+
 import { CircleDollarSign, History, House, Percent, UtensilsCrossed } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
 import {
@@ -8,6 +11,26 @@ import {
 } from "./ProductCatalogPanel";
 import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 
+interface ProductListApiItem {
+  readonly id: string;
+  readonly name: string;
+  readonly categoryId: string;
+  readonly price: number;
+  readonly imageUrl?: string;
+  readonly isActive: boolean;
+}
+
+interface ProductListApiResponse {
+  readonly items: readonly ProductListApiItem[];
+}
+
+interface SeedProductInput {
+  readonly name: string;
+  readonly categoryId: string;
+  readonly price: number;
+  readonly initialStock: number;
+}
+
 const navItems: readonly PosNavItem[] = [
   { id: "home", label: "Home", icon: House },
   { id: "menu", label: "Menu", icon: UtensilsCrossed },
@@ -16,7 +39,7 @@ const navItems: readonly PosNavItem[] = [
   { id: "wallet", label: "Wallet", icon: CircleDollarSign },
 ];
 
-const categories: readonly CatalogCategory[] = [
+const baseCategories: readonly CatalogCategory[] = [
   { id: "all", label: "All", emoji: "🧃" },
   { id: "main", label: "Main", emoji: "🍜" },
   { id: "drink", label: "Drink", emoji: "🥤" },
@@ -24,52 +47,291 @@ const categories: readonly CatalogCategory[] = [
   { id: "dessert", label: "Dessert", emoji: "🍬" },
 ];
 
-const products: readonly CatalogProduct[] = [
-  {
-    id: "prod-1",
-    name: "Reguler Noodles",
-    subtitle: "Instant noodles with egg and vegetables",
-    price: 10,
-    isAvailable: true,
-    emoji: "🍜",
-  },
-  {
-    id: "prod-2",
-    name: "Ebi Spaghetti",
-    subtitle: "Spicy spaghetti with fresh shrimps",
-    price: 35,
-    isAvailable: true,
-    emoji: "🍝",
-  },
-  {
-    id: "prod-3",
-    name: "Javanes Noodles",
-    subtitle: "Noodles with meat and vegetables",
-    price: 20,
-    isAvailable: false,
-    emoji: "🥘",
-  },
-  {
-    id: "prod-4",
-    name: "Iced Tea",
-    subtitle: "Cold lemon tea",
-    price: 6,
-    isAvailable: true,
-    emoji: "🧋",
-  },
+const demoCatalogSeed: readonly SeedProductInput[] = [
+  { name: "Reguler Noodles", categoryId: "main", price: 10, initialStock: 30 },
+  { name: "Chicken Noodles", categoryId: "main", price: 15, initialStock: 30 },
+  { name: "Chicken Curry", categoryId: "main", price: 25, initialStock: 25 },
+  { name: "Ebi Curry", categoryId: "main", price: 12, initialStock: 20 },
+  { name: "Javanes Noodles", categoryId: "main", price: 20, initialStock: 15 },
+  { name: "Iced Tea", categoryId: "drink", price: 6, initialStock: 30 },
 ];
 
-const orderItems: readonly CheckoutOrderItem[] = [
-  { id: "line-1", name: "Reguler Noodles", price: 20, quantity: 2, emoji: "🍜" },
-  { id: "line-2", name: "Chicken Noodles", price: 15, quantity: 1, emoji: "🍲" },
-  { id: "line-3", name: "Chicken Curry", price: 25, quantity: 1, emoji: "🍛" },
-  { id: "line-4", name: "Ebi Curry", price: 12, quantity: 1, emoji: "🥘" },
-];
+const categoryEmojiById: Record<string, string> = {
+  all: "🧃",
+  main: "🍜",
+  drink: "🥤",
+  snack: "🍔",
+  dessert: "🍬",
+};
+
+const nameEmojiHints: Record<string, string> = {
+  noodles: "🍜",
+  spaghetti: "🍝",
+  curry: "🍛",
+  tea: "🧋",
+  soda: "🥤",
+  burger: "🍔",
+  alfajor: "🍪",
+};
+
+function resolveCategoryEmoji(categoryId: string): string {
+  return categoryEmojiById[categoryId] ?? "🍽️";
+}
+
+function resolveProductEmoji(name: string, categoryId: string): string {
+  const normalizedName = name.toLowerCase();
+  const hint = Object.entries(nameEmojiHints).find(([token]) =>
+    normalizedName.includes(token),
+  );
+
+  if (hint) {
+    return hint[1];
+  }
+
+  return resolveCategoryEmoji(categoryId);
+}
+
+function resolveProductSubtitle(name: string, categoryId: string): string {
+  const categoryLabel =
+    baseCategories.find((category) => category.id === categoryId)?.label ??
+    categoryId;
+
+  return `${name} • ${categoryLabel}`;
+}
+
+function toCatalogProduct(item: ProductListApiItem): CatalogProduct {
+  return {
+    id: item.id,
+    name: item.name,
+    categoryId: item.categoryId,
+    subtitle: resolveProductSubtitle(item.name, item.categoryId),
+    price: item.price,
+    isAvailable: item.isActive,
+    emoji: resolveProductEmoji(item.name, item.categoryId),
+    imageUrl: item.imageUrl,
+  };
+}
+
+function buildInitialCartSeed(
+  products: readonly CatalogProduct[],
+): ReadonlyArray<{ readonly product: CatalogProduct; readonly quantity: number }> {
+  const preferredNames = [
+    { name: "Reguler Noodles", quantity: 2 },
+    { name: "Chicken Noodles", quantity: 1 },
+    { name: "Chicken Curry", quantity: 1 },
+    { name: "Ebi Curry", quantity: 1 },
+  ];
+
+  const seeded = preferredNames
+    .map((entry) => ({
+      product: products.find((product) => product.name === entry.name),
+      quantity: entry.quantity,
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is { readonly product: CatalogProduct; readonly quantity: number } =>
+        Boolean(entry.product),
+    );
+
+  if (seeded.length > 0) {
+    return seeded;
+  }
+
+  return products
+    .slice(0, 3)
+    .map((product) => ({
+      product,
+      quantity: 1,
+    }));
+}
 
 export function PosLayout(): JSX.Element {
-  const subtotal = 85;
-  const discount = 5;
-  const tax = 8;
+  const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const [hasSeededCart, setHasSeededCart] = useState<boolean>(false);
+  const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
+
+  const categories = useMemo(() => {
+    const dynamicCategories = new Map<string, CatalogCategory>();
+    for (const category of baseCategories) {
+      dynamicCategories.set(category.id, category);
+    }
+
+    for (const product of catalogProducts) {
+      const categoryId = product.categoryId;
+
+      if (!dynamicCategories.has(categoryId)) {
+        dynamicCategories.set(categoryId, {
+          id: categoryId,
+          label: categoryId[0]?.toUpperCase() + categoryId.slice(1),
+          emoji: resolveCategoryEmoji(categoryId),
+        });
+      }
+    }
+
+    return Array.from(dynamicCategories.values());
+  }, [catalogProducts]);
+
+  const loadCatalogProducts = useCallback(async (): Promise<readonly CatalogProduct[]> => {
+    const response = await fetch("/api/v1/products?activeOnly=true");
+    if (!response.ok) {
+      throw new Error("Failed to load catalog products.");
+    }
+
+    const payload = (await response.json()) as ProductListApiResponse;
+    return payload.items.map(toCatalogProduct);
+  }, []);
+
+  const seedDemoCatalog = useCallback(async (): Promise<void> => {
+    setIsLoadingProducts(true);
+    try {
+      await Promise.all(
+        demoCatalogSeed.map((product) =>
+          fetch("/api/v1/products", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify(product),
+          }),
+        ),
+      );
+
+      const seededProducts = await loadCatalogProducts();
+      setCatalogProducts(seededProducts);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [loadCatalogProducts]);
+
+  const refreshCatalog = useCallback(async (): Promise<void> => {
+    setIsLoadingProducts(true);
+    try {
+      const products = await loadCatalogProducts();
+      if (products.length === 0) {
+        await seedDemoCatalog();
+        return;
+      }
+
+      setCatalogProducts(products);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [loadCatalogProducts, seedDemoCatalog]);
+
+  useEffect(() => {
+    void refreshCatalog();
+  }, [refreshCatalog]);
+
+  useEffect(() => {
+    if (hasSeededCart || catalogProducts.length === 0) {
+      return;
+    }
+
+    const bootstrappedItems = buildInitialCartSeed(catalogProducts).map(
+      ({ product, quantity }) => ({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        quantity,
+        emoji: product.emoji,
+      }),
+    );
+
+    if (bootstrappedItems.length > 0) {
+      setCartItems(bootstrappedItems);
+      setHasSeededCart(true);
+    }
+  }, [catalogProducts, hasSeededCart]);
+
+  const visibleProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return catalogProducts.filter((product) => {
+      if (activeCategoryId !== "all") {
+        if (product.categoryId !== activeCategoryId) {
+          return false;
+        }
+      }
+
+      if (normalizedSearch.length > 0) {
+        return product.name.toLowerCase().includes(normalizedSearch);
+      }
+
+      return true;
+    });
+  }, [catalogProducts, activeCategoryId, searchTerm]);
+
+  const addProductToCart = useCallback(
+    (productId: string): void => {
+      const selectedProduct = catalogProducts.find((product) => product.id === productId);
+      if (!selectedProduct || !selectedProduct.isAvailable) {
+        return;
+      }
+
+      setCartItems((current) => {
+        const existing = current.find((item) => item.id === productId);
+        if (!existing) {
+          return [
+            ...current,
+            {
+              id: selectedProduct.id,
+              name: selectedProduct.name,
+              price: selectedProduct.price,
+              quantity: 1,
+              emoji: selectedProduct.emoji,
+            },
+          ];
+        }
+
+        return current.map((item) =>
+          item.id === productId
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+              }
+            : item,
+        );
+      });
+    },
+    [catalogProducts],
+  );
+
+  const increaseQuantity = useCallback((productId: string): void => {
+    setCartItems((current) =>
+      current.map((item) =>
+        item.id === productId
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+            }
+          : item,
+      ),
+    );
+  }, []);
+
+  const decreaseQuantity = useCallback((productId: string): void => {
+    setCartItems((current) =>
+      current
+        .map((item) =>
+          item.id === productId
+            ? {
+                ...item,
+                quantity: item.quantity - 1,
+              }
+            : item,
+        )
+        .filter((item) => item.quantity > 0),
+    );
+  }, []);
+
+  const subtotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cartItems],
+  );
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
@@ -77,14 +339,26 @@ export function PosLayout(): JSX.Element {
         <LeftNavRail items={navItems} activeItemId="menu" />
         <ProductCatalogPanel
           categories={categories}
-          activeCategoryId="main"
-          products={products}
+          activeCategoryId={activeCategoryId}
+          products={visibleProducts}
+          searchTerm={searchTerm}
+          isLoading={isLoadingProducts}
+          onSearchTermChange={setSearchTerm}
+          onCategorySelect={setActiveCategoryId}
+          onProductSelect={addProductToCart}
+          onSeedDemoCatalog={seedDemoCatalog}
         />
         <CheckoutPanel
-          items={orderItems}
+          items={cartItems}
           subtotal={subtotal}
-          discount={discount}
-          tax={tax}
+          discount={0}
+          tax={0}
+          onIncreaseQuantity={increaseQuantity}
+          onDecreaseQuantity={decreaseQuantity}
+          onCheckoutSuccess={() => {
+            setCartItems([]);
+            setHasSeededCart(true);
+          }}
         />
       </div>
     </main>
