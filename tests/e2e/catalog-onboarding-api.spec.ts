@@ -112,6 +112,31 @@ test.describe("catalog onboarding api", () => {
     expect(listParsed.data.items.some((item) => item.name === "Alfajor Premium")).toBe(true);
   });
 
+  test("canonicalizes custom category names into stable category codes", async ({
+    request,
+  }) => {
+    const createResponse = await request.post("/api/v1/products", {
+      data: {
+        name: "Tostadas Artesanales",
+        categoryId: "Desayuno y merienda",
+        price: 3.5,
+        cost: 1.2,
+        initialStock: 12,
+      },
+    });
+
+    expect(createResponse.status()).toBe(201);
+    const createBody = await createResponse.json();
+    const createParsed = productResponseDTOSchema.safeParse(createBody);
+    expect(createParsed.success).toBe(true);
+
+    if (!createParsed.success) {
+      throw new Error("Expected valid product response for canonical category creation");
+    }
+
+    expect(createParsed.data.item.categoryId).toBe("desayuno-y-merienda");
+  });
+
   test("returns validation errors for invalid payload and invalid query params", async ({
     request,
   }) => {

@@ -54,6 +54,7 @@ test("opens product sourcing from /products and searches through the UI", async 
   await page.getByTestId("products-workspace-open-sourcing-link").click();
 
   await expect(page).toHaveURL(/\/products\/sourcing$/);
+  await expect(page.getByTestId("nav-item-products")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Busqueda asistida de productos" })).toBeVisible();
 
   await page.getByTestId("product-sourcing-search-input").fill("co");

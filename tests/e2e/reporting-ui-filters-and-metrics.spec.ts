@@ -15,7 +15,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(productName);
   await page.getByTestId("products-workspace-create-sku-input").fill(`RPT-${marker.slice(-6)}`);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("snack");
+  await page.getByTestId("products-workspace-create-category-input").fill("Snacks");
   await page.getByTestId("products-workspace-create-price-input").fill("10");
   await page.getByTestId("products-workspace-create-cost-input").fill("4");
   await page.getByTestId("products-workspace-create-stock-input").fill("50");

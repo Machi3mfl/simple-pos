@@ -48,7 +48,7 @@ test.describe("product sourcing UI category mapping management", () => {
     await page.getByTestId("product-sourcing-toggle-393964").click();
     await expect(
       page.getByTestId("product-sourcing-import-category-393964"),
-    ).toHaveValue("snack");
+    ).toHaveValue("Snacks");
 
     await page.getByTestId(`product-sourcing-mapping-delete-${mappingTestId}`).click();
 
@@ -67,6 +67,6 @@ test.describe("product sourcing UI category mapping management", () => {
     await page.getByTestId("product-sourcing-toggle-393964").click();
     await expect(
       page.getByTestId("product-sourcing-import-category-393964"),
-    ).toHaveValue("gaseosas-cola");
+    ).toHaveValue("Gaseosas cola");
   });
 });

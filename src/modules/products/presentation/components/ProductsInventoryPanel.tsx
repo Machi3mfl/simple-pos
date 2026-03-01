@@ -26,7 +26,9 @@ import {
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
+import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
+import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 
 type StockFilter = "all" | "with_stock" | "low_stock" | "out_of_stock" | "inactive";
 type SortMode = "stock" | "name" | "recent" | "price";
@@ -339,12 +341,7 @@ export function ProductsInventoryPanel(): JSX.Element {
     workspace?.items.find((item) => item.id === selectedProductId) ?? workspace?.items[0] ?? null;
 
   const categoryOptions = useMemo(() => {
-    const categorySet = new Set<string>(["all"]);
-    for (const item of workspace?.items ?? []) {
-      categorySet.add(item.categoryId);
-    }
-
-    return Array.from(categorySet.values());
+    return ["all", ...dedupeCategoryCodes((workspace?.items ?? []).map((item) => item.categoryId))];
   }, [workspace?.items]);
 
   useEffect(() => {
@@ -1353,28 +1350,19 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.category}
-              </span>
-              <select
-                data-testid="products-workspace-create-category-input"
-                value={onboardingForm.categoryId}
-                onChange={(event) =>
-                  setOnboardingForm((current) => ({
-                    ...current,
-                    categoryId: event.target.value,
-                  }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              >
-                {onboardingCategories.map((option) => (
-                  <option key={option} value={option}>
-                    {labelForCategory(option)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CategoryInputField
+              label={messages.productsWorkspace.fields.category}
+              inputTestId="products-workspace-create-category-input"
+              categoryCode={onboardingForm.categoryId}
+              knownCategoryCodes={onboardingCategories}
+              onCategoryCodeChange={(nextCategoryCode) =>
+                setOnboardingForm((current) => ({
+                  ...current,
+                  categoryId: nextCategoryCode,
+                }))
+              }
+              required
+            />
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.price}
@@ -1544,20 +1532,19 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.category}
-              </span>
-              <input
-                data-testid="products-workspace-edit-category-input"
-                required
-                value={editForm.categoryId}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, categoryId: event.target.value }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <CategoryInputField
+              label={messages.productsWorkspace.fields.category}
+              inputTestId="products-workspace-edit-category-input"
+              categoryCode={editForm.categoryId}
+              knownCategoryCodes={[
+                ...onboardingCategories,
+                ...((workspace?.items ?? []).map((item) => item.categoryId)),
+              ]}
+              onCategoryCodeChange={(nextCategoryCode) =>
+                setEditForm((current) => ({ ...current, categoryId: nextCategoryCode }))
+              }
+              required
+            />
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.price}

@@ -9,6 +9,7 @@ import {
   MissingInitialStockCostError,
 } from "../errors/ProductDomainError";
 import { resolveProductSku } from "../services/ResolveProductSku";
+import { normalizeCategoryCode } from "@/shared/core/category/categoryNaming";
 
 interface CreateProductProps {
   readonly id: string;
@@ -96,7 +97,7 @@ export class Product {
       throw new InvalidProductNameError();
     }
 
-    const categoryId = props.categoryId.trim();
+    const categoryId = normalizeCategoryCode(props.categoryId);
     if (categoryId.length === 0) {
       throw new InvalidCategoryIdError();
     }
@@ -218,7 +219,9 @@ export class Product {
     }
 
     const nextCategoryId =
-      props.categoryId !== undefined ? props.categoryId.trim() : this.categoryId;
+      props.categoryId !== undefined
+        ? normalizeCategoryCode(props.categoryId)
+        : this.categoryId;
     if (nextCategoryId.length === 0) {
       throw new InvalidCategoryIdError();
     }

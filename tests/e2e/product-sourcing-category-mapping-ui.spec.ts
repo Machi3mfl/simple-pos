@@ -38,6 +38,6 @@ test.describe("product sourcing UI category mapping reuse", () => {
 
     await expect(
       page.getByTestId("product-sourcing-import-category-111111"),
-    ).toHaveValue("drink");
+    ).toHaveValue("Bebidas");
   });
 });

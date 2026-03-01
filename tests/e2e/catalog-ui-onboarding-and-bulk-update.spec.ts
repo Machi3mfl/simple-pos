@@ -10,7 +10,7 @@ test("creates product and reprices it from Products UI, then verifies Sales inte
 
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(uniqueProductName);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("dessert");
+  await page.getByTestId("products-workspace-create-category-input").fill("Postres");
   await page.getByTestId("products-workspace-create-price-input").fill("40");
   await page.getByTestId("products-workspace-create-cost-input").fill("18");
   await page.getByTestId("products-workspace-create-stock-input").fill("5");

@@ -12,6 +12,7 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 
 export interface ProductOnboardingProduct {
   readonly id: string;
@@ -111,11 +112,10 @@ export function useProductOnboarding({
   const [feedback, setFeedback] = useState<ProductOnboardingFeedbackState | null>(null);
 
   const categories = useMemo(() => {
-    const categorySet = new Set<string>(defaultCategoryOptions);
-    for (const product of products) {
-      categorySet.add(product.categoryId);
-    }
-    return Array.from(categorySet.values());
+    return dedupeCategoryCodes([
+      ...defaultCategoryOptions,
+      ...products.map((product) => product.categoryId),
+    ]);
   }, [products]);
 
   const reloadProducts = useCallback(async (): Promise<void> => {
@@ -155,7 +155,7 @@ export function useProductOnboarding({
       return;
     }
 
-    if (!categories.includes(form.categoryId)) {
+    if (form.categoryId.trim().length === 0) {
       setForm((current) => ({ ...current, categoryId: categories[0] ?? "main" }));
     }
   }, [categories, form.categoryId]);

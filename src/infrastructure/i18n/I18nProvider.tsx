@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { formatCategoryLabel } from "@/shared/core/category/categoryNaming";
+
 import {
   defaultLocale,
   resolveMessages,
@@ -70,7 +72,7 @@ export function I18nProvider({
             categoryId as keyof typeof messages.common.categories
           ];
 
-        return localized ?? humanizeIdentifier(categoryId);
+        return localized ?? formatCategoryLabel(categoryId);
       },
       labelForPaymentMethod: (paymentMethod: PaymentMethodLabel): string =>
         messages.common.paymentMethods[paymentMethod],

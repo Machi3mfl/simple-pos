@@ -19,7 +19,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(singleProductName);
   await page.getByTestId("products-workspace-create-sku-input").fill(singleProductSku);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("snack");
+  await page.getByTestId("products-workspace-create-category-input").fill("Desayuno y merienda");
   await page.getByTestId("products-workspace-create-price-input").fill("80");
   await page.getByTestId("products-workspace-create-cost-input").fill("30");
   await page.getByTestId("products-workspace-create-stock-input").fill("4");
@@ -35,6 +35,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     .filter({ hasText: singleProductName })
     .first();
   await expect(singleCard).toBeVisible();
+  await expect(singleCard).toContainText("Desayuno y merienda");
 
   await page.getByTestId("nav-item-sales").click();
   await page.getByLabel("Buscar en el menú").fill(singleProductName);

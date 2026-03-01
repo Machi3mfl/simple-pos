@@ -400,6 +400,7 @@ Why:
 - support explicit `Enter` submit for operators who type decisively,
 - cancel in-flight searches with `AbortController`,
 - never auto-import or auto-select the first provider result,
+- keep the selected-items summary directly below the search form and full-width so the operator never loses context while reviewing chosen items,
 - show a Carrefour origin badge and large image preview in result cards,
 - allow selecting `1..n` visible results before confirming import,
 - keep a persistent selected-count summary and batch import action,
@@ -470,11 +471,13 @@ Multi-provider search is a valid later extension, but it should be added only af
 
 - [ ] The operator can search Carrefour Argentina from `/products` without leaving the app.
 - [ ] The sourcing flow runs in a dedicated screen with enough space to inspect result images comfortably.
+- [ ] The sourcing screen preserves the main application shell and navigation rail while the operator works inside `/products/sourcing`.
 - [ ] Search results show a large enough image and descriptive title to distinguish nearby variants quickly.
 - [ ] Search requests are not fired on every keystroke and only run after typing stops or the operator presses `Enter`.
 - [ ] The first visible result images load fast enough to support quick product recognition.
 - [ ] The operator can select one or many search results and confirm a batch import in one action.
 - [ ] Each selected item allows category confirmation and minimum product field review before import.
+- [ ] Category confirmation uses a human-readable label plus a canonical stored code so duplicate internal categories are not created from alternate writing styles.
 - [ ] The system stores the selected external image for each successful item in managed storage and creates the product through the internal catalog command path.
 - [ ] The imported products are visible in `/products` and usable from the sales workspace after refresh.
 - [ ] Source metadata (provider, source product id, source URL, image URL, category path, EAN if present) is persisted for traceability.
@@ -583,9 +586,12 @@ Multi-provider search is a valid later extension, but it should be added only af
 
 - `/products` now links to `/products/sourcing` through the converged workspace CTA in `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`.
 - `/products/sourcing` now supports:
+  - rendering inside the shared POS shell so the main navigation rail remains visible while sourcing,
   - debounced Carrefour search,
   - multi-select result cards,
+  - a full-width selected-items summary directly below the search form instead of a detached right-side column,
   - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
+  - category confirmation through the shared `CategoryInputField`, with visible labels plus canonical stored codes,
   - assisted batch import execution against the real catalog runtime,
   - persisted category mapping reuse across later searches,
   - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
@@ -594,6 +600,7 @@ Multi-provider search is a valid later extension, but it should be added only af
   - and navigation back to `/products` to verify imported products in the live workspace.
 - Real-backend UI proof:
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
+  - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active.
   - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
   - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
   - `tests/e2e/product-sourcing-import-history-use-case.spec.ts` + `tests/e2e/product-sourcing-import-ui.spec.ts` verify that recent imports remain visible after persistence with internal product name and SKU.

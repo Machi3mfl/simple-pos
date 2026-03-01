@@ -14,6 +14,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
+import {
+  dedupeCategoryCodes,
+  normalizeCategoryCode,
+} from "@/shared/core/category/categoryNaming";
 
 import { resolveImportedProductSku } from "../../domain/services/ResolveImportedProductSku";
 
@@ -106,6 +111,12 @@ interface ImportedProductHistoryItem {
 
 interface ProductSourcingImportHistoryResponse {
   readonly items: readonly ImportedProductHistoryItem[];
+}
+
+interface KnownProductsResponse {
+  readonly items: readonly {
+    readonly categoryId: string;
+  }[];
 }
 
 interface ImportDraft {
@@ -204,7 +215,11 @@ function humanizeExternalCategoryPath(
     .join(" / ");
 }
 
-export function ProductSourcingScreen(): JSX.Element {
+export function ProductSourcingScreen({
+  embedded = false,
+}: {
+  readonly embedded?: boolean;
+}): JSX.Element {
   const { formatCurrency, formatDateTime, humanizeIdentifier, labelForCategory } = useI18n();
   const [query, setQuery] = useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
@@ -213,9 +228,11 @@ export function ProductSourcingScreen(): JSX.Element {
   const [importDrafts, setImportDrafts] = useState<Record<string, ImportDraft>>({});
   const [categoryMappings, setCategoryMappings] = useState<readonly ExternalCategoryMappingItem[]>([]);
   const [categoryMappingDrafts, setCategoryMappingDrafts] = useState<Record<string, string>>({});
+  const [knownCategoryCodes, setKnownCategoryCodes] = useState<readonly string[]>(CATEGORY_OPTIONS);
   const [importHistory, setImportHistory] = useState<readonly ImportedProductHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMappings, setIsLoadingMappings] = useState<boolean>(false);
+  const [isLoadingKnownCategories, setIsLoadingKnownCategories] = useState<boolean>(false);
   const [isLoadingImportHistory, setIsLoadingImportHistory] = useState<boolean>(false);
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [activeMappingPath, setActiveMappingPath] = useState<string | null>(null);
@@ -226,6 +243,15 @@ export function ProductSourcingScreen(): JSX.Element {
   const [importResult, setImportResult] = useState<ProductSourcingImportResponse | null>(null);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const effectiveKnownCategoryCodes = useMemo(
+    () =>
+      dedupeCategoryCodes([
+        ...knownCategoryCodes,
+        ...categoryMappings.map((mapping) => mapping.internalCategoryId),
+        ...importHistory.map((entry) => entry.mappedCategoryId),
+      ]),
+    [categoryMappings, importHistory, knownCategoryCodes],
+  );
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -276,6 +302,38 @@ export function ProductSourcingScreen(): JSX.Element {
       });
     } finally {
       setIsLoadingMappings(false);
+    }
+  }, []);
+
+  const loadKnownCategories = useCallback(async (): Promise<void> => {
+    setIsLoadingKnownCategories(true);
+
+    try {
+      const response = await fetch("/api/v1/products", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | KnownProductsResponse
+        | ApiErrorPayload
+        | null;
+
+      if (!response.ok) {
+        return;
+      }
+
+      const result = payload as KnownProductsResponse;
+      setKnownCategoryCodes(
+        dedupeCategoryCodes([
+          ...CATEGORY_OPTIONS,
+          ...result.items.map((item) => item.categoryId),
+        ]),
+      );
+    } finally {
+      setIsLoadingKnownCategories(false);
     }
   }, []);
 
@@ -425,10 +483,31 @@ export function ProductSourcingScreen(): JSX.Element {
   }, [loadImportHistory]);
 
   useEffect(() => {
+    void loadKnownCategories();
+  }, [loadKnownCategories]);
+
+  useEffect(() => {
     setImportDrafts(
-      Object.fromEntries(results.map((item) => [item.sourceProductId, createImportDraft(item)])),
+      Object.fromEntries(
+        results.map((item) => {
+          const suggestedCategoryCode = normalizeCategoryCode(
+            item.suggestedCategoryId ?? "other",
+          );
+          const matchedCategoryCode =
+            effectiveKnownCategoryCodes.find((code) => code === suggestedCategoryCode) ??
+            suggestedCategoryCode;
+
+          return [
+            item.sourceProductId,
+            {
+              ...createImportDraft(item),
+              categoryId: matchedCategoryCode,
+            },
+          ];
+        }),
+      ),
     );
-  }, [results]);
+  }, [effectiveKnownCategoryCodes, results]);
 
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.includes(item.sourceProductId)),
@@ -711,7 +790,11 @@ export function ProductSourcingScreen(): JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f7f8] px-4 py-4 lg:px-6 lg:py-6">
+    <main
+      className={[
+        embedded ? "min-h-full bg-[#f7f7f8] px-4 py-4 lg:px-6 lg:py-6" : "min-h-screen bg-[#f7f7f8] px-4 py-4 lg:px-6 lg:py-6",
+      ].join(" ")}
+    >
       <div className="mx-auto flex max-w-[1520px] flex-col gap-4">
         <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:px-6 lg:py-6">
@@ -765,243 +848,247 @@ export function ProductSourcingScreen(): JSX.Element {
               </button>
             </form>
 
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
-              <div>
-                {feedback ? (
-                  <div
-                    data-testid="product-sourcing-feedback"
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-                  >
-                    {feedback}
-                  </div>
-                ) : null}
+            {feedback ? (
+              <div
+                data-testid="product-sourcing-feedback"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
+              >
+                {feedback}
               </div>
+            ) : null}
 
-              <aside className="rounded-[1.75rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                      Seleccion actual
-                    </p>
+            <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50 px-4 py-4 lg:px-5 lg:py-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="grid gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Seleccion actual
+                  </p>
+                  <div className="flex items-end gap-3">
                     <p
                       data-testid="product-sourcing-selected-count"
-                      className="mt-2 text-[2rem] leading-none font-bold tracking-tight text-slate-900"
+                      className="text-[2.35rem] leading-none font-bold tracking-tight text-slate-900"
                     >
                       {selectedIds.length}
                     </p>
+                    <p className="pb-1 text-sm text-slate-500">
+                      {selectedIds.length === 1 ? "producto listo para importar" : "productos listos para importar"}
+                    </p>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleImportSelected()}
-                    data-testid="product-sourcing-import-button"
-                    disabled={selectedItems.length === 0 || isImporting}
-                    className={[
-                      "inline-flex min-h-[3.25rem] items-center justify-center rounded-2xl px-4 text-sm font-semibold transition",
-                      selectedItems.length === 0 || isImporting
-                        ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                        : "bg-blue-600 text-white shadow-[0_14px_28px_rgba(37,99,235,0.22)]",
-                    ].join(" ")}
-                  >
-                    {isImporting ? <Loader2 size={16} className="animate-spin" /> : "Importar seleccion"}
-                  </button>
                 </div>
 
-                <p className="mt-2 text-sm text-slate-600">
-                  Cada producto genera un SKU deterministico para evitar reimportaciones accidentales durante este slice.
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  Las categorias confirmadas se aprenden y se reutilizan automaticamente en futuras busquedas del mismo camino externo.
-                </p>
+                <div className="flex max-w-[44rem] flex-1 flex-col gap-2 text-sm text-slate-600">
+                  <p>
+                    Cada producto genera un SKU deterministico para evitar reimportaciones accidentales durante este slice.
+                  </p>
+                  <p>
+                    Las categorias confirmadas se aprenden y se reutilizan automaticamente en futuras busquedas del mismo camino externo.
+                  </p>
+                  {isLoadingKnownCategories ? (
+                    <p className="text-xs text-slate-500">Cargando categorías conocidas...</p>
+                  ) : null}
+                </div>
 
-                {importFeedback ? (
-                  <div
-                    data-testid="product-sourcing-import-feedback"
-                    className={[
-                      "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
-                      importFeedback.type === "success"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-rose-200 bg-rose-50 text-rose-700",
-                    ].join(" ")}
-                  >
-                    {importFeedback.message}
-                  </div>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void handleImportSelected()}
+                  data-testid="product-sourcing-import-button"
+                  disabled={selectedItems.length === 0 || isImporting}
+                  className={[
+                    "inline-flex min-h-[3.45rem] items-center justify-center rounded-2xl px-5 text-sm font-semibold transition xl:min-w-[16rem]",
+                    selectedItems.length === 0 || isImporting
+                      ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                      : "bg-blue-600 text-white shadow-[0_14px_28px_rgba(37,99,235,0.22)]",
+                  ].join(" ")}
+                >
+                  {isImporting ? <Loader2 size={16} className="animate-spin" /> : "Importar seleccion"}
+                </button>
+              </div>
 
-                {selectedItems.length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    {selectedItems.map((item) => {
-                      const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
-                      const skuPreview = resolveImportedProductSku(item.providerId, item.sourceProductId);
+              {importFeedback ? (
+                <div
+                  data-testid="product-sourcing-import-feedback"
+                  className={[
+                    "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
+                    importFeedback.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-rose-200 bg-rose-50 text-rose-700",
+                  ].join(" ")}
+                >
+                  {importFeedback.message}
+                </div>
+              ) : null}
 
-                      return (
-                        <article
-                          key={item.sourceProductId}
-                          className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                              <p className="mt-1 text-xs text-slate-500">SKU previsto: {skuPreview}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => toggleSelection(item.sourceProductId)}
-                              className="text-xs font-semibold text-slate-500"
-                            >
-                              Quitar
-                            </button>
+              {selectedItems.length > 0 ? (
+                <div className="mt-5 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+                  {selectedItems.map((item) => {
+                    const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
+                    const skuPreview = resolveImportedProductSku(item.providerId, item.sourceProductId);
+
+                    return (
+                      <article
+                        key={item.sourceProductId}
+                        className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                            <p className="mt-1 text-xs text-slate-500">SKU previsto: {skuPreview}</p>
                           </div>
-
-                          <div className="mt-4 grid gap-3">
-                            <label className="grid gap-1 text-sm text-slate-600">
-                              <span className="font-medium text-slate-700">Nombre final</span>
-                              <input
-                                data-testid={`product-sourcing-import-name-${item.sourceProductId}`}
-                                type="text"
-                                value={draft.name}
-                                onChange={(event) =>
-                                  updateDraft(item.sourceProductId, "name", event.target.value)
-                                }
-                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                              />
-                            </label>
-
-                            <label className="grid gap-1 text-sm text-slate-600">
-                              <span className="font-medium text-slate-700">Categoria final</span>
-                              <input
-                                data-testid={`product-sourcing-import-category-${item.sourceProductId}`}
-                                type="text"
-                                value={draft.categoryId}
-                                onChange={(event) =>
-                                  updateDraft(item.sourceProductId, "categoryId", event.target.value)
-                                }
-                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                              />
-                            </label>
-
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <label className="grid gap-1 text-sm text-slate-600">
-                                <span className="font-medium text-slate-700">Precio</span>
-                                <input
-                                  data-testid={`product-sourcing-import-price-${item.sourceProductId}`}
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={draft.price}
-                                  onChange={(event) =>
-                                    updateDraft(item.sourceProductId, "price", event.target.value)
-                                  }
-                                  className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                                />
-                              </label>
-
-                              <label className="grid gap-1 text-sm text-slate-600">
-                                <span className="font-medium text-slate-700">Stock inicial</span>
-                                <input
-                                  data-testid={`product-sourcing-import-stock-${item.sourceProductId}`}
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  value={draft.initialStock}
-                                  onChange={(event) =>
-                                    updateDraft(item.sourceProductId, "initialStock", event.target.value)
-                                  }
-                                  className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                                />
-                              </label>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <label className="grid gap-1 text-sm text-slate-600">
-                                <span className="font-medium text-slate-700">Costo</span>
-                                <input
-                                  data-testid={`product-sourcing-import-cost-${item.sourceProductId}`}
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={draft.cost}
-                                  onChange={(event) =>
-                                    updateDraft(item.sourceProductId, "cost", event.target.value)
-                                  }
-                                  className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                                />
-                              </label>
-
-                              <label className="grid gap-1 text-sm text-slate-600">
-                                <span className="font-medium text-slate-700">Stock minimo</span>
-                                <input
-                                  data-testid={`product-sourcing-import-min-stock-${item.sourceProductId}`}
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  value={draft.minStock}
-                                  onChange={(event) =>
-                                    updateDraft(item.sourceProductId, "minStock", event.target.value)
-                                  }
-                                  className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500">
-                    Selecciona resultados para completar la importacion desde esta misma pantalla.
-                  </div>
-                )}
-
-                {importResult ? (
-                  <div className="mt-4 space-y-3">
-                    {importResult.items.length > 0 ? (
-                      <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-emerald-900">Productos creados</p>
-                          <Link
-                            href="/products"
-                            data-testid="product-sourcing-go-products-link"
-                            className="text-sm font-semibold text-emerald-700"
+                          <button
+                            type="button"
+                            onClick={() => toggleSelection(item.sourceProductId)}
+                            className="shrink-0 text-xs font-semibold text-slate-500"
                           >
-                            Ver en productos
-                          </Link>
+                            Quitar
+                          </button>
                         </div>
-                        <ul className="mt-3 space-y-2 text-sm text-emerald-900">
-                          {importResult.items.map((entry) => (
-                            <li
-                              key={entry.sourceProductId}
-                              data-testid={`product-sourcing-import-result-${entry.sourceProductId}`}
-                              className="rounded-xl border border-emerald-200 bg-white px-3 py-3"
-                            >
-                              <p className="font-semibold">{entry.item.name}</p>
-                              <p className="mt-1 text-xs text-emerald-700">
-                                {labelForCategory(entry.item.categoryId)} • {entry.item.sku} • {formatCurrency(entry.item.price)}
-                              </p>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
 
-                    {importResult.invalidItems.length > 0 ? (
-                      <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-rose-900">Rechazados</p>
-                        <ul className="mt-3 space-y-2 text-sm text-rose-800">
-                          {importResult.invalidItems.map((entry) => (
-                            <li key={`${entry.row}-${entry.sourceProductId}`} className="rounded-xl border border-rose-200 bg-white px-3 py-3">
-                              <p className="font-semibold">{entry.name ?? entry.sourceProductId}</p>
-                              <p className="mt-1 text-xs">{entry.reason}</p>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="mt-4 grid gap-3">
+                          <label className="grid gap-1 text-sm text-slate-600">
+                            <span className="font-medium text-slate-700">Nombre final</span>
+                            <input
+                              data-testid={`product-sourcing-import-name-${item.sourceProductId}`}
+                              type="text"
+                              value={draft.name}
+                              onChange={(event) =>
+                                updateDraft(item.sourceProductId, "name", event.target.value)
+                              }
+                              className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
+                            />
+                          </label>
+
+                          <CategoryInputField
+                            label="Categoría final"
+                            inputTestId={`product-sourcing-import-category-${item.sourceProductId}`}
+                            categoryCode={draft.categoryId}
+                            knownCategoryCodes={effectiveKnownCategoryCodes}
+                            onCategoryCodeChange={(nextCategoryCode) =>
+                              updateDraft(item.sourceProductId, "categoryId", nextCategoryCode)
+                            }
+                            required
+                          />
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="grid gap-1 text-sm text-slate-600">
+                              <span className="font-medium text-slate-700">Precio</span>
+                              <input
+                                data-testid={`product-sourcing-import-price-${item.sourceProductId}`}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.price}
+                                onChange={(event) =>
+                                  updateDraft(item.sourceProductId, "price", event.target.value)
+                                }
+                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
+                              />
+                            </label>
+
+                            <label className="grid gap-1 text-sm text-slate-600">
+                              <span className="font-medium text-slate-700">Stock inicial</span>
+                              <input
+                                data-testid={`product-sourcing-import-stock-${item.sourceProductId}`}
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={draft.initialStock}
+                                onChange={(event) =>
+                                  updateDraft(item.sourceProductId, "initialStock", event.target.value)
+                                }
+                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="grid gap-1 text-sm text-slate-600">
+                              <span className="font-medium text-slate-700">Costo</span>
+                              <input
+                                data-testid={`product-sourcing-import-cost-${item.sourceProductId}`}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={draft.cost}
+                                onChange={(event) =>
+                                  updateDraft(item.sourceProductId, "cost", event.target.value)
+                                }
+                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
+                              />
+                            </label>
+
+                            <label className="grid gap-1 text-sm text-slate-600">
+                              <span className="font-medium text-slate-700">Stock minimo</span>
+                              <input
+                                data-testid={`product-sourcing-import-min-stock-${item.sourceProductId}`}
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={draft.minStock}
+                                onChange={(event) =>
+                                  updateDraft(item.sourceProductId, "minStock", event.target.value)
+                                }
+                                className="min-h-[2.9rem] rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-[1.5rem] border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500">
+                  Selecciona resultados para completar la importacion desde esta misma pantalla.
+                </div>
+              )}
+
+              {importResult ? (
+                <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                  {importResult.items.length > 0 ? (
+                    <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-emerald-900">Productos creados</p>
+                        <Link
+                          href="/products"
+                          data-testid="product-sourcing-go-products-link"
+                          className="text-sm font-semibold text-emerald-700"
+                        >
+                          Ver en productos
+                        </Link>
                       </div>
-                    ) : null}
-                  </div>
-                ) : null}
-              </aside>
-            </div>
+                      <ul className="mt-3 space-y-2 text-sm text-emerald-900">
+                        {importResult.items.map((entry) => (
+                          <li
+                            key={entry.sourceProductId}
+                            data-testid={`product-sourcing-import-result-${entry.sourceProductId}`}
+                            className="rounded-xl border border-emerald-200 bg-white px-3 py-3"
+                          >
+                            <p className="font-semibold">{entry.item.name}</p>
+                            <p className="mt-1 text-xs text-emerald-700">
+                              {labelForCategory(entry.item.categoryId)} • {entry.item.sku} • {formatCurrency(entry.item.price)}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {importResult.invalidItems.length > 0 ? (
+                    <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-4">
+                      <p className="text-sm font-semibold text-rose-900">Rechazados</p>
+                      <ul className="mt-3 space-y-2 text-sm text-rose-800">
+                        {importResult.invalidItems.map((entry) => (
+                          <li key={`${entry.row}-${entry.sourceProductId}`} className="rounded-xl border border-rose-200 bg-white px-3 py-3">
+                            <p className="font-semibold">{entry.name ?? entry.sourceProductId}</p>
+                            <p className="mt-1 text-xs">{entry.reason}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
           </div>
         </article>
 
@@ -1154,11 +1241,9 @@ export function ProductSourcingScreen(): JSX.Element {
                 const testIdFragment = toTestIdFragment(mapping.externalCategoryPath);
                 const draftValue =
                   categoryMappingDrafts[mapping.externalCategoryPath] ?? mapping.internalCategoryId;
-                const options = CATEGORY_OPTIONS.includes(
-                  draftValue as (typeof CATEGORY_OPTIONS)[number],
-                )
-                  ? CATEGORY_OPTIONS
-                  : [draftValue, ...CATEGORY_OPTIONS];
+                const options = effectiveKnownCategoryCodes.includes(draftValue)
+                  ? effectiveKnownCategoryCodes
+                  : [draftValue, ...effectiveKnownCategoryCodes];
                 const isBusy = activeMappingPath === mapping.externalCategoryPath;
 
                 return (
