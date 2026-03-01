@@ -5,6 +5,7 @@
 **Document ID**: `001`  
 **File Name**: `001-requirements-simple-pos-draft.md`  
 **Status**: `approved`  
+**GitHub Issue**: #20  
 **Priority**: `high`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  

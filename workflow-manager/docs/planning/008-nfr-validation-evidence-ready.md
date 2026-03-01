@@ -5,6 +5,7 @@
 **Document ID**: `008`  
 **File Name**: `008-nfr-validation-evidence-ready.md`  
 **Status**: `ready`  
+**GitHub Issue**: #22  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
 **Version**: `0.1`  

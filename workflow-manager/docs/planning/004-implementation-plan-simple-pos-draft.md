@@ -5,6 +5,7 @@
 **Document ID**: `004`  
 **File Name**: `004-implementation-plan-simple-pos-draft.md`  
 **Status**: `approved`  
+**GitHub Issue**: #21  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
 **Version**: `0.5`  
