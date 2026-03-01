@@ -1,3 +1,4 @@
+**GitHub Issue**: #36  
 # Product Sourcing Class Diagram
 
 Feature reference: `SOURCING-001`

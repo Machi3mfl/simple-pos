@@ -1,3 +1,4 @@
+**GitHub Issue**: #37  
 # Product Sourcing Activity Diagram
 
 Feature reference: `SOURCING-001`

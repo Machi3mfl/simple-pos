@@ -1,3 +1,4 @@
+**GitHub Issue**: #34  
 # Product Sourcing Import Session State Diagram
 
 Feature reference: `SOURCING-001`

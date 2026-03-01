@@ -1,3 +1,4 @@
+**GitHub Issue**: #35  
 # Product Sourcing Search and Import Sequence
 
 Feature reference: `SOURCING-001`
