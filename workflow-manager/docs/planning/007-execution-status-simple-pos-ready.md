@@ -97,6 +97,8 @@ Open planning item:
     - confirmed external category paths are persisted in `external_category_mappings`
     - later searches now reuse the confirmed internal category automatically when the external category path matches
     - category entry across onboarding and sourcing now normalizes operator-friendly labels into canonical codes to prevent duplicate categories caused by different writing styles
+    - Carrefour provider calls are now wrapped with process-local throttling plus structured health logging
+    - opt-in live provider smoke remains available through `npm run probe:product-sourcing:carrefour` guarded by `PRODUCT_SOURCING_LIVE_SMOKE=1`
     - learned category mappings can be reviewed, corrected, and deleted from the sourcing workspace itself
     - recent imports can be reviewed from the sourcing workspace with internal product name, SKU, category, and import timestamp
     - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
@@ -120,3 +122,4 @@ Open planning item:
 - Sourcing category mapping management verification: `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` proves that learned mappings can be updated and deleted from the UI and that the next search reflects the change.
 - Sourcing import history verification: `tests/e2e/product-sourcing-import-ui.spec.ts` and `tests/e2e/product-sourcing-import-history-use-case.spec.ts` prove that recent imports remain queryable from persisted trace data with internal product name and SKU.
 - Category canonicalization verification: `tests/e2e/catalog-onboarding-api.spec.ts`, `tests/e2e/products-workspace-ui.spec.ts`, and `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` prove that operator-facing category labels remain readable while stored ids are normalized to canonical slug codes.
+- Provider hardening verification: `tests/e2e/product-sourcing-provider-hardening.spec.ts` proves throttled provider calls plus structured success/failure health events for the Carrefour adapter wrapper.

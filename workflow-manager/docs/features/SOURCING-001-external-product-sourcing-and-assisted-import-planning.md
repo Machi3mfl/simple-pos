@@ -63,7 +63,6 @@ The current gap is not internal product persistence. The gap is **external disco
 
 What is still missing after the current vertical slice:
 
-- no provider health/rate-limit hardening yet,
 - no retry-management UI yet,
 - and no mobile/tablet-specific validation pass for larger assisted-import batches yet.
 
@@ -611,6 +610,26 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Add E2E with mocked provider responses.
 - Add an opt-in smoke probe for live provider access outside deterministic CI.
 
+### Phase 4 - Current Output
+
+- Provider hardening now wraps the Carrefour adapter with:
+  - `src/modules/product-sourcing/infrastructure/providers/RateLimitedRetailerCatalogProvider.ts`
+  - `src/modules/product-sourcing/infrastructure/providers/ObservedRetailerCatalogProvider.ts`
+- Runtime composition now applies:
+  - structured provider health logging for each search attempt,
+  - provider latency and item-count logging on success,
+  - provider error/status logging on failure,
+  - and a process-local minimum interval between external provider calls (`PRODUCT_SOURCING_PROVIDER_MIN_INTERVAL_MS`, default `350`).
+- Deterministic hardening coverage:
+  - `tests/e2e/product-sourcing-provider-hardening.spec.ts`
+  - verifies throttled execution spacing
+  - verifies structured success/failure health events
+  - verifies console JSON output shape for provider telemetry
+- Opt-in live smoke command:
+  - `npm run probe:product-sourcing:carrefour -- "coca cola" 5`
+  - requires `PRODUCT_SOURCING_LIVE_SMOKE=1`
+  - delegates to `workflow-manager/docs/pocs/scripts/product-sourcing-vtex-probe.mjs`
+
 ---
 
 ## Testing Strategy
@@ -625,6 +644,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 ### Integration
 
 - Carrefour adapter against captured VTEX-like fixtures,
+- provider hardening wrappers around the Carrefour adapter,
 - image asset persistence to Supabase storage,
 - source import repository persistence,
 - runtime wiring between `product-sourcing` and `catalog`.

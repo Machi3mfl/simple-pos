@@ -11,9 +11,23 @@ import { SearchExternalProductsUseCase } from "../../application/use-cases/Searc
 import { UpdateExternalCategoryMappingUseCase } from "../../application/use-cases/UpdateExternalCategoryMappingUseCase";
 import { CatalogCreateProductWriter } from "../adapters/CatalogCreateProductWriter";
 import { CarrefourCatalogProvider } from "../providers/carrefour/CarrefourCatalogProvider";
+import {
+  createConsoleRetailerCatalogProviderHealthLogger,
+  ObservedRetailerCatalogProvider,
+} from "../providers/ObservedRetailerCatalogProvider";
+import { RateLimitedRetailerCatalogProvider } from "../providers/RateLimitedRetailerCatalogProvider";
 import { SupabaseExternalCategoryMappingRepository } from "../repositories/SupabaseExternalCategoryMappingRepository";
 import { SupabaseImportedProductSourceRepository } from "../repositories/SupabaseImportedProductSourceRepository";
 import { SupabaseProductImageAssetStore } from "../storage/SupabaseProductImageAssetStore";
+
+function resolveProductSourcingProviderMinIntervalMs(): number {
+  const rawValue = Number(process.env.PRODUCT_SOURCING_PROVIDER_MIN_INTERVAL_MS ?? "350");
+  if (!Number.isFinite(rawValue) || rawValue < 0) {
+    return 350;
+  }
+
+  return Math.floor(rawValue);
+}
 
 export function createProductSourcingRuntime(): {
   listExternalCategoryMappingsUseCase: ListExternalCategoryMappingsUseCase;
@@ -27,7 +41,15 @@ export function createProductSourcingRuntime(): {
   const productRepository = new SupabaseProductRepository(client);
   const inventoryRepository = new SupabaseInventoryRepository(client);
   const createProductUseCase = new CreateProductUseCase(productRepository, inventoryRepository);
-  const retailerCatalogProvider = new CarrefourCatalogProvider();
+  const retailerCatalogProvider = new RateLimitedRetailerCatalogProvider(
+    new ObservedRetailerCatalogProvider(new CarrefourCatalogProvider(), {
+      providerId: "carrefour",
+      logger: createConsoleRetailerCatalogProviderHealthLogger(),
+    }),
+    {
+      minIntervalMs: resolveProductSourcingProviderMinIntervalMs(),
+    },
+  );
   const catalogProductWriter = new CatalogCreateProductWriter(
     createProductUseCase,
     productRepository,
