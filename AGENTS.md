@@ -250,6 +250,7 @@ The project uses a structured **Workflow Manager** to track requirements, featur
     *   Use the `[ENTITY-XXX]` format consistent with the workflow manager (e.g., `INVENTORY-001-bulk-upload.md`).
 5.  **Documentation Freshness & Sync (Mandatory)**:
     *   Any meaningful change in scope, architecture, feature behavior, task status, or testing strategy MUST update the related `workflow-manager/docs/` markdowns in the same work batch.
+    *   Keep `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md` updated whenever Use Cases, E2E scenarios, or API contracts covered by E2E change.
     *   Keep `workflow-manager/docs/WORKFLOW_INDEX.md` updated when adding/renaming core planning/feature/task artifacts so mobile GitHub reading stays navigable.
     *   After docs updates, sync issues using `workflow-manager/docs/scripts/sync-github.sh` (recommended: `--sync-execution` or `--sync-all`).
     *   Use `.env.github` for GitHub sync environment variables; never hardcode or commit secrets outside ignored env files.
