@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ImportedProductSourceRepository } from "../../application/ports/ImportedProductSourceRepository";
+import type {
+  ImportedProductHistoryRecord,
+  ImportedProductSourceRepository,
+} from "../../application/ports/ImportedProductSourceRepository";
 import { ImportedProductSource } from "../../domain/entities/ImportedProductSource";
 import type { ExternalCatalogProviderId } from "../../domain/entities/ExternalCatalogCandidate";
 
@@ -20,6 +23,12 @@ interface ImportedProductSourceRow {
   category_trail: string[];
   mapped_category_id: string;
   imported_at: string;
+}
+
+interface CatalogProductRow {
+  id: string;
+  name: string;
+  sku: string;
 }
 
 function mapRowToEntity(row: ImportedProductSourceRow): ImportedProductSource {
@@ -96,5 +105,54 @@ export class SupabaseImportedProductSourceRepository implements ImportedProductS
     }
 
     return mapRowToEntity(data as ImportedProductSourceRow);
+  }
+
+  async listRecent(limit: number): Promise<readonly ImportedProductHistoryRecord[]> {
+    const { data, error } = await this.client
+      .from("imported_product_sources")
+      .select("*")
+      .order("imported_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to list imported product sources: ${error.message}`);
+    }
+
+    const rows = (data ?? []) as ImportedProductSourceRow[];
+    const productIds = rows.map((row) => row.product_id);
+
+    const productsById = new Map<string, CatalogProductRow>();
+    if (productIds.length > 0) {
+      const { data: productData, error: productError } = await this.client
+        .from("products")
+        .select("id, name, sku")
+        .in("id", productIds);
+
+      if (productError) {
+        throw new Error(`Failed to list catalog products for sourcing history: ${productError.message}`);
+      }
+
+      for (const product of (productData ?? []) as CatalogProductRow[]) {
+        productsById.set(product.id, product);
+      }
+    }
+
+    return rows.map((row) => {
+      const product = productsById.get(row.product_id);
+
+      return {
+        id: row.id,
+        productId: row.product_id,
+        productName: product?.name ?? `Importado ${row.source_product_id}`,
+        productSku: product?.sku ?? `CRF-${row.source_product_id}`,
+        providerId: row.provider_id,
+        sourceProductId: row.source_product_id,
+        storedImagePublicUrl: row.stored_image_public_url,
+        brand: row.brand,
+        ean: row.ean,
+        mappedCategoryId: row.mapped_category_id,
+        importedAt: row.imported_at,
+      };
+    });
   }
 }

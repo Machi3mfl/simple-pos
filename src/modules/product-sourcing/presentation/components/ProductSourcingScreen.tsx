@@ -90,6 +90,24 @@ interface ProductSourcingCategoryMappingsResponse {
   readonly items: readonly ExternalCategoryMappingItem[];
 }
 
+interface ImportedProductHistoryItem {
+  readonly id: string;
+  readonly productId: string;
+  readonly productName: string;
+  readonly productSku: string;
+  readonly providerId: "carrefour";
+  readonly sourceProductId: string;
+  readonly storedImagePublicUrl: string;
+  readonly brand: string | null;
+  readonly ean: string | null;
+  readonly mappedCategoryId: string;
+  readonly importedAt: string;
+}
+
+interface ProductSourcingImportHistoryResponse {
+  readonly items: readonly ImportedProductHistoryItem[];
+}
+
 interface ImportDraft {
   readonly name: string;
   readonly categoryId: string;
@@ -195,12 +213,15 @@ export function ProductSourcingScreen(): JSX.Element {
   const [importDrafts, setImportDrafts] = useState<Record<string, ImportDraft>>({});
   const [categoryMappings, setCategoryMappings] = useState<readonly ExternalCategoryMappingItem[]>([]);
   const [categoryMappingDrafts, setCategoryMappingDrafts] = useState<Record<string, string>>({});
+  const [importHistory, setImportHistory] = useState<readonly ImportedProductHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMappings, setIsLoadingMappings] = useState<boolean>(false);
+  const [isLoadingImportHistory, setIsLoadingImportHistory] = useState<boolean>(false);
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [activeMappingPath, setActiveMappingPath] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<FeedbackState | null>(null);
+  const [importHistoryFeedback, setImportHistoryFeedback] = useState<FeedbackState | null>(null);
   const [mappingFeedback, setMappingFeedback] = useState<FeedbackState | null>(null);
   const [importResult, setImportResult] = useState<ProductSourcingImportResponse | null>(null);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
@@ -242,6 +263,7 @@ export function ProductSourcingScreen(): JSX.Element {
 
       const result = payload as ProductSourcingCategoryMappingsResponse;
       setCategoryMappings(result.items);
+      setMappingFeedback(null);
       setCategoryMappingDrafts(
         Object.fromEntries(
           result.items.map((item) => [item.externalCategoryPath, item.internalCategoryId]),
@@ -254,6 +276,43 @@ export function ProductSourcingScreen(): JSX.Element {
       });
     } finally {
       setIsLoadingMappings(false);
+    }
+  }, []);
+
+  const loadImportHistory = useCallback(async (): Promise<void> => {
+    setIsLoadingImportHistory(true);
+
+    try {
+      const response = await fetch("/api/v1/product-sourcing/import-history?limit=6", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | ProductSourcingImportHistoryResponse
+        | ApiErrorPayload
+        | null;
+
+      if (!response.ok) {
+        setImportHistoryFeedback({
+          type: "error",
+          message: resolveErrorMessage(payload, "No se pudo cargar el historial de imports."),
+        });
+        return;
+      }
+
+      const result = payload as ProductSourcingImportHistoryResponse;
+      setImportHistory(result.items);
+      setImportHistoryFeedback(null);
+    } catch {
+      setImportHistoryFeedback({
+        type: "error",
+        message: "No se pudo cargar el historial de imports.",
+      });
+    } finally {
+      setIsLoadingImportHistory(false);
     }
   }, []);
 
@@ -360,6 +419,10 @@ export function ProductSourcingScreen(): JSX.Element {
   useEffect(() => {
     void loadCategoryMappings();
   }, [loadCategoryMappings]);
+
+  useEffect(() => {
+    void loadImportHistory();
+  }, [loadImportHistory]);
 
   useEffect(() => {
     setImportDrafts(
@@ -531,7 +594,7 @@ export function ProductSourcingScreen(): JSX.Element {
       const importedIds = new Set(result.items.map((entry) => entry.sourceProductId));
       setSelectedIds((current) => current.filter((sourceProductId) => !importedIds.has(sourceProductId)));
       setImportResult(result);
-      await loadCategoryMappings();
+      await Promise.all([loadCategoryMappings(), loadImportHistory()]);
       setImportFeedback({
         type: result.importedCount > 0 ? "success" : "error",
         message:
@@ -1168,6 +1231,94 @@ export function ProductSourcingScreen(): JSX.Element {
                   </article>
                 );
               })}
+            </div>
+          ) : null}
+        </section>
+
+        <section
+          data-testid="product-sourcing-import-history-panel"
+          className="rounded-[2rem] border border-slate-200 bg-white px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.06)]"
+        >
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Historial reciente
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                Ultimos imports confirmados
+              </h2>
+              <p className="mt-2 max-w-[52rem] text-sm text-slate-600">
+                Vista persistente de los productos importados desde sourcing, con nombre interno, SKU, categoria final y fecha real de importacion.
+              </p>
+            </div>
+
+            {isLoadingImportHistory ? (
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-500">
+                <Loader2 size={16} className="animate-spin" />
+                Cargando historial
+              </div>
+            ) : null}
+          </div>
+
+          {importHistoryFeedback ? (
+            <div
+              data-testid="product-sourcing-import-history-feedback"
+              className={[
+                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
+                importHistoryFeedback.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-rose-200 bg-rose-50 text-rose-700",
+              ].join(" ")}
+            >
+              {importHistoryFeedback.message}
+            </div>
+          ) : null}
+
+          {importHistory.length === 0 && !isLoadingImportHistory ? (
+            <div className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+              Todavia no hay imports persistidos en este entorno. Cuando completes uno, aparecera aca con sus datos reales.
+            </div>
+          ) : null}
+
+          {importHistory.length > 0 ? (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {importHistory.map((entry) => (
+                <article
+                  key={entry.id}
+                  data-testid={`product-sourcing-history-row-${entry.sourceProductId}`}
+                  className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50"
+                >
+                  <div className="flex items-start gap-3 p-4">
+                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.2rem] bg-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- Stored sourcing assets are dynamic but controlled by the application. */}
+                      <img
+                        src={entry.storedImagePublicUrl}
+                        alt={entry.productName}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+                        Carrefour
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">
+                        {entry.productName}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {entry.productSku} • {labelForCategory(entry.mappedCategoryId)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {entry.brand ?? "Marca no informada"}
+                        {entry.ean ? ` • EAN ${entry.ean}` : ""}
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-slate-600">
+                        Importado {formatDateTime(entry.importedAt)}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           ) : null}
         </section>

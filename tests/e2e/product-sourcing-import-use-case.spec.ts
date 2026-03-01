@@ -6,7 +6,10 @@ import type {
   CreateCatalogProductFromExternalCandidateInput,
 } from "../../src/modules/product-sourcing/application/ports/CatalogProductWriter";
 import type { ExternalCategoryMappingRepository } from "../../src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository";
-import type { ImportedProductSourceRepository } from "../../src/modules/product-sourcing/application/ports/ImportedProductSourceRepository";
+import type {
+  ImportedProductHistoryRecord,
+  ImportedProductSourceRepository,
+} from "../../src/modules/product-sourcing/application/ports/ImportedProductSourceRepository";
 import type {
   PersistExternalImageInput,
   PersistedExternalImageAsset,
@@ -72,6 +75,26 @@ class InMemoryImportedProductSourceRepository implements ImportedProductSourceRe
 
   async getBySource(providerId: "carrefour", sourceProductId: string): Promise<ImportedProductSource | null> {
     return this.items.get(`${providerId}:${sourceProductId}`) ?? null;
+  }
+
+  async listRecent(): Promise<readonly ImportedProductHistoryRecord[]> {
+    return Array.from(this.items.values()).map((item) => {
+      const primitives = item.toPrimitives();
+
+      return {
+        id: primitives.id,
+        productId: primitives.productId,
+        productName: `Importado ${primitives.sourceProductId}`,
+        productSku: `CRF-${primitives.sourceProductId}`,
+        providerId: primitives.providerId,
+        sourceProductId: primitives.sourceProductId,
+        storedImagePublicUrl: primitives.storedImagePublicUrl,
+        brand: primitives.brand,
+        ean: primitives.ean,
+        mappedCategoryId: primitives.mappedCategoryId,
+        importedAt: primitives.importedAt,
+      };
+    });
   }
 }
 

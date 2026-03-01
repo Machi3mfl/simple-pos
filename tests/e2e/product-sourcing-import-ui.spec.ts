@@ -75,6 +75,12 @@ test.describe("product sourcing UI assisted import", () => {
     await expect(page.getByTestId(`product-sourcing-import-result-${sourceProductId}`)).toContainText(
       importedName,
     );
+    await expect(
+      page.getByTestId(`product-sourcing-history-row-${sourceProductId}`),
+    ).toContainText(importedName);
+    await expect(
+      page.getByTestId(`product-sourcing-history-row-${sourceProductId}`),
+    ).toContainText(`CRF-${sourceProductId.toUpperCase()}`);
 
     await page.getByTestId("product-sourcing-go-products-link").click();
     await expect(page).toHaveURL(/\/products$/);

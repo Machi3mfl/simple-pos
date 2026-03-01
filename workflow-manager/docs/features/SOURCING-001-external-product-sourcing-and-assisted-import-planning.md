@@ -64,7 +64,7 @@ The current gap is not internal product persistence. The gap is **external disco
 What is still missing after the current vertical slice:
 
 - no provider health/rate-limit hardening yet,
-- no import-history or retry-management UI yet,
+- no retry-management UI yet,
 - and no mobile/tablet-specific validation pass for larger assisted-import batches yet.
 
 ---
@@ -480,6 +480,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - [ ] Source metadata (provider, source product id, source URL, image URL, category path, EAN if present) is persisted for traceability.
 - [ ] A category confirmed for one imported external path is reused automatically in later search results that share the same external category path.
 - [ ] The operator can review, correct, or delete learned category mappings from the sourcing workspace.
+- [ ] The operator can review a persistent recent import history from the sourcing workspace itself.
 - [ ] Batch import feedback shows per-item success and failure states without hiding partial results.
 - [ ] The architecture keeps retailer-specific logic outside `catalog` and `products`.
 
@@ -588,12 +589,14 @@ Multi-provider search is a valid later extension, but it should be added only af
   - assisted batch import execution against the real catalog runtime,
   - persisted category mapping reuse across later searches,
   - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
+  - persistent recent import history sourced from `imported_product_sources` and internal catalog names/SKUs,
   - managed image persistence plus source trace recording during each successful import,
   - and navigation back to `/products` to verify imported products in the live workspace.
 - Real-backend UI proof:
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
   - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
   - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
+  - `tests/e2e/product-sourcing-import-history-use-case.spec.ts` + `tests/e2e/product-sourcing-import-ui.spec.ts` verify that recent imports remain visible after persistence with internal product name and SKU.
 
 ### Phase 4 - Hardening
 
@@ -624,6 +627,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - mocked Carrefour-backed search and batch import flow from `/products`,
 - real-backend UI validation for persisted category mapping reuse,
 - real-backend UI validation for learned mapping management (`list/update/delete`),
+- persisted recent import history projection linked back to internal product names and SKUs,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
 - real product visibility after batch import in `/products` and `/sales`,
 - optional live provider smoke checks behind an explicit env flag, not in the stable CI gate.

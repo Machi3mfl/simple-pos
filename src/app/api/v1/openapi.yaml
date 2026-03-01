@@ -202,6 +202,30 @@ paths:
         '400':
           $ref: '#/components/responses/ErrorResponse'
 
+  /product-sourcing/import-history:
+    get:
+      tags: [ProductSourcing]
+      operationId: listImportedProductHistory
+      summary: List recently imported sourcing items
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 6
+      responses:
+        '200':
+          description: Recent sourcing imports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSourcingImportHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
   /products/workspace:
     get:
       tags: [Catalog]
@@ -878,6 +902,55 @@ components:
           enum: [carrefour]
         externalCategoryPath:
           type: string
+
+    ProductSourcingImportHistoryItem:
+      type: object
+      required:
+        [
+          id,
+          productId,
+          productName,
+          productSku,
+          providerId,
+          sourceProductId,
+          storedImagePublicUrl,
+          mappedCategoryId,
+          importedAt,
+        ]
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        productName:
+          type: string
+        productSku:
+          type: string
+        providerId:
+          type: string
+          enum: [carrefour]
+        sourceProductId:
+          type: string
+        storedImagePublicUrl:
+          type: string
+        brand:
+          type: [string, 'null']
+        ean:
+          type: [string, 'null']
+        mappedCategoryId:
+          type: string
+        importedAt:
+          type: string
+          format: date-time
+
+    ProductSourcingImportHistoryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSourcingImportHistoryItem'
 
     CreateProductRequest:
       type: object

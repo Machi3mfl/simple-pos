@@ -88,6 +88,7 @@ Open planning item:
     - `GET /api/v1/product-sourcing/search`
     - `POST /api/v1/product-sourcing/import`
     - `GET/PATCH/DELETE /api/v1/product-sourcing/category-mappings`
+    - `GET /api/v1/product-sourcing/import-history`
     - dedicated `/products/sourcing` screen reachable from `/products`
     - `product-sourcing` module runtime wired to real catalog creation through `CatalogProductWriter`
     - selected external images are persisted into the managed storage bucket `product-sourcing-images`
@@ -95,6 +96,7 @@ Open planning item:
     - confirmed external category paths are persisted in `external_category_mappings`
     - later searches now reuse the confirmed internal category automatically when the external category path matches
     - learned category mappings can be reviewed, corrected, and deleted from the sourcing workspace itself
+    - recent imports can be reviewed from the sourcing workspace with internal product name, SKU, category, and import timestamp
     - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
     - contract/use-case/provider/UI tests with deterministic fixtures, including fixture-backed real-backend sourcing runs
     - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification and persisted category mapping reuse
@@ -114,3 +116,4 @@ Open planning item:
 - Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.
 - Sourcing category mapping verification: `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` proves that a category confirmed in one import is auto-reused on a later result sharing the same external path.
 - Sourcing category mapping management verification: `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` proves that learned mappings can be updated and deleted from the UI and that the next search reflects the change.
+- Sourcing import history verification: `tests/e2e/product-sourcing-import-ui.spec.ts` and `tests/e2e/product-sourcing-import-history-use-case.spec.ts` prove that recent imports remain queryable from persisted trace data with internal product name and SKU.

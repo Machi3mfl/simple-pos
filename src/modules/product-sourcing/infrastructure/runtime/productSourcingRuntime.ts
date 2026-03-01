@@ -6,6 +6,7 @@ import { SupabaseInventoryRepository } from "@/modules/inventory/infrastructure/
 import { DeleteExternalCategoryMappingUseCase } from "../../application/use-cases/DeleteExternalCategoryMappingUseCase";
 import { ImportExternalProductsUseCase } from "../../application/use-cases/ImportExternalProductsUseCase";
 import { ListExternalCategoryMappingsUseCase } from "../../application/use-cases/ListExternalCategoryMappingsUseCase";
+import { ListImportedProductHistoryUseCase } from "../../application/use-cases/ListImportedProductHistoryUseCase";
 import { SearchExternalProductsUseCase } from "../../application/use-cases/SearchExternalProductsUseCase";
 import { UpdateExternalCategoryMappingUseCase } from "../../application/use-cases/UpdateExternalCategoryMappingUseCase";
 import { CatalogCreateProductWriter } from "../adapters/CatalogCreateProductWriter";
@@ -16,6 +17,7 @@ import { SupabaseProductImageAssetStore } from "../storage/SupabaseProductImageA
 
 export function createProductSourcingRuntime(): {
   listExternalCategoryMappingsUseCase: ListExternalCategoryMappingsUseCase;
+  listImportedProductHistoryUseCase: ListImportedProductHistoryUseCase;
   searchExternalProductsUseCase: SearchExternalProductsUseCase;
   importExternalProductsUseCase: ImportExternalProductsUseCase;
   updateExternalCategoryMappingUseCase: UpdateExternalCategoryMappingUseCase;
@@ -37,6 +39,9 @@ export function createProductSourcingRuntime(): {
   return {
     listExternalCategoryMappingsUseCase: new ListExternalCategoryMappingsUseCase(
       externalCategoryMappingRepository,
+    ),
+    listImportedProductHistoryUseCase: new ListImportedProductHistoryUseCase(
+      importedProductSourceRepository,
     ),
     searchExternalProductsUseCase: new SearchExternalProductsUseCase(
       retailerCatalogProvider,
