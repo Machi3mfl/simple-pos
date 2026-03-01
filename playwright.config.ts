@@ -23,7 +23,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run build && npm run start -- --port 3010",
-        url: `${defaultBaseUrl}/pos`,
+        url: `${defaultBaseUrl}/sales`,
         reuseExistingServer: !process.env.CI,
         timeout: 180_000,
       },

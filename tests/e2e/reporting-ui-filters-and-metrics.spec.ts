@@ -9,7 +9,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   const productName = `Reporting UI ${marker}`;
   const customerName = `Reporting User ${marker}`;
 
-  await page.goto("/pos");
+  await page.goto("/sales");
 
   await page.getByTestId("nav-item-catalog").click();
   await page.getByTestId("onboarding-name-input").fill(productName);

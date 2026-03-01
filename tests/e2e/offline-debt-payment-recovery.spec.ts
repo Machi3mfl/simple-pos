@@ -35,7 +35,7 @@ test.describe("offline debt payment recovery", () => {
       await route.continue();
     });
 
-    await page.goto("/pos");
+    await page.goto("/sales");
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();
     await page.getByTestId("checkout-customer-name-input").fill(customerName);

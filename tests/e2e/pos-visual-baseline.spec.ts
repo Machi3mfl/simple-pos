@@ -20,7 +20,7 @@ async function mockProductsList(page: Page): Promise<void> {
 test("renders tablet three-zone layout baseline", async ({ page }) => {
   await mockProductsList(page);
 
-  await page.goto("/pos");
+  await page.goto("/sales");
 
   await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
@@ -37,7 +37,7 @@ test.describe("responsive layout baseline", () => {
   test("renders compact-tablet layout baseline", async ({ page }) => {
     await mockProductsList(page);
 
-    await page.goto("/pos");
+    await page.goto("/sales");
 
     await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();

@@ -16,8 +16,8 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     const marker = uniqueMarker();
     const customerName = `UI Flow ${marker}`;
 
-    await page.goto("/pos");
-    await expect(page).toHaveURL(/\/pos\/sales$/);
+    await page.goto("/sales");
+    await expect(page).toHaveURL(/\/sales$/);
     await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
     await expect(page.getByTestId("checkout-open-payment-button")).toBeEnabled({
       timeout: 15_000,
@@ -44,7 +44,7 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     await expect(checkoutFeedback).toContainText(customerName);
 
     await page.getByTestId("nav-item-receivables").click();
-    await expect(page).toHaveURL(/\/pos\/receivables$/);
+    await expect(page).toHaveURL(/\/receivables$/);
     await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
     await page.getByTestId("debt-refresh-candidates-button").click();
     const customerOption = page
@@ -60,7 +60,7 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     await expect(page.getByTestId("debt-outstanding-value")).not.toHaveText("$0.00");
 
     await page.getByTestId("nav-item-reporting").click();
-    await expect(page).toHaveURL(/\/pos\/reporting$/);
+    await expect(page).toHaveURL(/\/reporting$/);
     await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
 
     const tomorrow = new Date(Date.now() + 1000 * 60 * 60 * 24)

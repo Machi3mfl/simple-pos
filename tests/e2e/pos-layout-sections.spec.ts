@@ -19,7 +19,7 @@ async function mockProducts(page: Page): Promise<void> {
 
 test("renders core POS layout sections and controls", async ({ page }) => {
   await mockProducts(page);
-  await page.goto("/pos");
+  await page.goto("/sales");
 
   await expect(page.getByTestId("nav-item-sales")).toBeVisible();
   await expect(page.getByTestId("nav-item-catalog")).toBeVisible();

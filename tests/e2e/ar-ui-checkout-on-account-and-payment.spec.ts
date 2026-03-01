@@ -9,7 +9,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 }) => {
   const customerName = `UI AR ${Date.now()}`;
 
-  await page.goto("/pos");
+  await page.goto("/sales");
 
   await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeEnabled();

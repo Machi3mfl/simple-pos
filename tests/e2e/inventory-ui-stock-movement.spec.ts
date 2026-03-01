@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("registers inventory movement from UI and shows validation feedback", async ({ page }) => {
   const uniqueProductName = `Inventory Seed ${Date.now()}`;
 
-  await page.goto("/pos");
+  await page.goto("/sales");
   await page.getByTestId("nav-item-catalog").click();
 
   await page.getByTestId("onboarding-name-input").fill(uniqueProductName);

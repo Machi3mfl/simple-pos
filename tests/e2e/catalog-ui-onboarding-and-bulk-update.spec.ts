@@ -5,7 +5,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
 }) => {
   const uniqueProductName = `E2E Catalog ${Date.now()}`;
 
-  await page.goto("/pos");
+  await page.goto("/sales");
   await page.getByRole("button", { name: "Catalog" }).click();
 
   await page.getByTestId("onboarding-name-input").fill(uniqueProductName);

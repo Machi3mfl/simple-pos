@@ -84,7 +84,7 @@ curl -X POST /api/v1/sales \
 
 ## Current Output
 
-- Tablet-first POS mockup route: `src/app/(admin)/pos/page.tsx`
+- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/catalog`, `/inventory`, `/receivables`, `/reporting`, `/sync`)
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
@@ -97,7 +97,7 @@ curl -X POST /api/v1/sales \
   - `Receivables`: debt management UI
   - `Reporting`: reporting/history UI
   - `Sync`: offline queue/sync UI
-- Root route redirect to POS demo: `src/app/page.tsx` -> `/pos`
+- Root route redirect to POS demo: `src/app/page.tsx` -> `/sales`
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
   - Category and search filtering in catalog panel

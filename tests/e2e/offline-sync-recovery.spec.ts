@@ -32,7 +32,7 @@ test.describe("offline sync recovery", () => {
       await route.continue();
     });
 
-    await page.goto("/pos");
+    await page.goto("/sales");
 
     await page.getByRole("button", { name: "Process to Payment" }).click();
     await page.getByRole("button", { name: "Confirm Payment" }).click();

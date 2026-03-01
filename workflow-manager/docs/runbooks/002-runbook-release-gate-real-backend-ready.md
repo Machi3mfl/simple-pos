@@ -29,7 +29,7 @@ npx -y supabase start
 npx -y supabase db reset --local
 ```
 
-3. Export runtime env variables:
+3. Export runtime env variables (optional only when running Playwright manually):
 
 ```bash
 export POS_BACKEND_MODE=supabase
@@ -37,21 +37,17 @@ export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 export SUPABASE_SERVICE_ROLE_KEY="<local-service-role-key>"
 ```
 
-Alternative (auto-load keys from local Supabase status):
-
-```bash
-eval "$(npx -y supabase status -o env | rg '^[A-Z0-9_]+=')"
-POS_BACKEND_MODE=supabase \
-NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
-SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-npm run test:e2e:release-gate:real
-```
-
 4. Run real-backend release-gate tests:
 
 ```bash
 npm run test:e2e:release-gate:real
 ```
+
+This command now:
+- starts Supabase if needed
+- resets the local DB
+- auto-loads `API_URL` and `SERVICE_ROLE_KEY` from `supabase status -o env`
+- maps them to `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 
 5. Run the real-backend UI suite by module (catalog, inventory, sales, receivables, reporting, sync):
 

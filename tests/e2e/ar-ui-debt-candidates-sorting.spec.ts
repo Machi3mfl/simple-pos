@@ -41,7 +41,7 @@ test("lists receivables by customer name and sorts candidates by outstanding bal
   const mediumDebtCustomer = `${marker} Medium`;
   const highDebtCustomer = `${marker} High`;
 
-  await page.goto("/pos");
+  await page.goto("/sales");
   await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeEnabled();
 

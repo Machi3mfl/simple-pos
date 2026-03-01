@@ -16,12 +16,12 @@ export const posWorkspaceIds: readonly PosWorkspaceId[] = [
 ];
 
 export const workspacePathById: Record<PosWorkspaceId, string> = {
-  sales: "/pos/sales",
-  catalog: "/pos/catalog",
-  inventory: "/pos/inventory",
-  receivables: "/pos/receivables",
-  reporting: "/pos/reporting",
-  sync: "/pos/sync",
+  sales: "/sales",
+  catalog: "/catalog",
+  inventory: "/inventory",
+  receivables: "/receivables",
+  reporting: "/reporting",
+  sync: "/sync",
 };
 
 export function isPosWorkspaceId(value: string): value is PosWorkspaceId {

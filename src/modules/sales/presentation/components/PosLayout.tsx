@@ -174,7 +174,7 @@ function resolveWorkspaceFromPathname(pathname: string | null): PosWorkspaceId |
   }
 
   const segments = pathname.split("/").filter(Boolean);
-  const maybeWorkspace = segments[1] ?? "";
+  const maybeWorkspace = segments[0] === "pos" ? (segments[1] ?? "") : (segments[0] ?? "");
   if (!isPosWorkspaceId(maybeWorkspace)) {
     return null;
   }
