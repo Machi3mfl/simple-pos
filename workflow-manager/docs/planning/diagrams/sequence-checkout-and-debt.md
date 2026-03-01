@@ -1,3 +1,4 @@
+**GitHub Issue**: #15  
 # Sequence Diagram: Checkout and Debt Flow
 
 ```mermaid

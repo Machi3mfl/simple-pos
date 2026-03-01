@@ -4,7 +4,7 @@
 
 **Feature ID**: `RELEASE-001`  
 **Status**: `done`  
-**GitHub Issue**: `pending`  
+**GitHub Issue**: #19  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-013`, `PBI-011`, `PBI-012`  
 **Linked FR/NFR**: `FR-005`, `FR-006`, `NFR-003`  

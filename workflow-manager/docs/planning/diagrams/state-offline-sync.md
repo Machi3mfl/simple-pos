@@ -1,3 +1,4 @@
+**GitHub Issue**: #17  
 # State Diagram: Offline Sync Lifecycle
 
 ```mermaid

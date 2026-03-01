@@ -5,6 +5,7 @@
 **Document ID**: `007`  
 **File Name**: `007-execution-status-simple-pos-ready.md`  
 **Status**: `ready`  
+**GitHub Issue**: #18  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
 **Version**: `0.1`  

@@ -1,3 +1,4 @@
+**GitHub Issue**: #16  
 # Class Diagram: MVP Domain
 
 Source of truth diagram in Mermaid embedded markdown.
