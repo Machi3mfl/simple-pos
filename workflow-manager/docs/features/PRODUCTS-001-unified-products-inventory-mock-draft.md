@@ -1,4 +1,4 @@
-# [PRODUCTS-001] Feature: Mock visual de Productos e Inventario
+# [PRODUCTS-001] Feature: Visual Mock for Products and Inventory
 
 ## Metadata
 
@@ -11,33 +11,33 @@
 
 ## Business Goal
 
-Validar una experiencia unificada de `Productos e inventario` antes de tocar endpoints, casos de uso o contratos. El foco del mock es reducir cambio de contexto, priorizar imágenes y textos grandes, y acercar acciones frecuentes al producto seleccionado.
+Validate a unified `Products and inventory` experience before touching endpoints, use cases, or contracts. The purpose of the mock is to reduce context switching, prioritize large images and readable text, and keep frequent actions close to the selected product.
 
 ## Scope
 
-- Agrega un workspace nuevo `/products` dentro del shell POS.
-- Renderiza datos mock locales, sin integración API.
-- Muestra:
-  - listado de productos ordenado por estado de stock,
-  - filtros útiles para operación diaria,
-  - ficha detallada del producto en modal,
-  - acciones rápidas de stock/edición,
-  - modales visuales para CRUD y flujos masivos.
+- Adds a new `/products` workspace inside the POS shell.
+- Renders local mock data with no API integration.
+- Shows:
+  - a product list ordered by stock state,
+  - useful operational filters,
+  - a detailed product sheet in a modal,
+  - quick stock/edit actions,
+  - visual modals for CRUD and bulk flows.
 
 ## UX Direction
 
-- La lista prioriza productos con stock y alerta visual de stock bajo/sin stock.
-- Los productos se muestran con cards alineadas al lenguaje visual de `Ventas`: fondo blanco, sin gradientes, imagen central neutra y nombre grande.
-- Los ejemplos del mock están orientados a kiosko para validar reconocimiento rápido en operación diaria.
-- Los cards priorizan imagen grande, nombre visible y métricas cortas, con spacing más compacto para mostrar más productos en pantalla.
-- El objetivo visual en desktop ancho es acercarse a 5 productos por fila sin perder legibilidad básica.
-- La grilla usa `auto-fit` con cards más angostas para acercarse a 5 productos por fila en resoluciones anchas.
-- La grilla ocupa todo el ancho disponible y el detalle vive en un modal para no comprimir la lectura del listado.
-- El header evita copy explicativo extra para conservar alto útil del workspace.
-- Las acciones se concentran en el modal del producto seleccionado para evitar ruido visual.
-- El modal usa scroll interno y altura máxima del viewport para no cortarse en desktop o tablet.
-- El rail lateral y el workspace deben scrollear correctamente dentro del alto del shell sin recortar el contenido inferior.
-- Las operaciones de alta/edición/stock masivo viven en modales o flujos tipo wizard.
+- The list prioritizes products with stock and adds visual emphasis for low-stock and out-of-stock states.
+- Products use cards aligned with the visual language of `Sales`: white background, no gradients, neutral centered image, and large product name.
+- Mock examples are kiosk-oriented to validate fast recognition during daily operation.
+- Cards prioritize a large image, visible product name, and short metrics, with tighter spacing so more products fit on screen.
+- The desktop target is to get close to 5 products per row without losing basic readability.
+- The grid uses `auto-fit` with narrower cards to approach 5 products per row on wide resolutions.
+- The grid uses the full available width and moves detail into a modal so the list remains easy to read.
+- The header avoids extra explanatory copy to preserve useful vertical space in the workspace.
+- Actions are concentrated inside the selected-product modal to reduce visual noise.
+- The modal uses internal scroll and a viewport-constrained max height so it does not get clipped on desktop or tablet.
+- The side rail and the workspace must scroll correctly inside the shell height without clipping lower content.
+- Create, edit, and bulk stock operations live in modals or wizard-like flows.
 
 ## Architecture Artifacts
 
@@ -45,25 +45,25 @@ Validar una experiencia unificada de `Productos e inventario` antes de tocar end
 
 ```mermaid
 flowchart LR
-    A[Workspace /products] --> B[Listado de productos]
-    A --> C[Filtros y orden]
-    A --> D[Modal de detalle]
-    D --> E[Agregar stock]
-    D --> F[Ajustar stock]
-    D --> G[Editar producto]
-    A --> H[Carga masiva]
-    A --> I[Stock masivo]
+    A[Workspace /products] --> B[Product list]
+    A --> C[Filters and sorting]
+    A --> D[Detail modal]
+    D --> E[Add stock]
+    D --> F[Adjust stock]
+    D --> G[Edit product]
+    A --> H[Bulk import]
+    A --> I[Bulk stock]
 ```
 
 ### Layout Diagram
 
 ```mermaid
 flowchart TB
-    A[Header + acciones principales]
-    B[Listado filtrable]
-    C[Grilla de productos]
-    D[Modal de detalle]
-    E[Movimientos recientes]
+    A[Header + primary actions]
+    B[Filterable list]
+    C[Product grid]
+    D[Detail modal]
+    E[Recent movements]
 
     A --> B
     A --> C
@@ -73,20 +73,20 @@ flowchart TB
 
 ## Current Output
 
-- Ruta mock navegable en `src/modules/products/presentation/components/ProductsInventoryMockPanel.tsx`
-- Implementacion real actual en `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`
-- Workspace nuevo en:
+- Navigable mock route in `src/modules/products/presentation/components/ProductsInventoryMockPanel.tsx`
+- Current real implementation in `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`
+- New workspace wiring in:
   - `src/modules/sales/presentation/posWorkspace.ts`
   - `src/modules/sales/presentation/components/PosLayout.tsx`
-- Smoke UI actualizado para incluir la nueva preview en:
+- Updated UI smoke coverage including the new preview in:
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
-- Siguiente etapa planificada en:
+- Planned next stage in:
   - `workflow-manager/docs/features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md`
 
-Desde `2026-03-01`, `/products` ya corre con backend real y este documento queda como baseline visual historica.
+Since `2026-03-01`, `/products` already runs on the real backend and this document remains as the historical visual baseline.
 
 ## Explicit Non-Goals
 
-- No crea endpoints nuevos.
-- No reemplaza todavía las pantallas reales de `Catálogo` ni `Inventario`.
-- No implementa persistencia, CRUD real ni movimientos reales.
+- Does not create new endpoints.
+- Does not yet replace the real `Catalog` or `Inventory` screens.
+- Does not implement real persistence, real CRUD, or real stock movements.

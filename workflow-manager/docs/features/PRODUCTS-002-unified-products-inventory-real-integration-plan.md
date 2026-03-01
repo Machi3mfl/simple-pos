@@ -1,4 +1,4 @@
-# [PRODUCTS-002] Feature: Integracion real de Productos e Inventario
+# [PRODUCTS-002] Feature: Real Products and Inventory Integration
 
 ## Metadata
 
@@ -11,40 +11,40 @@
 
 ## Business Goal
 
-Convertir `/products` desde mock visual a workspace operativo real, sin mezclar dominio ni duplicar logica ya existente en `catalog` e `inventory`.
+Turn `/products` from a visual mock into a real operational workspace, without mixing domains or duplicating business logic that already exists in `catalog` and `inventory`.
 
-El objetivo no es solo "dibujar la pantalla", sino cerrar el circuito completo:
+The goal is not only to "draw the screen", but to close the full loop:
 
-- UI usable para operacion diaria,
-- persistencia consistente,
-- comandos reales de producto y stock,
-- pruebas del circuito end-to-end con backend real.
+- usable UI for daily operations,
+- consistent persistence,
+- real product and stock commands,
+- end-to-end flow coverage against the real backend.
 
 ---
 
 ## Current Baseline
 
-Hoy existe:
+Today the system already has:
 
-- Mock UI aprobado en `src/modules/products/presentation/components/ProductsInventoryMockPanel.tsx`
+- Approved mock UI in `src/modules/products/presentation/components/ProductsInventoryMockPanel.tsx`
 - `GET /api/v1/products`
 - `POST /api/v1/products`
 - `POST /api/v1/products/price-batches`
 - `GET /api/v1/stock-movements`
 - `POST /api/v1/stock-movements`
 
-Gaps relevantes:
+Relevant gaps:
 
-- No existe un read model unificado para listar producto + stock + costo promedio + ultimo movimiento.
-- No existe `PATCH /api/v1/products/:id` para editar/archivar.
-- No existe importacion masiva real para productos o stock.
-- El stock visible hoy tiene una inconsistencia de modelo:
-  - `products.stock` existe en catalogo
-  - `inventory_items.stock_on_hand` existe en inventario
-  - `CreateProductUseCase` crea producto con `initialStock`, pero no inicializa `inventory_items`
-  - `RegisterStockMovementUseCase` muta `inventory_items`, no `products.stock`
+- There is no unified read model for `product + stock + average cost + last movement`.
+- There is no `PATCH /api/v1/products/:id` to edit/archive products.
+- There is no real bulk import for products or stock.
+- Visible stock currently has a model inconsistency:
+  - `products.stock` exists in catalog
+  - `inventory_items.stock_on_hand` exists in inventory
+  - `CreateProductUseCase` creates a product with `initialStock`, but does not initialize `inventory_items`
+  - `RegisterStockMovementUseCase` mutates `inventory_items`, not `products.stock`
 
-Antes de conectar el workspace nuevo, hay que fijar una sola fuente de verdad del stock.
+Before connecting the new workspace, the system needs a single stock source of truth.
 
 ---
 
@@ -52,54 +52,54 @@ Antes de conectar el workspace nuevo, hay que fijar una sola fuente de verdad de
 
 ### Pattern Choice
 
-Para este problema conviene usar **Read Model / Query Model + existing command use cases**.
+For this problem the right fit is **Read Model / Query Model + existing command use cases**.
 
-Razon:
+Reason:
 
-- `/products` necesita datos agregados de `catalog` + `inventory`
-- las operaciones de escritura siguen siendo comandos bien separados (`create product`, `register stock movement`, `bulk price update`, etc.)
-- evita convertir `GET /api/v1/products` en un endpoint administrativo sobredimensionado
+- `/products` needs aggregated data from `catalog` + `inventory`
+- write operations should remain clearly separated commands (`create product`, `register stock movement`, `bulk price update`, etc.)
+- this avoids turning `GET /api/v1/products` into an oversized administrative endpoint
 
 ### Source of Truth for Stock
 
-Para `PRODUCTS-002`, el stock visible del workspace debe salir de `inventory_items.stock_on_hand`.
+For `PRODUCTS-002`, the visible stock in the workspace must come from `inventory_items.stock_on_hand`.
 
-`products.stock` debe quedar como:
+`products.stock` should remain:
 
-- campo legacy temporal para compatibilidad,
-- o candidato a deprecacion/migracion posterior,
-- pero no como fuente de verdad para el workspace unificado.
+- a temporary legacy compatibility field,
+- or a future deprecation/migration candidate,
+- but not the source of truth for the unified workspace.
 
 ---
 
 ## Target Outcome
 
-Cuando la feature termine:
+When the feature is complete:
 
-- `/products` lista productos reales con filtros, sort y paginacion
-- cada card muestra stock actual real, stock minimo, precio y estado
-- el modal de detalle muestra datos reales y movimientos recientes
-- `Nuevo producto`, `Agregar stock`, `Ajustar stock`, `Editar producto` y `Archivar` funcionan
-- los cambios persisten al recargar
-- el circuito real queda cubierto con tests de UI, API, persistencia y logica
+- `/products` lists real products with filters, sorting, and pagination
+- each card shows real current stock, minimum stock, price, and status
+- the detail modal shows real data and recent movements
+- `New product`, `Add stock`, `Adjust stock`, `Edit product`, and `Archive` work
+- changes persist after reload
+- the real circuit is covered by UI, API, persistence, and logic tests
 
 ## Implementation Snapshot
 
-Entregado en `2026-03-01`:
+Delivered on `2026-03-01`:
 
-- migracion `20260301110000_products_workspace_real_integration.sql` con `sku`, `min_stock` y backfill de `inventory_items`
-- `CreateProductUseCase` inicializa inventario real y registra movimiento inicial cuando hay stock de alta
-- `RegisterStockMovementUseCase` mantiene sincronizado el espejo legacy `products.stock` y `products.cost`
-- endpoint paginado `GET /api/v1/products/workspace`
+- migration `20260301110000_products_workspace_real_integration.sql` with `sku`, `min_stock`, and `inventory_items` backfill
+- `CreateProductUseCase` initializes real inventory and records the initial movement when the product is created with stock
+- `RegisterStockMovementUseCase` keeps the legacy `products.stock` and `products.cost` mirror synchronized
+- paginated endpoint `GET /api/v1/products/workspace`
 - `PATCH /api/v1/products/:id`
 - `POST /api/v1/products/import`
 - `POST /api/v1/stock-movements/import`
-- workspace real `/products` con listado, filtros, modal de detalle, alta, edicion, archivado, stock individual y lotes paste-based
+- real `/products` workspace with listing, filters, detail modal, create, edit, archive, individual stock operations, and paste-based batch flows
 
-Nota de alcance:
+Scope note:
 
-- la carga masiva se entrego en formato paste/import con validacion parcial por fila
-- no se implemento un wizard de preview separado antes de persistir
+- bulk loading was delivered in paste/import form with partial per-row validation
+- a separate preview wizard before persistence was not implemented
 
 ---
 
@@ -107,20 +107,20 @@ Nota de alcance:
 
 ### In Scope
 
-- Workspace `/products` conectado a backend real
-- Read model unificado para listado operativo
-- Modal de detalle conectado a datos reales
-- Alta individual de producto
-- Movimiento individual de stock
-- Edicion y archivado de producto
-- Plan de importacion masiva para productos y stock
-- Cobertura de pruebas por capa y E2E real
+- `/products` workspace connected to the real backend
+- Unified read model for the operational list
+- Detail modal connected to real data
+- Individual product creation
+- Individual stock movement
+- Product editing and archiving
+- Bulk import plan for products and stock
+- Layered test coverage and real E2E coverage
 
 ### Out of Scope
 
-- Descontar stock automaticamente desde ventas
-- Eliminar inmediatamente `/catalog` y `/inventory`
-- Reescribir toda la arquitectura de catalogo e inventario en un solo modulo
+- Automatically deducting stock from sales
+- Immediately removing `/catalog` and `/inventory`
+- Rewriting the full catalog and inventory architecture into a single module
 
 ---
 
@@ -184,79 +184,79 @@ sequenceDiagram
     participant InventoryRepo as InventoryRepository
     participant ReadAPI as GET /api/v1/products/workspace
 
-    Operator->>UI: Abrir modal y confirmar "Agregar stock"
+    Operator->>UI: Open modal and confirm "Add stock"
     UI->>API: POST movement
     API->>UseCase: execute(productId, movementType, quantity, unitCost)
     UseCase->>InventoryRepo: getInventoryItem(productId)
     UseCase->>InventoryRepo: saveInventoryItem(evolved)
     UseCase->>InventoryRepo: appendStockMovement(movement)
-    API-->>UI: 201 movimiento registrado
-    UI->>ReadAPI: refresh listado
-    ReadAPI-->>UI: producto actualizado + stock real
+    API-->>UI: 201 movement registered
+    UI->>ReadAPI: refresh list
+    ReadAPI-->>UI: updated product + real stock
 ```
 
 ### Activity Diagram
 
 ```mermaid
 flowchart TD
-    A[Abrir /products] --> B[Cargar listado real]
-    B --> C[Filtrar y ordenar]
-    C --> D[Seleccionar producto]
-    D --> E[Abrir modal detalle]
-    E --> F{Accion}
-    F -->|Crear| G[Alta producto]
-    F -->|Agregar/Ajustar stock| H[Movimiento stock]
-    F -->|Editar/Archivar| I[Actualizar producto]
-    G --> J[Persistir y refrescar]
+    A[Open /products] --> B[Load real list]
+    B --> C[Filter and sort]
+    C --> D[Select product]
+    D --> E[Open detail modal]
+    E --> F{Action}
+    F -->|Create| G[Create product]
+    F -->|Add/Adjust stock| H[Stock movement]
+    F -->|Edit/Archive| I[Update product]
+    G --> J[Persist and refresh]
     H --> J
     I --> J
-    J --> K[Listado y modal consistentes]
+    J --> K[List and modal stay consistent]
 ```
 
 ---
 
 ## Rollout Plan
 
-### Phase 0 - Consistencia de persistencia
+### Phase 0 - Persistence Consistency
 
-Objetivo: asegurar base de datos y use cases consistentes antes de montar la nueva UI real.
+Goal: make database state and use cases consistent before mounting the new real UI.
 
-#### `P2-T01` Definir y documentar fuente de verdad del stock
+#### `P2-T01` Define and document the stock source of truth
 
-- Decidir formalmente que `/products` lee stock desde `inventory_items.stock_on_hand`
-- Registrar impacto en docs y contratos
+- Formally decide that `/products` reads stock from `inventory_items.stock_on_hand`
+- Record the impact in docs and contracts
 
-#### `P2-T02` Reparar alta inicial de producto + inventario
+#### `P2-T02` Fix initial product creation + inventory initialization
 
-- Crear slice que garantice que alta de producto inicializa inventario real
-- Evitar que un producto nuevo quede con stock en `products.stock` pero sin `inventory_items`
+- Create a slice that guarantees product creation initializes real inventory
+- Prevent a new product from ending up with stock in `products.stock` but no `inventory_items`
 
-#### `P2-T03` Extender port de inventario para snapshot masivo
+#### `P2-T03` Extend the inventory port for bulk snapshot reads
 
-- Agregar en `InventoryRepository` una operacion tipo `listInventorySnapshot(productIds)`
-- Evitar `N+1` para el listado del workspace
+- Add an operation like `listInventorySnapshot(productIds)` to `InventoryRepository`
+- Avoid `N+1` reads for the workspace listing
 
 #### Acceptance Criteria
 
-- [x] Un producto nuevo puede crearse con stock inicial consistente
-- [x] El stock mostrado por futuras queries no depende de `products.stock`
-- [x] Existe consulta masiva de snapshot de inventario
+- [x] A new product can be created with consistent initial stock
+- [x] Future visible stock queries no longer depend on `products.stock`
+- [x] A bulk inventory snapshot query exists
 
 #### Tests
 
-- Unit: orquestacion de alta inicial producto + inventario
-- Integration: repositorios Supabase escriben en tablas correctas
-- API: contrato de alta sigue valido
+- Unit: initial product + inventory orchestration
+- Integration: Supabase repositories write to the correct tables
+- API: product creation contract remains valid
 
 ---
 
-### Phase 1 - Read model real para `/products`
+### Phase 1 - Real Read Model for `/products`
 
-Objetivo: reemplazar el mock por listado real sin tocar aun todas las mutaciones.
+Goal: replace the mock list with real data before connecting all mutations.
 
-#### `P2-T04` Diseñar contrato `GET /api/v1/products/workspace`
+#### `P2-T04` Design `GET /api/v1/products/workspace`
 
-Debe soportar:
+It must support:
 
 - `q`
 - `categoryId`
@@ -266,232 +266,232 @@ Debe soportar:
 - `page`
 - `pageSize`
 
-#### `P2-T05` Implementar `ListProductsWorkspaceUseCase`
+#### `P2-T05` Implement `ListProductsWorkspaceUseCase`
 
-- Combina `ProductRepository` + snapshot de inventario
-- Calcula estado visual (`with_stock`, `low_stock`, `out_of_stock`, `inactive`)
-- Devuelve DTO listo para cards
+- Combine `ProductRepository` + inventory snapshot
+- Compute visual state (`with_stock`, `low_stock`, `out_of_stock`, `inactive`)
+- Return a DTO ready for cards
 
-#### `P2-T06` Implementar endpoint + DTOs + OpenAPI
+#### `P2-T06` Implement endpoint + DTOs + OpenAPI
 
 - `GET /api/v1/products/workspace`
-- respuesta paginada
-- filtros y sort validados
+- paginated response
+- validated filters and sorting
 
-#### `P2-T07` Conectar la grilla real en `/products`
+#### `P2-T07` Connect the real grid in `/products`
 
-- reemplazar fixtures mock por fetch real
-- mantener modal todavia con acciones deshabilitadas o parciales si hace falta
+- replace mock fixtures with real fetches
+- keep the modal with disabled or partial actions if needed while the rest catches up
 
 #### Acceptance Criteria
 
-- [x] `/products` carga datos reales con filtros y orden
-- [x] La pantalla persiste al refrescar
-- [x] No hay `N+1` por producto para stock
+- [x] `/products` loads real data with filters and sorting
+- [x] The screen persists correctly after refresh
+- [x] There is no per-product stock `N+1`
 
 #### Tests
 
 - Unit: `ListProductsWorkspaceUseCase`
 - API contract: `products-workspace`
-- Integration: repositorio snapshot masivo
-- E2E UI real: filtros + sort + persistencia de recarga
+- Integration: bulk snapshot repository query
+- Real UI E2E: filters + sorting + refresh persistence
 
 ---
 
-### Phase 2 - Modal de detalle real
+### Phase 2 - Real Detail Modal
 
-Objetivo: detalle util sin mutacion todavia o con mutaciones controladas.
+Goal: provide useful detail without uncontrolled mutation, or with carefully limited mutation.
 
-#### `P2-T08` Conectar modal a item real del listado
+#### `P2-T08` Connect the modal to a real list item
 
-- usar datos del read model para header, precio y estado
+- use read-model data for header, price, and status
 
-#### `P2-T09` Mostrar movimientos recientes reales
+#### `P2-T09` Show real recent movements
 
-- reutilizar `GET /api/v1/stock-movements?productId=...`
-- limitar cantidad y ordenar descendente
+- reuse `GET /api/v1/stock-movements?productId=...`
+- limit the amount and sort descending
 
-#### `P2-T10` Manejar estados de carga, error y producto inexistente
+#### `P2-T10` Handle loading, error, and missing-product states
 
-- modal robusto ante refresh, archivado o producto filtrado
+- modal must remain robust during refresh, archive, or filtered-out product scenarios
 
 #### Acceptance Criteria
 
-- [x] El modal muestra datos reales del producto
-- [x] El historial coincide con la persistencia real
-- [x] El modal no rompe si el producto cambia o desaparece
+- [x] The modal shows real product data
+- [x] History matches real persistence
+- [x] The modal does not break if the product changes or disappears
 
 #### Tests
 
-- API integration: movimientos por producto
-- E2E UI real: abrir modal, validar datos y movimientos
+- API integration: movements by product
+- Real UI E2E: open modal and validate data and history
 
 ---
 
-### Phase 3 - Alta individual real desde `/products`
+### Phase 3 - Real Product Creation from `/products`
 
-Objetivo: mover `Nuevo producto` del mock a circuito real.
+Goal: move `New product` from the mock into the real circuit.
 
-#### `P2-T11` Reusar o adaptar alta real existente para modal nuevo
+#### `P2-T11` Reuse or adapt the existing real create flow for the new modal
 
-- conectar formulario a `POST /api/v1/products`
-- asegurar inicializacion de inventario de Phase 0
+- connect the form to `POST /api/v1/products`
+- guarantee inventory initialization from Phase 0
 
-#### `P2-T12` Refrescar lista y seleccionar el nuevo producto
+#### `P2-T12` Refresh the list and select the newly created product
 
-- invalidacion de listado
-- feedback claro
+- list invalidation
+- clear feedback
 
 #### Acceptance Criteria
 
-- [x] Crear producto desde `/products` lo deja visible al volver a cargar
-- [x] El producto aparece con stock consistente
-- [x] El producto queda disponible tambien en `/sales` si esta activo
+- [x] Creating a product from `/products` makes it visible after reload
+- [x] The product appears with consistent stock
+- [x] The product also becomes available in `/sales` if active
 
 #### Tests
 
 - API contract: `POST /api/v1/products`
-- E2E UI real: alta desde `/products`
-- Cross-module E2E: producto creado visible en `/sales`
+- Real UI E2E: create from `/products`
+- Cross-module E2E: product created in `/products` is visible in `/sales`
 
 ---
 
-### Phase 4 - Agregar stock / ajustar stock
+### Phase 4 - Add Stock / Adjust Stock
 
-Objetivo: cerrar el circuito de inventario diario desde el modal.
+Goal: close the daily inventory loop directly from the modal.
 
-#### `P2-T13` Conectar modal de stock a `POST /api/v1/stock-movements`
+#### `P2-T13` Connect the stock modal to `POST /api/v1/stock-movements`
 
 - `inbound`
 - `adjustment`
-- `outbound` solo si se decide mantenerlo visible
+- `outbound` only if it stays intentionally exposed
 
-#### `P2-T14` Refrescar card + modal luego de guardar
+#### `P2-T14` Refresh card + modal after save
 
-- stock actual
-- ultimo movimiento
-- historial reciente
+- current stock
+- last movement
+- recent history
 
 #### Acceptance Criteria
 
-- [x] Agregar stock actualiza listado y modal
-- [x] Ajustar stock actualiza listado y modal
-- [x] Errores de negocio se muestran sin desincronizar la UI
+- [x] Adding stock updates both the list and the modal
+- [x] Adjusting stock updates both the list and the modal
+- [x] Business errors are shown without desynchronizing the UI
 
 #### Tests
 
 - Unit: `RegisterStockMovementUseCase`
 - API contract: `POST /api/v1/stock-movements`
-- E2E UI real: alta de stock y ajuste
-- Persistence integration: stock y movimiento auditado
+- Real UI E2E: stock add and adjustment
+- Persistence integration: audited stock and movement updates
 
 ---
 
-### Phase 5 - Editar y archivar producto
+### Phase 5 - Edit and Archive Product
 
-Objetivo: cerrar el CRUD operativo minimo.
+Goal: close the minimum operational CRUD.
 
-#### `P2-T15` Extender dominio de producto
+#### `P2-T15` Extend the product domain
 
-- editar nombre
-- editar categoria
-- editar precio
-- editar imagen
-- archivar / reactivar
+- edit name
+- edit category
+- edit price
+- edit image
+- archive / reactivate
 
-#### `P2-T16` Extender `ProductRepository`
+#### `P2-T16` Extend `ProductRepository`
 
 - `getById`
-- soporte de update coherente
+- coherent update support
 
-#### `P2-T17` Implementar `PATCH /api/v1/products/:id`
+#### `P2-T17` Implement `PATCH /api/v1/products/:id`
 
-- cambios aditivos
-- validacion DTO
-- contrato OpenAPI
+- additive changes
+- DTO validation
+- OpenAPI contract
 
-#### `P2-T18` Conectar modal de edicion y archivado
+#### `P2-T18` Connect edit and archive from the modal
 
-- refresco de lista
-- respeto de filtro `Solo activos`
+- list refresh
+- respects the `Active only` filter
 
 #### Acceptance Criteria
 
-- [x] Editar producto persiste y refresca
-- [x] Archivar oculta el producto bajo `Solo activos`
-- [x] `/sales` deja de ofrecer el producto archivado
+- [x] Editing a product persists and refreshes correctly
+- [x] Archiving hides the product under `Active only`
+- [x] `/sales` stops offering the archived product
 
 #### Tests
 
 - Unit: `UpdateProductUseCase`
 - API contract: `PATCH /api/v1/products/:id`
-- E2E UI real: editar + archivar
-- Cross-module E2E: producto archivado no aparece en `/sales`
+- Real UI E2E: edit + archive
+- Cross-module E2E: archived product no longer appears in `/sales`
 
 ---
 
-### Phase 6 - Masivos
+### Phase 6 - Bulk Operations
 
-Objetivo: cubrir la operacion grande sin bloquear la entrega incremental.
+Goal: cover large operational workflows without blocking incremental delivery.
 
-#### `P2-T19` Definir POC y contrato de carga masiva de productos
+#### `P2-T19` Define POC and contract for bulk product import
 
-- plantilla
+- template
 - preview
-- validacion por fila
+- per-row validation
 - apply
 
-#### `P2-T20` Definir contrato de stock masivo
+#### `P2-T20` Define the bulk stock contract
 
-- batch de movimientos
+- movement batches
 - preview
-- errores parciales bloqueantes
+- blocking partial errors
 
-#### `P2-T21` Integrar UI por wizard
+#### `P2-T21` Integrate UI through a wizard
 
-- no en un batch junto con CRUD individual
+- do not ship it bundled into the same batch as individual CRUD
 
 #### Acceptance Criteria
 
-- [x] Carga masiva procesa multiples filas y reporta validas e invalidas
-- [x] Stock masivo procesa multiples filas y reporta validas e invalidas
-- [x] Resultados muestran filas validas e invalidas
+- [x] Bulk product import processes multiple rows and reports valid and invalid ones
+- [x] Bulk stock import processes multiple rows and reports valid and invalid ones
+- [x] Results show valid and invalid rows
 
 #### Tests
 
 - API contract: batch import
-- Integration: persistencia por lote
-- E2E UI real: happy path + invalid rows
+- Integration: batch persistence
+- Real UI E2E: happy path + invalid rows
 
 ---
 
-### Phase 7 - Convergencia y release
+### Phase 7 - Convergence and Release
 
-Objetivo: endurecer y decidir convivencia con `catalog` / `inventory`.
+Goal: harden the feature and define coexistence with `catalog` / `inventory`.
 
-#### `P2-T22` Decidir convivencia de rutas
+#### `P2-T22` Decide route coexistence
 
-Opciones:
+Options:
 
-- [x] mantener `/catalog` y `/inventory` como fallback administrativo fuera del rail principal
-- [ ] redirigir a `/products` cuando paridad funcional este cerrada
+- [x] keep `/catalog` and `/inventory` as direct administrative fallbacks outside the main rail
+- [ ] redirect to `/products` once functional parity is fully closed
 
-#### `P2-T23` Endurecer suite real de release
+#### `P2-T23` Harden the real release suite
 
-Circuitos minimos:
+Minimum circuits:
 
-1. Alta producto en `/products`
-2. Producto visible en `/sales`
-3. Alta de stock desde `/products`
-4. Stock y movimientos persistidos tras recarga
-5. Edicion y archivado con impacto en filtros y `/sales`
+1. Product creation in `/products`
+2. Product visible in `/sales`
+3. Stock add from `/products`
+4. Stock and movements persist after reload
+5. Edit and archive impact both filters and `/sales`
 
 #### Acceptance Criteria
 
-- [x] El circuito principal corre en backend real
-- [x] La release gate cubre `/products`
-- [x] No quedan acciones mockeadas en el workspace
-- [x] El rail principal converge en `Products`; `/catalog` y `/inventory` quedan como fallback administrativo directo
+- [x] The main circuit runs against the real backend
+- [x] The release gate covers `/products`
+- [x] No mocked actions remain in the workspace
+- [x] The main rail converges into `Products`; `/catalog` and `/inventory` remain as direct administrative fallbacks
 
 ---
 
@@ -500,16 +500,16 @@ Circuitos minimos:
 ### Unit
 
 - `ListProductsWorkspaceUseCase`
-- slice de alta producto + inventario inicial
+- initial product creation + inventory initialization slice
 - `UpdateProductUseCase`
-- reglas de archivado y filtros de estado
+- archive and status-filter rules
 
 ### Integration
 
 - `SupabaseProductRepository`
 - `SupabaseInventoryRepository`
-- query de snapshot masivo de stock
-- integracion de producto + inventario al crear
+- bulk stock snapshot query
+- product + inventory integration at creation time
 
 ### API Contract
 
@@ -517,26 +517,26 @@ Circuitos minimos:
 - `PATCH /api/v1/products/:id`
 - `POST /api/v1/products`
 - `POST /api/v1/stock-movements`
-- futuros batch endpoints
+- future batch endpoints
 
-### E2E UI Real
+### Real UI E2E
 
-- `/products` lista y filtros
-- detalle modal con movimientos
-- alta producto
-- agregar stock
-- ajustar stock
-- editar
-- archivar
+- `/products` list and filters
+- detail modal with movements
+- product creation
+- add stock
+- adjust stock
+- edit
+- archive
 
 ### Cross-Module Real
 
-- producto creado en `/products` visible en `/sales`
-- producto archivado deja de verse en `/sales`
+- product created in `/products` is visible in `/sales`
+- archived product disappears from `/sales`
 
-Nota:
+Note:
 
-- no incluir "venta descuenta stock" en esta feature, porque hoy el flujo de ventas no integra inventario automaticamente
+- do not include "sale deducts stock" in this feature, because the current sales flow does not yet integrate inventory automatically
 
 ---
 
@@ -549,37 +549,37 @@ Nota:
 5. `Phase 4`
 6. `Phase 5`
 7. `Phase 7`
-8. `Phase 6` solo si el alcance masivo sigue siendo prioridad inmediata
+8. `Phase 6` only if bulk scope remains an immediate priority
 
-Razon:
+Reason:
 
-- primero consistencia de datos,
-- despues lectura real,
-- luego mutaciones individuales,
-- masivos al final por complejidad y superficie de error.
+- data consistency first,
+- then real reads,
+- then individual mutations,
+- bulk workflows last because of their complexity and error surface.
 
 ---
 
 ## Risks
 
-- **Dualidad de stock (`products.stock` vs `inventory_items.stock_on_hand`)**
-  Mitigacion: resolver fuente de verdad en `Phase 0`.
+- **Dual stock model (`products.stock` vs `inventory_items.stock_on_hand`)**
+  Mitigation: resolve the source of truth in `Phase 0`.
 
-- **Scope creep al intentar reemplazar `/catalog` y `/inventory` demasiado pronto**
-  Mitigacion: mantener convivencia hasta cerrar CRUD + stock + E2E real.
+- **Scope creep by trying to replace `/catalog` and `/inventory` too early**
+  Mitigation: keep coexistence until CRUD + stock + real E2E are fully closed.
 
-- **Importacion masiva mezclada con CRUD individual**
-  Mitigacion: dejar batch workflows en fase separada.
+- **Bulk import mixed together with individual CRUD**
+  Mitigation: keep batch workflows in a separate phase.
 
 ---
 
 ## Definition of Done
 
-- [x] `/products` funciona con backend real
-- [x] No quedan datos mock ni acciones mock en el workspace
-- [x] Persistencia consistente entre producto e inventario
-- [x] CRUD individual cerrado
-- [x] Stock individual cerrado
-- [x] Contratos OpenAPI actualizados
-- [x] E2E real cubre el circuito principal
-- [x] Documentacion de workflow y trazabilidad actualizada
+- [x] `/products` works against the real backend
+- [x] No mock data or mock actions remain in the workspace
+- [x] Consistent persistence between product and inventory
+- [x] Individual CRUD is closed
+- [x] Individual stock flow is closed
+- [x] OpenAPI contracts are updated
+- [x] Real E2E covers the main circuit
+- [x] Workflow documentation and traceability are updated

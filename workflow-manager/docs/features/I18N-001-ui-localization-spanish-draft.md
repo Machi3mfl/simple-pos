@@ -1,18 +1,18 @@
-# [I18N-001] Feature: Localización UI a Español
+# [I18N-001] Feature: UI Localization to Spanish
 
 ## Metadata
 
-**Feature ID**: `I18N-001`  
-**Status**: `done`  
-**Priority**: `high`  
-**Linked FR/NFR**: `NFR-002`, `NFR-005`  
+**Feature ID**: `I18N-001`
+**Status**: `done`
+**Priority**: `high`
+**Linked FR/NFR**: `NFR-002`, `NFR-005`
 **Planning Reference**: `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md`
 
 ---
 
 ## Business Goal
 
-Traducir toda la UI operativa a español con una base i18n reusable para evitar strings embebidos, mantener terminología consistente entre módulos y permitir sumar nuevos locales sin reescribir componentes.
+Translate the full operational UI into Spanish with a reusable i18n foundation so the app avoids embedded strings, keeps terminology consistent across modules, and can add new locales without rewriting components.
 
 ## Architecture Artifacts
 
@@ -85,24 +85,24 @@ flowchart LR
 
 ## Acceptance Criteria
 
-- [x] La app renderiza con `lang="es"`.
-- [x] Los componentes visibles del POS consumen un diccionario tipado compartido.
-- [x] Navegación, checkout, catálogo, inventario, deudas, reportes y sync muestran copy en español.
-- [x] Los mensajes de validación y feedback de API que impactan UI dejaron de salir en inglés.
-- [x] Los E2E que validan UI fueron actualizados a español.
+- [x] The app renders with `lang="es"`.
+- [x] Visible POS components consume a shared typed dictionary.
+- [x] Navigation, checkout, catalog, inventory, receivables, reporting, and sync show Spanish copy.
+- [x] API validation and feedback messages surfaced in the UI no longer appear in English.
+- [x] E2E coverage that validates the UI was updated to Spanish.
 
 ## Current Output
 
-- Infraestructura i18n base:
+- Base i18n infrastructure:
   - `src/infrastructure/i18n/messages.ts`
   - `src/infrastructure/i18n/I18nProvider.tsx`
-- `src/app/layout.tsx` ahora monta `I18nProvider` y publica `lang="es"`.
-- Todos los paneles visibles del POS consumen mensajes centralizados en español.
-- Categorías, métodos de pago, estados de deuda y tipos de movimiento usan helpers compartidos del provider.
-- Los errores/feedbacks de rutas API y DTOs visibles desde UI fueron traducidos al español.
-- Las suites E2E de UI verifican headings, acciones y feedbacks en español.
+- `src/app/layout.tsx` now mounts `I18nProvider` and publishes `lang="es"`.
+- All visible POS panels consume centralized Spanish messages.
+- Categories, payment methods, debt statuses, and movement types use shared provider helpers.
+- UI-visible API route and DTO errors/feedback were translated to Spanish.
+- UI E2E suites validate headings, actions, and feedback in Spanish.
 
 ## Notes
 
-- La solución no depende de una librería externa; la app usa un provider y un bundle tipado por locale.
-- Agregar otro idioma requiere sumar un nuevo bundle con la misma shape y pasar otro `locale` al provider.
+- The solution does not depend on an external library; the app uses a provider and a typed locale bundle.
+- Adding another language requires adding a new bundle with the same shape and passing another `locale` to the provider.

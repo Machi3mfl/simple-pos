@@ -119,7 +119,7 @@ curl -X POST /api/v1/sales \
   - on-account checkout can capture an initial partial payment and shows the remaining balance inline
 - Checkout UX updates:
   - removed `discount` / `tax` rows from the live order panel for now
-  - `Ir a cobrar` now opens a large checkout modal so payment becomes a focused final step
+  - `Go to checkout` now opens a large checkout modal so payment becomes a focused final step
   - the checkout modal emphasizes total, method selection, cash received/change due, and remaining on-account balance
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`
