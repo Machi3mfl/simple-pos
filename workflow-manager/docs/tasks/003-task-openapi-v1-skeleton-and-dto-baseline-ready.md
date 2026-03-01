@@ -7,7 +7,7 @@
 **Feature**: `API-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `in_review`  
+**Status**: `done`  
 **GitHub Issue**: #10  
 **Priority**: `high`  
 **Assignee**: `TBD`  
@@ -98,4 +98,4 @@ npx playwright test tests/e2e/api-contract-conformance.spec.ts
 
 - [x] OpenAPI v1 skeleton committed.
 - [x] DTO baseline documented.
-- [ ] Contract review approved.
+- [x] Contract review approved.

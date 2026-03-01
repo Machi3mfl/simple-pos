@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `AR-001`  
-**Status**: `in_progress`  
+**Status**: `done`  
 **GitHub Issue**: #5  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-014`, `PBI-015`, `PBI-016`  

@@ -4,13 +4,13 @@
 
 **Document ID**: `003`  
 **File Name**: `003-backlog-simple-pos-draft.md`  
-**Status**: `draft`  
+**Status**: `in_review`  
 **GitHub Issue**: #2  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.6`  
+**Version**: `0.7`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-28`  
+**Last Updated**: `2026-03-01`  
 **Linked PRD**: `workflow-manager/docs/planning/002-prd-simple-pos-draft.md`
 
 ---
@@ -39,11 +39,11 @@
 
 | Epic ID | Name | Outcome | Priority | Status | PRD Link |
 | --- | --- | --- | --- | --- | --- |
-| EPIC-001 | POS UI Mock + Responsive UX | Usable and confidence-building customer demo | high | ready | Sections 3, 4, 5 |
-| EPIC-002 | API Contracts and Mock Runtime | Stable contracts and UI-first testability | high | ready | Sections 5, 6, 7 |
-| EPIC-003 | Product Onboarding and Inventory Core | Catalog + stock operations with low friction | high | ready | Sections 3, 5 |
-| EPIC-004 | Sales History and Basic Analytics | Baseline business visibility | medium | candidate | Sections 5, 6 |
-| EPIC-005 | Customer Debt Tracking (On-Account) | Debt per customer/order with payment tracking | high | ready | Sections 3, 5, 6 |
+| EPIC-001 | POS UI Mock + Responsive UX | Usable and confidence-building customer demo | high | done | Sections 3, 4, 5 |
+| EPIC-002 | API Contracts and Mock Runtime | Stable contracts and UI-first testability | high | done | Sections 5, 6, 7 |
+| EPIC-003 | Product Onboarding and Inventory Core | Catalog + stock operations with low friction | high | done | Sections 3, 5 |
+| EPIC-004 | Sales History and Basic Analytics | Baseline business visibility | medium | done | Sections 5, 6 |
+| EPIC-005 | Customer Debt Tracking (On-Account) | Debt per customer/order with payment tracking | high | done | Sections 3, 5, 6 |
 
 ---
 
@@ -51,25 +51,25 @@
 
 | PBI ID | Epic | Type | User Story / Job | Acceptance Criteria | Priority | Estimate | Status | Dependencies | Trace (FR/NFR) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PBI-001 | EPIC-001 | story | As an operator, I want a visual POS catalog so I can sell fast without typing. | Category tabs and product grid support add/remove/update cart actions and respect approved UI baseline layout | high | M | ready | none | FR-001, NFR-002 |
-| PBI-002 | EPIC-001 | story | As an operator, I want a simple checkout flow so every sale is consistently recorded. | Checkout blocks without payment method; only `cash`/`on_account` are allowed in v1; confirmed sale summary shown | high | M | ready | PBI-001 | FR-002 |
-| PBI-003 | EPIC-002 | enabler | Build mocked backend mode with adapters/contracts for UI-first development. | Mock mode toggle; module fixtures; deterministic error scenarios | high | M | ready | none | FR-010, BR-007 |
-| PBI-004 | EPIC-002 | story | Add Playwright E2E for critical flows on mocked backend. | J-001 and J-002 pass locally/CI in mock mode | high | M | ready | PBI-003 | FR-010, NFR-003 |
-| PBI-005 | EPIC-001 | story | As an older user, I need large touch targets and clear hierarchy to operate safely. | Touch targets >= 44px; <= 3 checkout steps; contrast checks pass; tablet viewport is the primary acceptance target | high | S | ready | PBI-001, PBI-002 | NFR-002, NFR-005 |
-| PBI-006 | EPIC-003 | story | As support admin, I need a guided onboarding wizard to load products easily. | Wizard requests minimum fields and validates at field level | high | M | ready | PBI-001 | FR-003, FR-008 |
-| PBI-007 | EPIC-003 | enabler | Implement placeholder image strategy by category. | Product can be saved without real photo and renders fallback image | high | S | ready | PBI-006 | FR-009 |
-| PBI-008 | EPIC-002 | enabler | Define API contracts v1 (DTO schemas + endpoint list). | Products/sales/stock/reports/customers/debt endpoints documented | high | M | ready | none | FR-007, NFR-004 |
-| PBI-009 | EPIC-003 | story | Implement stock movement flow (inbound/outbound/adjustment). | Inbound movement requires unit cost; history is stored; stock and weighted-average cost basis are recalculated consistently | high | M | ready | PBI-008 | FR-004 |
-| PBI-010 | EPIC-002 | enabler | Add architecture guardrails for hexagonal boundaries. | CI flags invalid cross-layer imports | medium | S | candidate | PBI-008 | NFR-004 |
-| PBI-011 | EPIC-004 | story | As owner, I want sales history with date/payment filters. | List and detail views are filterable and consistent | medium | M | candidate | PBI-008 | FR-005 |
-| PBI-012 | EPIC-004 | story | As owner, I want top products and basic profit summary. | Daily/weekly summaries displayed with clear totals using persisted weighted-average stock cost basis | medium | M | candidate | PBI-011, PBI-009 | FR-006 |
-| PBI-013 | EPIC-002 | story | Run critical E2E flows on real backend before release. | Sale/stock/onboarding E2E green against real persistence | high | M | candidate | PBI-008, PBI-009 | NFR-003, BR-007 |
-| PBI-014 | EPIC-005 | story | As an operator, I can mark checkout as `on_account` and link it to a customer. | On-account checkout requires existing or newly created customer | high | M | ready | PBI-002, PBI-008 | FR-011 |
-| PBI-015 | EPIC-005 | enabler | Store debt ledger entries linked to customer and originating order. | Ledger reflects per-order debt and outstanding customer balance | high | M | ready | PBI-014 | FR-012, NFR-006 |
-| PBI-016 | EPIC-005 | story | As support admin, I can register debt payments that reduce customer balance. | Debt payment creates ledger movement and updates outstanding total | high | M | ready | PBI-015 | FR-013, NFR-006 |
-| PBI-017 | EPIC-002 | enabler | Implement offline queue and sync orchestration for critical events (sales/debt). | Offline events are persisted as `pending_sync` and synchronized idempotently after reconnect | high | M | ready | PBI-008, PBI-014, PBI-016 | FR-014, NFR-007 |
-| PBI-018 | EPIC-002 | story | Validate offline outage/recovery flows with Playwright + integration tests. | E2E covers offline checkout/debt capture and successful sync reconciliation | high | M | ready | PBI-017 | FR-014, NFR-007 |
-| PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount by scope, shows preview, validates invalid results, and writes audit summary | high | M | ready | PBI-008, PBI-006 | FR-015 |
+| PBI-001 | EPIC-001 | story | As an operator, I want a visual POS catalog so I can sell fast without typing. | Category tabs and product grid support add/remove/update cart actions and respect approved UI baseline layout | high | M | done | none | FR-001, NFR-002 |
+| PBI-002 | EPIC-001 | story | As an operator, I want a simple checkout flow so every sale is consistently recorded. | Checkout blocks without payment method; only `cash`/`on_account` are allowed in v1; confirmed sale summary shown | high | M | done | PBI-001 | FR-002 |
+| PBI-003 | EPIC-002 | enabler | Build mocked backend mode with adapters/contracts for UI-first development. | Mock mode toggle; module fixtures; deterministic error scenarios | high | M | done | none | FR-010, BR-007 |
+| PBI-004 | EPIC-002 | story | Add Playwright E2E for critical flows on mocked backend. | J-001 and J-002 pass locally/CI in mock mode | high | M | done | PBI-003 | FR-010, NFR-003 |
+| PBI-005 | EPIC-001 | story | As an older user, I need large touch targets and clear hierarchy to operate safely. | Touch targets >= 44px; <= 3 checkout steps; contrast checks pass; tablet viewport is the primary acceptance target | high | S | done | PBI-001, PBI-002 | NFR-002, NFR-005 |
+| PBI-006 | EPIC-003 | story | As support admin, I need a guided onboarding wizard to load products easily. | Wizard requests minimum fields and validates at field level | high | M | done | PBI-001 | FR-003, FR-008 |
+| PBI-007 | EPIC-003 | enabler | Implement placeholder image strategy by category. | Product can be saved without real photo and renders fallback image | high | S | done | PBI-006 | FR-009 |
+| PBI-008 | EPIC-002 | enabler | Define API contracts v1 (DTO schemas + endpoint list). | Products/sales/stock/reports/customers/debt endpoints documented | high | M | done | none | FR-007, NFR-004 |
+| PBI-009 | EPIC-003 | story | Implement stock movement flow (inbound/outbound/adjustment). | Inbound movement requires unit cost; history is stored; stock and weighted-average cost basis are recalculated consistently | high | M | done | PBI-008 | FR-004 |
+| PBI-010 | EPIC-002 | enabler | Add architecture guardrails for hexagonal boundaries. | CI flags invalid cross-layer imports | medium | S | done | PBI-008 | NFR-004 |
+| PBI-011 | EPIC-004 | story | As owner, I want sales history with date/payment filters. | List and detail views are filterable and consistent | medium | M | done | PBI-008 | FR-005 |
+| PBI-012 | EPIC-004 | story | As owner, I want top products and basic profit summary. | Daily/weekly summaries displayed with clear totals using persisted weighted-average stock cost basis | medium | M | done | PBI-011, PBI-009 | FR-006 |
+| PBI-013 | EPIC-002 | story | Run critical E2E flows on real backend before release. | Sale/stock/onboarding E2E green against real persistence | high | M | done | PBI-008, PBI-009 | NFR-003, BR-007 |
+| PBI-014 | EPIC-005 | story | As an operator, I can mark checkout as `on_account` and link it to a customer. | On-account checkout requires existing or newly created customer | high | M | done | PBI-002, PBI-008 | FR-011 |
+| PBI-015 | EPIC-005 | enabler | Store debt ledger entries linked to customer and originating order. | Ledger reflects per-order debt and outstanding customer balance | high | M | done | PBI-014 | FR-012, NFR-006 |
+| PBI-016 | EPIC-005 | story | As support admin, I can register debt payments that reduce customer balance. | Debt payment creates ledger movement and updates outstanding total | high | M | done | PBI-015 | FR-013, NFR-006 |
+| PBI-017 | EPIC-002 | enabler | Implement offline queue and sync orchestration for critical events (sales/debt). | Offline events are persisted as `pending_sync` and synchronized idempotently after reconnect | high | M | done | PBI-008, PBI-014, PBI-016 | FR-014, NFR-007 |
+| PBI-018 | EPIC-002 | story | Validate offline outage/recovery flows with Playwright + integration tests. | E2E covers offline checkout/debt capture and successful sync reconciliation | high | M | done | PBI-017 | FR-014, NFR-007 |
+| PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount by scope, shows preview, validates invalid results, and writes audit summary | high | M | done | PBI-008, PBI-006 | FR-015 |
 
 ---
 
@@ -102,27 +102,27 @@
 ## 4. MVP Cutline
 
 ### Must-Have for MVP
-- [ ] PBI-001
-- [ ] PBI-002
-- [ ] PBI-003
-- [ ] PBI-004
-- [ ] PBI-005
-- [ ] PBI-006
-- [ ] PBI-007
-- [ ] PBI-008
-- [ ] PBI-009
-- [ ] PBI-013
-- [ ] PBI-014
-- [ ] PBI-015
-- [ ] PBI-016
-- [ ] PBI-017
-- [ ] PBI-018
-- [ ] PBI-019
+- [x] PBI-001
+- [x] PBI-002
+- [x] PBI-003
+- [x] PBI-004
+- [x] PBI-005
+- [x] PBI-006
+- [x] PBI-007
+- [x] PBI-008
+- [x] PBI-009
+- [x] PBI-013
+- [x] PBI-014
+- [x] PBI-015
+- [x] PBI-016
+- [x] PBI-017
+- [x] PBI-018
+- [x] PBI-019
 
 ### Should-Have (Post-MVP Candidate)
-- [ ] PBI-011
-- [ ] PBI-012
-- [ ] PBI-010
+- [x] PBI-011
+- [x] PBI-012
+- [x] PBI-010
 
 ### Won't-Have (Current Cycle)
 - Real MercadoPago checkout processing.
@@ -168,22 +168,22 @@
 
 ## 6. Definition of Ready (DoR)
 
-- [ ] Problem and value are clear.
-- [ ] Acceptance criteria are testable.
-- [ ] Dependencies are identified.
-- [ ] Required API/domain contracts are defined.
-- [ ] Primary UI surface and route are identified (or approved technical exception).
-- [ ] UX references are available for the target UI surface.
-- [ ] Integration scenario (`UI -> API -> domain`) is defined for verification.
+- [x] Problem and value are clear.
+- [x] Acceptance criteria are testable.
+- [x] Dependencies are identified.
+- [x] Required API/domain contracts are defined.
+- [x] Primary UI surface and route are identified (or approved technical exception).
+- [x] UX references are available for the target UI surface.
+- [x] Integration scenario (`UI -> API -> domain`) is defined for verification.
 
 ## 7. Definition of Done (DoD)
 
-- [ ] Acceptance criteria met.
-- [ ] UI surface is implemented/updated and integrated with API/domain logic (or approved technical exception with referenced UI coverage).
-- [ ] End-to-end flow is demoable from UI for linked FR/UC.
-- [ ] Unit/integration/E2E tests added as required.
-- [ ] Architecture rules respected (Hexagonal boundaries).
-- [ ] Documentation updated (PRD/backlog/feature/task links).
+- [x] Acceptance criteria met.
+- [x] UI surface is implemented/updated and integrated with API/domain logic (or approved technical exception with referenced UI coverage).
+- [x] End-to-end flow is demoable from UI for linked FR/UC.
+- [x] Unit/integration/E2E tests added as required.
+- [x] Architecture rules respected (Hexagonal boundaries).
+- [x] Documentation updated (PRD/backlog/feature/task links).
 - [ ] Reviewed and accepted by stakeholder.
 
 ---
@@ -200,3 +200,4 @@
 | 2026-02-27 | Added explicit UI baseline alignment requirement for POS visual implementation | maxi |
 | 2026-02-27 | Added bulk price update scope for fast repricing scenarios (`PBI-019`, `FR-015`) | maxi |
 | 2026-02-28 | Enforced vertical-slice policy so each PBI/UC closes with integrated UI + API + domain + tests | maxi |
+| 2026-03-01 | Refreshed execution statuses after UI+API module E2E real-backend validation | maxi |

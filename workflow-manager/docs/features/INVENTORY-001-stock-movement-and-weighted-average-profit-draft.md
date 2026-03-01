@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `INVENTORY-001`  
-**Status**: `in_progress`  
+**Status**: `done`  
 **GitHub Issue**: #6  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-009`, `PBI-012`  

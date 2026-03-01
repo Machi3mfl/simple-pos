@@ -4,14 +4,14 @@
 
 **Document ID**: `002`  
 **File Name**: `002-prd-simple-pos-draft.md`  
-**Status**: `draft`  
+**Status**: `in_review`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.5`  
+**Version**: `0.6`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-27`  
+**Last Updated**: `2026-03-01`  
 **Linked Backlog**: `workflow-manager/docs/planning/003-backlog-simple-pos-draft.md`  
-**Linked Design**: `pending-reference`
+**Linked Design**: `workflow-manager/docs/planning/005-ui-reference-pos-v1-draft.md`
 
 ---
 
@@ -201,9 +201,9 @@ We need to validate usability quickly with a functional UI demo to build custome
 
 ### Go/No-Go Criteria for MVP
 - [ ] Critical sales/stock/debt flows validated with real user demo.
-- [ ] Mock-mode E2E green for J-001, J-002, and J-005.
-- [ ] Real-backend E2E green for sale, stock, and debt before production release.
-- [ ] Offline outage/recovery scenarios green for J-006.
+- [x] Mock-mode E2E green for J-001, J-002, and J-005.
+- [x] Real-backend E2E green for sale, stock, and debt before production release.
+- [x] Offline outage/recovery scenarios green for J-006.
 - [ ] NFR usability/performance/reliability thresholds met.
 
 ---

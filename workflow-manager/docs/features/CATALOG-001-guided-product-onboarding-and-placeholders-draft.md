@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `CATALOG-001`  
-**Status**: `in_progress`  
+**Status**: `done`  
 **GitHub Issue**: #8  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-006`, `PBI-007`, `PBI-019`  

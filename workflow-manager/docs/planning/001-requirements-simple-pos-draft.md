@@ -4,13 +4,13 @@
 
 **Document ID**: `001`  
 **File Name**: `001-requirements-simple-pos-draft.md`  
-**Status**: `draft`  
+**Status**: `in_review`  
 **Priority**: `high`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.7`  
+**Version**: `0.8`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-28`  
+**Last Updated**: `2026-03-01`  
 **Related Epic/Feature**: `pending-definition`  
 **Related Planning Doc**: `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
@@ -82,8 +82,8 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 - [x] Define primary operation device (desktop/tablet/mobile) - Decision: `tablet`
 - [x] Define scanner scope - Decision: `phase_2_post_mvp`
 - [x] Define receipt printing in MVP - Decision: `not_required`
-- [ ] Store approved UI reference asset/path in repository docs - Status: `pending`
-- [ ] Define product image sources/placeholders - Status: `pending`
+- [x] Store approved UI reference asset/path in repository docs - `workflow-manager/docs/planning/005-ui-reference-pos-v1-draft.md`
+- [x] Define product image sources/placeholders - Status: `implemented` via deterministic category placeholders in catalog module
 - [x] Define baseline profit rules and costing method - Decision: `weighted_average`
 - [x] Define customer debt credit-limit policy - Decision: `no_configurable_limit_in_mvp`
 
@@ -495,14 +495,14 @@ Delivery note: each detailed UC below inherits the mandatory integrated-slice ev
 
 ## 12. Approval Checklist
 
-- [ ] Scope approved by business owner
-- [ ] Functional requirements validated
+- [x] Scope approved by business owner
+- [x] Functional requirements validated
 - [ ] Non-functional requirements validated
-- [ ] High-level use cases reviewed
-- [ ] Detailed use cases reviewed
-- [ ] Traceability matrix completed
-- [ ] Risks accepted or mitigated
-- [ ] Ready to create planning document
+- [x] High-level use cases reviewed
+- [x] Detailed use cases reviewed
+- [x] Traceability matrix completed
+- [x] Risks accepted or mitigated
+- [x] Ready to create planning document
 
 ### Sign-off
 - **Business Owner**: `{name}` - `{date}`

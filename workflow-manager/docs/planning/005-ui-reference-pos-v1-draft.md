@@ -4,13 +4,13 @@
 
 **Document ID**: `005`  
 **File Name**: `005-ui-reference-pos-v1-draft.md`  
-**Status**: `draft`  
+**Status**: `approved`  
 **GitHub Issue**: #1  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.1`  
+**Version**: `0.2`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-27`  
+**Last Updated**: `2026-03-01`  
 **Related Planning**: `004-implementation-plan-simple-pos-draft.md`  
 **Related Feature**: `POS-001-ui-pos-mockup-and-checkout-draft.md`
 
@@ -57,9 +57,8 @@ Note: until the file is stored in repository, this document remains the textual 
 
 ## 4. Review Checklist
 
-- [ ] Left/center/right structure preserved.
-- [ ] Category and product discovery remain visual-first.
-- [ ] Order panel keeps totals + primary CTA visible.
-- [ ] Tablet landscape remains primary validated viewport.
-- [ ] Stakeholder approves visual parity for MVP demo.
-
+- [x] Left/center/right structure preserved.
+- [x] Category and product discovery remain visual-first.
+- [x] Order panel keeps totals + primary CTA visible.
+- [x] Tablet landscape remains primary validated viewport.
+- [x] Stakeholder approves visual parity for MVP demo.

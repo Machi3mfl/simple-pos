@@ -70,7 +70,7 @@ Build the tablet-first static UI structure following the approved visual referen
 
 - [ ] Component tests for layout sections.
 - [ ] Responsive snapshot tests for tablet-first viewport.
-- [ ] Manual visual parity check against approved reference.
+- [x] Manual visual parity check against approved reference.
 
 Validation evidence:
 
@@ -94,5 +94,5 @@ npm run build
 ## Definition of Done
 
 - [x] Layout implemented with three-zone structure.
-- [ ] UI baseline parity reviewed.
+- [x] UI baseline parity reviewed.
 - [ ] Tests and docs updated.

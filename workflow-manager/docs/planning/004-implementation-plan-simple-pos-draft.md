@@ -4,12 +4,12 @@
 
 **Document ID**: `004`  
 **File Name**: `004-implementation-plan-simple-pos-draft.md`  
-**Status**: `planning`  
+**Status**: `in_review`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.3`  
+**Version**: `0.4`  
 **Created At**: `2026-02-27`  
-**Last Updated**: `2026-02-28`  
+**Last Updated**: `2026-03-01`  
 **Input Documents**: `001-requirements-simple-pos-draft.md`, `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
 ---
@@ -113,10 +113,10 @@ The POS UI must follow the user-approved visual reference image provided in this
 - `TASK-003` Define OpenAPI v1 Skeleton and DTO Baseline
 
 **Exit Criteria**
-- [ ] `004` plan approved.
-- [ ] Feature docs created and linked.
-- [ ] Core diagrams published under planning/features docs.
-- [ ] UC-to-UI mapping approved and linked from requirements/backlog.
+- [x] `004` plan approved.
+- [x] Feature docs created and linked.
+- [x] Core diagrams published under planning/features docs.
+- [x] UC-to-UI mapping approved and linked from requirements/backlog.
 
 ### Iteration 1 - Tablet-First POS UI
 **Dates**: `2026-03-09` to `2026-03-13`
@@ -130,9 +130,9 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-001, PBI-002, PBI-005  
 **Exit Criteria**
-- [ ] Demo-ready tablet flow.
-- [ ] E2E smoke in mock mode passes for checkout happy path.
-- [ ] UI review approved against the user-provided visual baseline.
+- [x] Demo-ready tablet flow.
+- [x] E2E smoke in mock mode passes for checkout happy path.
+- [x] UI review approved against the user-provided visual baseline.
 
 ### Iteration 2 - Contract and Mock Runtime
 **Dates**: `2026-03-16` to `2026-03-20`
@@ -142,9 +142,9 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-008, PBI-003, PBI-004, PBI-010  
 **Exit Criteria**
-- [ ] Contract docs versioned and reviewed.
-- [ ] Mock critical flows green in CI/local.
-- [ ] At least one UI flow per active module is wired to `/api/v1` mock endpoints (no static-only UI path).
+- [x] Contract docs versioned and reviewed.
+- [x] Mock critical flows green in CI/local.
+- [x] At least one UI flow per active module is wired to `/api/v1` mock endpoints (no static-only UI path).
 
 ### Iteration 3 - Catalog and Inventory Core
 **Dates**: `2026-03-23` to `2026-03-27`
@@ -155,10 +155,10 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-006, PBI-007, PBI-009, PBI-019  
 **Exit Criteria**
-- [ ] Product onboarding complete without real photos.
-- [ ] Bulk repricing flow validated for percentage/fixed updates with preview.
-- [ ] Stock + cost basis update verified by integration tests.
-- [ ] Onboarding, stock movement, and bulk repricing UIs execute end-to-end against API contracts.
+- [x] Product onboarding complete without real photos.
+- [x] Bulk repricing flow validated for percentage/fixed updates with preview.
+- [x] Stock + cost basis update verified by integration tests.
+- [x] Onboarding, stock movement, and bulk repricing UIs execute end-to-end against API contracts.
 
 ### Iteration 4 - Customer Debt Flows
 **Dates**: `2026-03-30` to `2026-04-03`
@@ -168,9 +168,9 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-014, PBI-015, PBI-016  
 **Exit Criteria**
-- [ ] Debt lifecycle works end-to-end in mock and real persistence tests.
-- [ ] Ledger audit checks pass.
-- [ ] On-account checkout UI and debt payment UI are both integrated and demoable.
+- [x] Debt lifecycle works end-to-end in mock and real persistence tests.
+- [x] Ledger audit checks pass.
+- [x] On-account checkout UI and debt payment UI are both integrated and demoable.
 
 ### Iteration 5 - Offline Resilience
 **Dates**: `2026-04-06` to `2026-04-10`
@@ -180,9 +180,9 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-017, PBI-018  
 **Exit Criteria**
-- [ ] Confirmed offline events survive outage and sync after reconnect.
-- [ ] Conflict handling and retry policy tested.
-- [ ] Offline state/queue indicators are visible in UI and support manual retry actions.
+- [x] Confirmed offline events survive outage and sync after reconnect.
+- [x] Conflict handling and retry policy tested.
+- [x] Offline state/queue indicators are visible in UI and support manual retry actions.
 
 ### Iteration 6 - Release Hardening and Reporting
 **Dates**: `2026-04-13` to `2026-04-17`
@@ -192,9 +192,9 @@ The POS UI must follow the user-approved visual reference image provided in this
 
 **PBIs**: PBI-013, PBI-011, PBI-012  
 **Exit Criteria**
-- [ ] Real-backend release gate green.
+- [x] Real-backend release gate green.
 - [ ] FR/NFR traceability checks pass.
-- [ ] Reporting/history UI consumes real-backend endpoints with validated data.
+- [x] Reporting/history UI consumes real-backend endpoints with validated data.
 
 ---
 
@@ -226,10 +226,10 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 - E2E real backend: required in Iteration 6 before release.
 
 ### Release Gates (Must Pass)
-- [ ] FR coverage: FR-001..FR-015 mapped to implemented PBIs.
+- [x] FR coverage: FR-001..FR-015 mapped to implemented PBIs.
 - [ ] NFR coverage: NFR-001..NFR-007 validated with evidence.
 - [ ] No critical unresolved risk in planning risk list.
-- [ ] API backward compatibility review completed for `/api/v1`.
+- [x] API backward compatibility review completed for `/api/v1`.
 
 ---
 
@@ -269,12 +269,12 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 
 ## 9. Planning Completion Checklist
 
-- [ ] Feature docs created and linked from this plan.
+- [x] Feature docs created and linked from this plan.
 - [ ] Iteration owners and capacity assigned.
-- [ ] GitHub issues created from PBIs/features.
-- [ ] Diagram artifacts committed and linked.
-- [ ] UI baseline reference linked in POS feature and related issues/PRs.
-- [ ] All FR/UC items mapped to at least one integrated UI surface.
+- [x] GitHub issues created from PBIs/features.
+- [x] Diagram artifacts committed and linked.
+- [x] UI baseline reference linked in POS feature and related issues/PRs.
+- [x] All FR/UC items mapped to at least one integrated UI surface.
 - [ ] Stakeholder review completed.
 
 ### Sign-off

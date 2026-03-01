@@ -76,7 +76,7 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 
 - [ ] Unit tests for payment method validation.
 - [ ] Integration test for `on_account` customer-required constraint.
-- [ ] UI test for checkout blocking behavior.
+- [x] UI test for checkout blocking behavior.
 
 Validation evidence:
 

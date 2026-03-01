@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `OFFLINE-001`  
-**Status**: `in_progress`  
+**Status**: `done`  
 **GitHub Issue**: #3  
 **Priority**: `high`  
 **Linked PBIs**: `PBI-017`, `PBI-018`  

@@ -11,9 +11,11 @@ Mobile-friendly navigation map for the full project workflow.
 3. [PRD](./planning/002-prd-simple-pos-draft.md)
 4. [Product Backlog](./planning/003-backlog-simple-pos-draft.md)
 5. [Implementation Plan](./planning/004-implementation-plan-simple-pos-draft.md)
-6. [Daily Execution Runbook (Iteration 0/1)](./runbooks/001-runbook-iteration-0-1-daily-execution-ready.md)
-7. [Release Gate Runbook (Iteration 6 real backend)](./runbooks/002-runbook-release-gate-real-backend-ready.md)
-8. Feature set:
+6. [UC to E2E Traceability Matrix](./planning/006-uc-e2e-traceability-matrix-ready.md)
+7. [Execution Status Snapshot](./planning/007-execution-status-simple-pos-ready.md)
+8. [Daily Execution Runbook (Iteration 0/1)](./runbooks/001-runbook-iteration-0-1-daily-execution-ready.md)
+9. [Release Gate Runbook (Iteration 6 real backend)](./runbooks/002-runbook-release-gate-real-backend-ready.md)
+10. Feature set:
    - [POS-001](./features/POS-001-ui-pos-mockup-and-checkout-draft.md)
    - [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md)
    - [CATALOG-001](./features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md)
@@ -21,7 +23,7 @@ Mobile-friendly navigation map for the full project workflow.
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
    - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)
-8. Iteration 0/1 execution tasks:
+11. Iteration 0/1 execution tasks:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
    - [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md)
@@ -81,6 +83,8 @@ GITHUB_ENV_FILE="../.env.github" ./docs/scripts/sync-github.sh --sync-execution
 | `Feature` | Delivery slice grouping related tasks/PBIs | [features/](./features/) |
 | `Task` | Atomic, implementable unit with acceptance criteria and tests | [tasks/](./tasks/) |
 | `Traceability` | Mapping FR/NFR/BR to PBIs/tests/issues | [001 Traceability Matrix](./planning/001-requirements-simple-pos-draft.md#11-traceability-matrix), [002 Traceability](./planning/002-prd-simple-pos-draft.md#9-traceability-and-handoff) |
+| `UC-E2E Matrix` | Explicit mapping from implemented use cases to E2E files and runtime modes | [006 UC to E2E Traceability Matrix](./planning/006-uc-e2e-traceability-matrix-ready.md) |
+| `Execution Snapshot` | Current implementation status by iteration/feature/task plus pending items | [007 Execution Status](./planning/007-execution-status-simple-pos-ready.md) |
 | `weighted_average` | Costing policy used to compute inventory cost basis/profit | [001 Open Questions / Decisions](./planning/001-requirements-simple-pos-draft.md#10-risks-and-open-questions), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md) |
 | `on_account` | Sale mode that creates customer debt | [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md) |
 | `pending_sync` | Offline event state before backend synchronization | [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md) |
