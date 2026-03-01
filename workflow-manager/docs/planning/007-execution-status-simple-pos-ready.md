@@ -4,28 +4,30 @@
 
 **Document ID**: `007`  
 **File Name**: `007-execution-status-simple-pos-ready.md`  
-**Status**: `ready`  
+**Status**: `done`
 **GitHub Issue**: #18  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.1`  
+**Version**: `0.3`
 **Created At**: `2026-03-01`  
 **Last Updated**: `2026-03-01`  
 **Source Docs**: `001`, `002`, `003`, `004`, `005`, `006`  
 
 ---
 
+> Closure note: this snapshot records the completed MVP execution state as of `2026-03-01`.
+
 ## 1. Iteration Status
 
 | Iteration | Scope | Status | Evidence |
 | --- | --- | --- | --- |
 | Iteration 0 | Architecture artifacts + OpenAPI baseline | done | TASK-001, TASK-002, TASK-003 |
-| Iteration 1 | Tablet POS UI + checkout rules + mock E2E | done (with follow-ups) | TASK-004, TASK-005, TASK-006 |
+| Iteration 1 | Tablet POS UI + checkout rules + mock E2E | done | TASK-004, TASK-005, TASK-006 |
 | Iteration 2 | Contracts + mock runtime | done | API-001 + contract and mock E2E suites |
 | Iteration 3 | Catalog + inventory + bulk repricing | done | CATALOG-001, INVENTORY-001 |
 | Iteration 4 | On-account debt and payments | done | AR-001 + UI/API/E2E debt flows |
 | Iteration 5 | Offline capture and sync | done | OFFLINE-001 + offline recovery E2E |
-| Iteration 6 | Reporting + release gate real backend | done (traceability/NFR review pending closure) | RELEASE-001 + real-backend suites |
+| Iteration 6 | Reporting + release gate real backend | done | RELEASE-001 + real-backend suites |
 
 ---
 
@@ -37,9 +39,12 @@
 | API-001 | done |
 | CATALOG-001 | done |
 | INVENTORY-001 | done |
+| PRODUCTS-001 | done |
+| PRODUCTS-002 | done |
 | AR-001 | done |
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
+| I18N-001 | done |
 
 ---
 
@@ -56,20 +61,33 @@
 
 ---
 
-## 4. Current Pending Items
+## 4. Task Audit Result
 
-No open execution blockers in MVP planning scope.
-
-Optional post-closure follow-up:
-
-1. Keep NFR evidence refreshed when introducing new modules or runtime changes.
-2. Re-run visual snapshot update only when UI contract changes intentionally.
+- `workflow-manager/docs/tasks/` currently contains six task documents: `TASK-001` through `TASK-006`.
+- All six task documents are marked `done` and their referenced outputs still exist in the repository.
+- No open task document was found during this audit.
+- Recent extension work (`PRODUCTS-001`, `PRODUCTS-002`, `I18N-001`) was tracked at feature level rather than by adding new task files.
 
 ---
 
-## 5. Verification Snapshot
+## 5. Current Pending Items
+
+No open execution blockers or open task documents were found in the current workflow scope.
+
+Non-blocking follow-up items still worth tracking:
+
+1. `PRODUCTS-003` closes the remaining `/products` parity work after MVP closure.
+2. `TASK-007` tracks guided onboarding inside `/products`.
+3. `TASK-008` tracks bulk price update preview and apply inside `/products`.
+4. `TASK-009` tracks the batch import preview and dry-run UX decision.
+5. `TASK-010` tracks final route convergence and legacy fallback retirement.
+
+---
+
+## 6. Verification Snapshot
 
 - Real-backend module suite: `npm run test:e2e:ui:real:modules` -> passing.
 - Real-backend release gate: `npm run test:e2e:release-gate:real` -> passing.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
+- Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

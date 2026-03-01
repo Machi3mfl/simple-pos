@@ -707,7 +707,7 @@ update_issue() {
         '{title: $title, body: $body, labels: $labels}')
     
     # Set state based on status
-    if [[ "$status" == "completed" || "$status" == "cancelled" ]]; then
+    if [[ "$status" == "done" || "$status" == "completed" || "$status" == "cancelled" ]]; then
         issue_data=$(echo "$issue_data" | jq '. + {state: "closed"}')
     else
         issue_data=$(echo "$issue_data" | jq '. + {state: "open"}')
@@ -792,8 +792,8 @@ sync_file() {
         return
     fi
     
-    # Skip template files (contain template variables)
-    if grep -Eq "\\{[a-zA-Z][^}]*\\}" "$file"; then
+    # Skip unresolved template files, but ignore real API path params such as `{id}`.
+    if grep -Eo "\\{[a-z][a-z0-9_-]*\\}" "$file" | grep -vqE '^\\{id\\}$'; then
         log_skip "Skipping template file: $file"
         return
     fi
@@ -865,8 +865,8 @@ dedupe_file() {
         return
     fi
 
-    # Skip template files (contain template variables)
-    if grep -Eq "\\{[a-zA-Z][^}]*\\}" "$file"; then
+    # Skip unresolved template files, but ignore real API path params such as `{id}`.
+    if grep -Eo "\\{[a-z][a-z0-9_-]*\\}" "$file" | grep -vqE '^\\{id\\}$'; then
         log_skip "Skipping template file: $file"
         return
     fi

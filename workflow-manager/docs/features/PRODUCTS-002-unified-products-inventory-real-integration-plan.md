@@ -33,11 +33,11 @@ Today the system already has:
 - `GET /api/v1/stock-movements`
 - `POST /api/v1/stock-movements`
 
-Relevant gaps:
+Planning-time gaps (closed unless explicitly noted in the audit section below):
 
-- There is no unified read model for `product + stock + average cost + last movement`.
-- There is no `PATCH /api/v1/products/:id` to edit/archive products.
-- There is no real bulk import for products or stock.
+- There was no unified read model for `product + stock + average cost + last movement`.
+- There was no `PATCH /api/v1/products/:id` to edit/archive products.
+- There was no real bulk import for products or stock.
 - Visible stock currently has a model inconsistency:
   - `products.stock` exists in catalog
   - `inventory_items.stock_on_hand` exists in inventory
@@ -100,6 +100,18 @@ Scope note:
 
 - bulk loading was delivered in paste/import form with partial per-row validation
 - a separate preview wizard before persistence was not implemented
+
+## Audit Review (`2026-03-01`)
+
+Audit conclusion after implementation review:
+
+- `PRODUCTS-002` is correctly closed as `done`; the real `/products` workspace, persistence, and main circuit tests are in place.
+- No open blocker remains for the current products workspace scope.
+- The remaining gaps are parity follow-ups, not closure blockers, and are now tracked in `PRODUCTS-003`:
+  - guided onboarding wizard still lives in `/catalog`
+  - bulk price update with preview/apply still lives in `/catalog`
+  - bulk imports in `/products` ship as paste/import flows without a preview wizard
+  - `/catalog` and `/inventory` should remain direct administrative fallbacks until the previous parity items are intentionally migrated or retired
 
 ---
 
@@ -434,22 +446,22 @@ Goal: close the minimum operational CRUD.
 
 Goal: cover large operational workflows without blocking incremental delivery.
 
-#### `P2-T19` Define POC and contract for bulk product import
+#### `P2-T19` Define contract and input shape for bulk product import
 
-- template
-- preview
+- template or paste input
 - per-row validation
-- apply
+- apply with partial success reporting
 
 #### `P2-T20` Define the bulk stock contract
 
 - movement batches
-- preview
-- blocking partial errors
+- per-row validation
+- apply with partial success reporting
 
-#### `P2-T21` Integrate UI through a wizard
+#### `P2-T21` Integrate UI through a lightweight batch modal
 
 - do not ship it bundled into the same batch as individual CRUD
+- preview wizard intentionally deferred; current delivery uses paste/import modals
 
 #### Acceptance Criteria
 
@@ -475,6 +487,11 @@ Options:
 
 - [x] keep `/catalog` and `/inventory` as direct administrative fallbacks outside the main rail
 - [ ] redirect to `/products` once functional parity is fully closed
+
+Functional parity still pending before redirect:
+
+- [ ] guided onboarding wizard inside `/products`
+- [ ] bulk price update preview/apply inside `/products`
 
 #### `P2-T23` Harden the real release suite
 

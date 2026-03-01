@@ -23,17 +23,22 @@ Mobile-friendly navigation map for the full project workflow.
    - [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md)
    - [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md)
    - [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md)
+   - [PRODUCTS-003](./features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md)
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
    - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)
    - [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md)
-12. Iteration 0/1 execution tasks:
+12. Task artifacts:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
    - [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md)
    - [TASK-004](./tasks/004-task-pos-tablet-layout-from-approved-reference-ready.md)
    - [TASK-005](./tasks/005-task-checkout-payment-rules-cash-on-account-ready.md)
    - [TASK-006](./tasks/006-task-playwright-mock-smoke-and-visual-baseline-ready.md)
+   - [TASK-007](./tasks/007-task-products-onboarding-parity-in-workspace-ready.md)
+   - [TASK-008](./tasks/008-task-products-bulk-price-update-parity-ready.md)
+   - [TASK-009](./tasks/009-task-products-batch-import-ux-decision-ready.md)
+   - [TASK-010](./tasks/010-task-products-route-convergence-and-legacy-retirement-ready.md)
 
 ---
 
@@ -43,7 +48,12 @@ Mobile-friendly navigation map for the full project workflow.
 | --- | --- | --- |
 | Iteration 0 | Architecture and contract baseline | [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md), [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md), [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md) |
 | Iteration 1 | Tablet-first UI and checkout validation | [TASK-004](./tasks/004-task-pos-tablet-layout-from-approved-reference-ready.md), [TASK-005](./tasks/005-task-checkout-payment-rules-cash-on-account-ready.md), [TASK-006](./tasks/006-task-playwright-mock-smoke-and-visual-baseline-ready.md) |
-| Iteration 6 | Release hardening and reporting baseline | [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md), [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
+| Iteration 2 | Contracts, mock runtime, and architecture guardrails | [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
+| Iteration 3 | Catalog, inventory, and bulk repricing core | [CATALOG-001](./features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md) |
+| Iteration 4 | On-account debt lifecycle | [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md) |
+| Iteration 5 | Offline capture and reconciliation | [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md) |
+| Iteration 6 | Reporting and real-backend release gate | [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md), [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
+| Post-MVP extension batch | Unified products workspace, convergence, and runtime localization | [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md), [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md), [PRODUCTS-003](./features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md), [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md) |
 
 ---
 

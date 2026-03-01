@@ -4,20 +4,22 @@
 
 **Document ID**: `001`  
 **File Name**: `001-requirements-simple-pos-draft.md`  
-**Status**: `approved`  
+**Status**: `done`
 **GitHub Issue**: #20  
 **Priority**: `high`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.9`  
+**Version**: `1.0`
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
-**Related Epic/Feature**: `pending-definition`  
+**Related Epic/Feature**: `POS-001`, `API-001`, `CATALOG-001`, `INVENTORY-001`, `AR-001`, `OFFLINE-001`, `RELEASE-001`
 **Related Planning Doc**: `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
 ---
 
 > This document is a use-case decomposition complement. The primary modern scope artifacts are PRD + Product Backlog.
+
+> Closure note: the MVP scope defined here was fully implemented and verified by `2026-03-01`. This document remains as the historical requirements baseline for the completed MVP.
 
 ---
 

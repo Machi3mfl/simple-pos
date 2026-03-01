@@ -4,16 +4,18 @@
 
 **Document ID**: `003`  
 **File Name**: `003-backlog-simple-pos-draft.md`  
-**Status**: `approved`  
+**Status**: `done`
 **GitHub Issue**: #2  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.8`  
+**Version**: `0.9`
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Linked PRD**: `workflow-manager/docs/planning/002-prd-simple-pos-draft.md`
 
 ---
+
+> Closure note: all PBIs in the original MVP backlog are now marked `done`. This document remains as the historical backlog baseline for the shipped MVP scope.
 
 ## 1. Backlog Strategy
 

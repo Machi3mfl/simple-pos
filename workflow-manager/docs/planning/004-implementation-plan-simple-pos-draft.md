@@ -4,16 +4,18 @@
 
 **Document ID**: `004`  
 **File Name**: `004-implementation-plan-simple-pos-draft.md`  
-**Status**: `approved`  
+**Status**: `done`
 **GitHub Issue**: #21  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.5`  
+**Version**: `0.6`
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Input Documents**: `001-requirements-simple-pos-draft.md`, `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
 
 ---
+
+> Closure note: the original MVP implementation plan was fully executed by `2026-03-01`. Follow-up work after MVP closure is tracked separately in extension features such as `PRODUCTS-001`, `PRODUCTS-002`, and `I18N-001`.
 
 ## 1. Planning Baseline (Locked Decisions)
 

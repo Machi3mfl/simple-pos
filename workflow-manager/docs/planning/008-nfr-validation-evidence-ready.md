@@ -4,16 +4,18 @@
 
 **Document ID**: `008`  
 **File Name**: `008-nfr-validation-evidence-ready.md`  
-**Status**: `ready`  
+**Status**: `done`
 **GitHub Issue**: #22  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.1`  
+**Version**: `0.3`
 **Created At**: `2026-03-01`  
 **Last Updated**: `2026-03-01`  
 **Related Docs**: `001`, `002`, `004`, `007`  
 
 ---
+
+> Closure note: this document captures the NFR evidence used to close the original MVP release scope.
 
 ## 1. Scope
 
@@ -26,8 +28,8 @@ This document captures evidence for MVP NFR closure used by PRD and implementati
 | NFR | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
 | NFR-001 | Perceived interaction performance | `tests/e2e/nfr-performance-usability.spec.ts` (`keeps key interaction latency within perceived target budget`) | pass |
-| NFR-002 | 60+ usability baseline (touch/readability) | `tests/e2e/nfr-performance-usability.spec.ts` (`>=44px` controls), `tests/e2e/pos-layout-sections.spec.ts`, `tests/e2e/pos-visual-baseline.spec.ts` | pass |
-| NFR-003 | Reliability / no critical event loss | Real backend gate: `npm run test:e2e:release-gate:real`, module suite: `npm run test:e2e:ui:real:modules` | pass |
+| NFR-002 | 60+ usability baseline (touch/readability) | `tests/e2e/nfr-performance-usability.spec.ts` (`>=44px` controls), `tests/e2e/pos-layout-sections.spec.ts`, `tests/e2e/pos-visual-baseline.spec.ts`, `tests/e2e/products-workspace-ui.spec.ts` | pass |
+| NFR-003 | Reliability / no critical event loss | Real backend gate: `npm run test:e2e:release-gate:real`, module suite: `npm run test:e2e:ui:real:modules`, focused `/products` flow: `tests/e2e/products-workspace-ui.spec.ts` | pass |
 | NFR-004 | Maintainability / architecture boundaries | OpenAPI and contract checks + layer guardrails documented in `API-001` | pass |
 | NFR-005 | Portability / responsive behavior | `tests/e2e/pos-visual-baseline.spec.ts` (tablet + compact-tablet snapshots) | pass |
 | NFR-006 | Auditability for debt | `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`, `tests/e2e/ar-ui-debt-candidates-sorting.spec.ts`, `tests/e2e/ar-debt-ledger-and-payments-api.spec.ts` | pass |

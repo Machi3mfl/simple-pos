@@ -4,17 +4,19 @@
 
 **Document ID**: `005`  
 **File Name**: `005-ui-reference-pos-v1-draft.md`  
-**Status**: `approved`  
+**Status**: `done`
 **GitHub Issue**: #1  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.2`  
+**Version**: `0.3`
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Related Planning**: `004-implementation-plan-simple-pos-draft.md`  
 **Related Feature**: `POS-001-ui-pos-mockup-and-checkout-draft.md`
 
 ---
+
+> Closure note: this visual reference was approved and implemented in the delivered MVP. It remains the historical design baseline for the original POS shell.
 
 ## 1. Source of Truth
 
