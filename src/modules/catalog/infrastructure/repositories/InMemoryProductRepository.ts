@@ -1,3 +1,5 @@
+import { getMockStore } from "@/infrastructure/config/mockStore";
+
 import type { Product } from "../../domain/entities/Product";
 import type {
   ListProductsFilters,
@@ -5,10 +7,8 @@ import type {
 } from "../../domain/repositories/ProductRepository";
 
 export class InMemoryProductRepository implements ProductRepository {
-  private static storage: Product[] = [];
-
   async save(product: Product): Promise<void> {
-    const current = InMemoryProductRepository.storage;
+    const current = getMockStore().products;
     const index = current.findIndex((item) => item.getId() === product.getId());
 
     if (index === -1) {
@@ -26,7 +26,7 @@ export class InMemoryProductRepository implements ProductRepository {
   }
 
   async list(filters?: ListProductsFilters): Promise<readonly Product[]> {
-    return InMemoryProductRepository.storage.filter((product) => {
+    return getMockStore().products.filter((product) => {
       const primitive = product.toPrimitives();
 
       if (filters?.categoryId && primitive.categoryId !== filters.categoryId) {

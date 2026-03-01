@@ -1,15 +1,16 @@
+import { getMockStore } from "@/infrastructure/config/mockStore";
+
 import type { Sale } from "../../domain/entities/Sale";
 import type { SaleFilters, SaleRepository } from "../../domain/repositories/SaleRepository";
 
 export class InMemorySaleRepository implements SaleRepository {
-  private static readonly storage: Sale[] = [];
-
   async save(sale: Sale): Promise<void> {
-    InMemorySaleRepository.storage.push(sale);
+    getMockStore().sales.push(sale);
   }
 
   async list(filters: SaleFilters = {}): Promise<readonly Sale[]> {
-    return InMemorySaleRepository.storage
+    return getMockStore()
+      .sales
       .filter((sale) => {
         if (filters.paymentMethod && sale.getPaymentMethod() !== filters.paymentMethod) {
           return false;

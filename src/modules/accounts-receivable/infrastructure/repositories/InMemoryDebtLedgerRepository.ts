@@ -1,3 +1,5 @@
+import { getMockStore } from "@/infrastructure/config/mockStore";
+
 import { DebtLedgerEntry } from "../../domain/entities/DebtLedgerEntry";
 import type {
   DebtLedgerFilters,
@@ -5,20 +7,18 @@ import type {
 } from "../../domain/repositories/DebtLedgerRepository";
 
 export class InMemoryDebtLedgerRepository implements DebtLedgerRepository {
-  private static readonly entriesByCustomerId = new Map<string, DebtLedgerEntry[]>();
-
   async append(entry: DebtLedgerEntry): Promise<void> {
     const customerId = entry.getCustomerId();
-    const existing = InMemoryDebtLedgerRepository.entriesByCustomerId.get(customerId) ?? [];
+    const existing = getMockStore().debtEntriesByCustomerId.get(customerId) ?? [];
     existing.push(entry);
-    InMemoryDebtLedgerRepository.entriesByCustomerId.set(customerId, existing);
+    getMockStore().debtEntriesByCustomerId.set(customerId, existing);
   }
 
   async listByCustomer(
     customerId: string,
     filters: DebtLedgerFilters = {},
   ): Promise<readonly DebtLedgerEntry[]> {
-    const entries = InMemoryDebtLedgerRepository.entriesByCustomerId.get(customerId) ?? [];
+    const entries = getMockStore().debtEntriesByCustomerId.get(customerId) ?? [];
 
     return entries
       .filter((entry) => {

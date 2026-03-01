@@ -1,26 +1,29 @@
-import { InventoryItem } from "../../domain/entities/InventoryItem";
-import type { InventoryRepository, StockMovementFilters } from "../../domain/repositories/InventoryRepository";
-import { StockMovement } from "../../domain/entities/StockMovement";
+import { getMockStore } from "@/infrastructure/config/mockStore";
+
+import type { InventoryItem } from "../../domain/entities/InventoryItem";
+import type {
+  InventoryRepository,
+  StockMovementFilters,
+} from "../../domain/repositories/InventoryRepository";
+import type { StockMovement } from "../../domain/entities/StockMovement";
 
 export class InMemoryInventoryRepository implements InventoryRepository {
-  private static readonly inventoryByProductId = new Map<string, InventoryItem>();
-  private static readonly stockMovements: StockMovement[] = [];
-
   async getInventoryItem(productId: string): Promise<InventoryItem | null> {
-    return InMemoryInventoryRepository.inventoryByProductId.get(productId) ?? null;
+    return getMockStore().inventoryByProductId.get(productId) ?? null;
   }
 
   async saveInventoryItem(item: InventoryItem): Promise<void> {
     const { productId } = item.toPrimitives();
-    InMemoryInventoryRepository.inventoryByProductId.set(productId, item);
+    getMockStore().inventoryByProductId.set(productId, item);
   }
 
   async appendStockMovement(movement: StockMovement): Promise<void> {
-    InMemoryInventoryRepository.stockMovements.push(movement);
+    getMockStore().stockMovements.push(movement);
   }
 
   async listStockMovements(filters: StockMovementFilters = {}): Promise<readonly StockMovement[]> {
-    return InMemoryInventoryRepository.stockMovements
+    return getMockStore()
+      .stockMovements
       .filter((movement) => {
         if (filters.productId && movement.getProductId() !== filters.productId) {
           return false;
