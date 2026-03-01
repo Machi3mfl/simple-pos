@@ -24,11 +24,14 @@ Mobile-friendly navigation map for the full project workflow.
    - [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md)
    - [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md)
    - [PRODUCTS-003](./features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md)
+   - [SOURCING-001](./features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md)
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
    - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)
    - [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md)
-12. Task artifacts:
+12. PoC set:
+   - [POC-001](./pocs/001-poc-product-sourcing-vtex-search-feasibility-ready.md)
+13. Task artifacts:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
    - [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md)
@@ -54,6 +57,7 @@ Mobile-friendly navigation map for the full project workflow.
 | Iteration 5 | Offline capture and reconciliation | [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md) |
 | Iteration 6 | Reporting and real-backend release gate | [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md), [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
 | Post-MVP extension batch | Unified products workspace, convergence, and runtime localization | [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md), [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md), [PRODUCTS-003](./features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md), [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md) |
+| Post-MVP sourcing batch | External product discovery, assisted import, and source traceability | [SOURCING-001](./features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md), [POC-001](./pocs/001-poc-product-sourcing-vtex-search-feasibility-ready.md) |
 
 ---
 

@@ -15,7 +15,7 @@
 
 ---
 
-> Closure note: this snapshot records the completed MVP execution state as of `2026-03-01`.
+> Closure note: this snapshot records the completed MVP execution state as of `2026-03-01`, plus the post-MVP planning item opened on the same date for external product sourcing.
 
 ## 1. Iteration Status
 
@@ -42,6 +42,7 @@
 | PRODUCTS-001 | done |
 | PRODUCTS-002 | done |
 | PRODUCTS-003 | done |
+| SOURCING-001 | planning |
 | AR-001 | done |
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
@@ -77,7 +78,13 @@
 
 ## 5. Current Pending Items
 
-No open execution items remain in the documented post-MVP convergence batch.
+Open planning item:
+
+- `SOURCING-001` external product sourcing and assisted import:
+  - status: `planning`
+  - PoC status: `completed`
+  - implementation status: not started
+  - main artifact: `workflow-manager/docs/features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md`
 
 ---
 

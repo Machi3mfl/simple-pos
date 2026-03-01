@@ -17,6 +17,7 @@ This `docs/` workspace is a reusable base for project planning and issue traceab
 - `prompts/`: reusable prompt library
 - `injector/`: optional sample-data injector scaffold
 - `guides/`: methodology and operating standards (including GitHub issues/PR conventions)
+- `pocs/`: feasibility and spike artifacts linked to upcoming features
 
 ## Diagram Format Rule
 - Use Markdown files (`.md`) with embedded Mermaid blocks (` ```mermaid `).
@@ -25,6 +26,7 @@ This `docs/` workspace is a reusable base for project planning and issue traceab
 ## Project-owned folders
 These folders are intentionally empty in this repository and must be filled per project:
 - `features/`
+- `pocs/`
 - `planning/`
 - `runbooks/`
 - `guides/`

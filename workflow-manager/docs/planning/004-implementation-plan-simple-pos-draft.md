@@ -15,7 +15,7 @@
 
 ---
 
-> Closure note: the original MVP implementation plan was fully executed by `2026-03-01`. Follow-up work after MVP closure is tracked separately in extension features such as `PRODUCTS-001`, `PRODUCTS-002`, and `I18N-001`.
+> Closure note: the original MVP implementation plan was fully executed by `2026-03-01`. Follow-up work after MVP closure is tracked separately in extension features such as `PRODUCTS-001`, `PRODUCTS-002`, `I18N-001`, and `SOURCING-001`.
 
 ## 1. Planning Baseline (Locked Decisions)
 
