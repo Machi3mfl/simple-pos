@@ -137,6 +137,71 @@ paths:
         '400':
           $ref: '#/components/responses/ErrorResponse'
 
+  /product-sourcing/category-mappings:
+    get:
+      tags: [ProductSourcing]
+      operationId: listExternalCategoryMappings
+      summary: List learned external category mappings for sourcing
+      parameters:
+        - in: query
+          name: providerId
+          required: false
+          schema:
+            type: string
+            enum: [carrefour]
+            default: carrefour
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 8
+      responses:
+        '200':
+          description: Learned category mappings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSourcingCategoryMappingsResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      tags: [ProductSourcing]
+      operationId: updateExternalCategoryMapping
+      summary: Update or create a learned external category mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductSourcingCategoryMappingMutationRequest'
+      responses:
+        '200':
+          description: Updated learned category mapping
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSourcingCategoryMapping'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags: [ProductSourcing]
+      operationId: deleteExternalCategoryMapping
+      summary: Delete a learned external category mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductSourcingCategoryMappingDeleteRequest'
+      responses:
+        '204':
+          description: Mapping deleted
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
   /products/workspace:
     get:
       tags: [Catalog]
@@ -761,6 +826,58 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductSourcingImportInvalidItem'
+
+    ProductSourcingCategoryMapping:
+      type: object
+      required:
+        [id, providerId, externalCategoryPath, internalCategoryId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        providerId:
+          type: string
+          enum: [carrefour]
+        externalCategoryPath:
+          type: string
+        internalCategoryId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductSourcingCategoryMappingsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSourcingCategoryMapping'
+
+    ProductSourcingCategoryMappingMutationRequest:
+      type: object
+      required: [providerId, externalCategoryPath, internalCategoryId]
+      properties:
+        providerId:
+          type: string
+          enum: [carrefour]
+        externalCategoryPath:
+          type: string
+        internalCategoryId:
+          type: string
+
+    ProductSourcingCategoryMappingDeleteRequest:
+      type: object
+      required: [providerId, externalCategoryPath]
+      properties:
+        providerId:
+          type: string
+          enum: [carrefour]
+        externalCategoryPath:
+          type: string
 
     CreateProductRequest:
       type: object

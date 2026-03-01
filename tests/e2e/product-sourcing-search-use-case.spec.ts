@@ -64,6 +64,14 @@ class InMemoryExternalCategoryMappingRepository
       rule,
     );
   }
+
+  async listByProvider(): Promise<readonly CategoryMappingRule[]> {
+    return Array.from(this.items.values());
+  }
+
+  async delete(providerId: "carrefour", externalCategoryPath: string): Promise<void> {
+    this.items.delete(`${providerId}:${externalCategoryPath}`);
+  }
 }
 
 test.describe("product sourcing search use case", () => {

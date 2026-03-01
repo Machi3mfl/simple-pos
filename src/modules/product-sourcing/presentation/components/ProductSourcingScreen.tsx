@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeft, CheckSquare, Loader2, Search, Store, XSquare } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckSquare,
+  Loader2,
+  Save,
+  Search,
+  Store,
+  Trash2,
+  XSquare,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
@@ -68,6 +77,19 @@ interface ProductSourcingImportResponse {
   }[];
 }
 
+interface ExternalCategoryMappingItem {
+  readonly id: string;
+  readonly providerId: "carrefour";
+  readonly externalCategoryPath: string;
+  readonly internalCategoryId: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+interface ProductSourcingCategoryMappingsResponse {
+  readonly items: readonly ExternalCategoryMappingItem[];
+}
+
 interface ImportDraft {
   readonly name: string;
   readonly categoryId: string;
@@ -84,6 +106,7 @@ interface FeedbackState {
 
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
+const CATEGORY_OPTIONS = ["drink", "snack", "dessert", "main", "other"] as const;
 
 function resolveErrorMessage(payload: unknown, fallback: string): string {
   if (
@@ -143,17 +166,42 @@ function parseIntegerInput(value: string): number | null {
   return Number.isInteger(parsed) ? parsed : null;
 }
 
+function toTestIdFragment(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function humanizeExternalCategoryPath(
+  value: string,
+  humanizeIdentifier: (value: string) => string,
+): string {
+  return value
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) => humanizeIdentifier(segment))
+    .join(" / ");
+}
+
 export function ProductSourcingScreen(): JSX.Element {
-  const { formatCurrency, humanizeIdentifier, labelForCategory } = useI18n();
+  const { formatCurrency, formatDateTime, humanizeIdentifier, labelForCategory } = useI18n();
   const [query, setQuery] = useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   const [results, setResults] = useState<readonly ExternalCatalogCandidateItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
   const [importDrafts, setImportDrafts] = useState<Record<string, ImportDraft>>({});
+  const [categoryMappings, setCategoryMappings] = useState<readonly ExternalCategoryMappingItem[]>([]);
+  const [categoryMappingDrafts, setCategoryMappingDrafts] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingMappings, setIsLoadingMappings] = useState<boolean>(false);
   const [isImporting, setIsImporting] = useState<boolean>(false);
+  const [activeMappingPath, setActiveMappingPath] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<FeedbackState | null>(null);
+  const [mappingFeedback, setMappingFeedback] = useState<FeedbackState | null>(null);
   const [importResult, setImportResult] = useState<ProductSourcingImportResponse | null>(null);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -167,6 +215,47 @@ export function ProductSourcingScreen(): JSX.Element {
       window.clearTimeout(timeoutId);
     };
   }, [query]);
+
+  const loadCategoryMappings = useCallback(async (): Promise<void> => {
+    setIsLoadingMappings(true);
+
+    try {
+      const response = await fetch("/api/v1/product-sourcing/category-mappings?limit=8", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+        },
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | ProductSourcingCategoryMappingsResponse
+        | ApiErrorPayload
+        | null;
+
+      if (!response.ok) {
+        setMappingFeedback({
+          type: "error",
+          message: resolveErrorMessage(payload, "No se pudo cargar el listado de category mappings."),
+        });
+        return;
+      }
+
+      const result = payload as ProductSourcingCategoryMappingsResponse;
+      setCategoryMappings(result.items);
+      setCategoryMappingDrafts(
+        Object.fromEntries(
+          result.items.map((item) => [item.externalCategoryPath, item.internalCategoryId]),
+        ),
+      );
+    } catch {
+      setMappingFeedback({
+        type: "error",
+        message: "No se pudo cargar el listado de category mappings.",
+      });
+    } finally {
+      setIsLoadingMappings(false);
+    }
+  }, []);
 
   const executeSearch = useCallback(async (rawQuery: string): Promise<void> => {
     const normalizedQuery = normalizeQuery(rawQuery);
@@ -269,19 +358,13 @@ export function ProductSourcingScreen(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    setImportDrafts((current) => {
-      let changed = false;
-      const next: Record<string, ImportDraft> = { ...current };
+    void loadCategoryMappings();
+  }, [loadCategoryMappings]);
 
-      for (const item of results) {
-        if (!next[item.sourceProductId]) {
-          next[item.sourceProductId] = createImportDraft(item);
-          changed = true;
-        }
-      }
-
-      return changed ? next : current;
-    });
+  useEffect(() => {
+    setImportDrafts(
+      Object.fromEntries(results.map((item) => [item.sourceProductId, createImportDraft(item)])),
+    );
   }, [results]);
 
   const selectedItems = useMemo(
@@ -448,6 +531,7 @@ export function ProductSourcingScreen(): JSX.Element {
       const importedIds = new Set(result.items.map((entry) => entry.sourceProductId));
       setSelectedIds((current) => current.filter((sourceProductId) => !importedIds.has(sourceProductId)));
       setImportResult(result);
+      await loadCategoryMappings();
       setImportFeedback({
         type: result.importedCount > 0 ? "success" : "error",
         message:
@@ -462,6 +546,104 @@ export function ProductSourcingScreen(): JSX.Element {
       });
     } finally {
       setIsImporting(false);
+    }
+  }
+
+  function updateCategoryMappingDraft(externalCategoryPath: string, value: string): void {
+    setCategoryMappingDrafts((current) => ({
+      ...current,
+      [externalCategoryPath]: value,
+    }));
+    setMappingFeedback(null);
+  }
+
+  async function handleSaveCategoryMapping(externalCategoryPath: string): Promise<void> {
+    const internalCategoryId = categoryMappingDrafts[externalCategoryPath]?.trim();
+    if (!internalCategoryId) {
+      setMappingFeedback({
+        type: "error",
+        message: "Selecciona una categoria valida antes de guardar la regla.",
+      });
+      return;
+    }
+
+    setActiveMappingPath(externalCategoryPath);
+
+    try {
+      const response = await fetch("/api/v1/product-sourcing/category-mappings", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          providerId: "carrefour",
+          externalCategoryPath,
+          internalCategoryId,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setMappingFeedback({
+          type: "error",
+          message: resolveErrorMessage(payload, "No se pudo actualizar la regla de categoria."),
+        });
+        return;
+      }
+
+      await loadCategoryMappings();
+      setMappingFeedback({
+        type: "success",
+        message: "La regla de categoria se actualizo correctamente.",
+      });
+    } catch {
+      setMappingFeedback({
+        type: "error",
+        message: "No se pudo actualizar la regla de categoria.",
+      });
+    } finally {
+      setActiveMappingPath(null);
+    }
+  }
+
+  async function handleDeleteCategoryMapping(externalCategoryPath: string): Promise<void> {
+    setActiveMappingPath(externalCategoryPath);
+
+    try {
+      const response = await fetch("/api/v1/product-sourcing/category-mappings", {
+        method: "DELETE",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          providerId: "carrefour",
+          externalCategoryPath,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok && response.status !== 204) {
+        setMappingFeedback({
+          type: "error",
+          message: resolveErrorMessage(payload, "No se pudo eliminar la regla de categoria."),
+        });
+        return;
+      }
+
+      await loadCategoryMappings();
+      setMappingFeedback({
+        type: "success",
+        message: "La regla de categoria se elimino correctamente.",
+      });
+    } catch {
+      setMappingFeedback({
+        type: "error",
+        message: "No se pudo eliminar la regla de categoria.",
+      });
+    } finally {
+      setActiveMappingPath(null);
     }
   }
 
@@ -564,6 +746,9 @@ export function ProductSourcingScreen(): JSX.Element {
 
                 <p className="mt-2 text-sm text-slate-600">
                   Cada producto genera un SKU deterministico para evitar reimportaciones accidentales durante este slice.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Las categorias confirmadas se aprenden y se reutilizan automaticamente en futuras busquedas del mismo camino externo.
                 </p>
 
                 {importFeedback ? (
@@ -854,6 +1039,138 @@ export function ProductSourcingScreen(): JSX.Element {
             No hay candidatos visibles para la busqueda actual.
           </article>
         ) : null}
+
+        <section
+          data-testid="product-sourcing-mappings-panel"
+          className="rounded-[2rem] border border-slate-200 bg-white px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.06)]"
+        >
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Reglas aprendidas
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                Category mappings confirmados
+              </h2>
+              <p className="mt-2 max-w-[52rem] text-sm text-slate-600">
+                Este panel deja visible como el sourcing aprende el destino interno de cada camino de categoria externo y te permite corregirlo sin tocar la base.
+              </p>
+            </div>
+
+            {isLoadingMappings ? (
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-500">
+                <Loader2 size={16} className="animate-spin" />
+                Cargando reglas
+              </div>
+            ) : null}
+          </div>
+
+          {mappingFeedback ? (
+            <div
+              data-testid="product-sourcing-mapping-feedback"
+              className={[
+                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
+                mappingFeedback.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-rose-200 bg-rose-50 text-rose-700",
+              ].join(" ")}
+            >
+              {mappingFeedback.message}
+            </div>
+          ) : null}
+
+          {categoryMappings.length === 0 && !isLoadingMappings ? (
+            <div className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+              Todavia no hay reglas aprendidas. Importa un producto y la categoria confirmada quedara disponible para futuras busquedas.
+            </div>
+          ) : null}
+
+          {categoryMappings.length > 0 ? (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {categoryMappings.map((mapping) => {
+                const testIdFragment = toTestIdFragment(mapping.externalCategoryPath);
+                const draftValue =
+                  categoryMappingDrafts[mapping.externalCategoryPath] ?? mapping.internalCategoryId;
+                const options = CATEGORY_OPTIONS.includes(
+                  draftValue as (typeof CATEGORY_OPTIONS)[number],
+                )
+                  ? CATEGORY_OPTIONS
+                  : [draftValue, ...CATEGORY_OPTIONS];
+                const isBusy = activeMappingPath === mapping.externalCategoryPath;
+
+                return (
+                  <article
+                    key={mapping.id}
+                    data-testid={`product-sourcing-mapping-row-${testIdFragment}`}
+                    className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+                          Carrefour
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-slate-900">
+                          {humanizeExternalCategoryPath(
+                            mapping.externalCategoryPath,
+                            humanizeIdentifier,
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Actualizado {formatDateTime(mapping.updatedAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+                      <label className="grid gap-1 text-sm text-slate-600">
+                        <span className="font-medium text-slate-700">Categoria interna</span>
+                        <select
+                          data-testid={`product-sourcing-mapping-category-${testIdFragment}`}
+                          value={draftValue}
+                          onChange={(event) =>
+                            updateCategoryMappingDraft(
+                              mapping.externalCategoryPath,
+                              event.target.value,
+                            )
+                          }
+                          className="min-h-[2.9rem] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none"
+                        >
+                          {options.map((option) => (
+                            <option key={option} value={option}>
+                              {labelForCategory(option)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <button
+                        type="button"
+                        data-testid={`product-sourcing-mapping-save-${testIdFragment}`}
+                        onClick={() => void handleSaveCategoryMapping(mapping.externalCategoryPath)}
+                        disabled={isBusy}
+                        className="inline-flex min-h-[2.9rem] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+                      >
+                        {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        Guardar
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid={`product-sourcing-mapping-delete-${testIdFragment}`}
+                        onClick={() => void handleDeleteCategoryMapping(mapping.externalCategoryPath)}
+                        disabled={isBusy}
+                        className="inline-flex min-h-[2.9rem] items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700"
+                      >
+                        {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        Eliminar
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
       </div>
     </main>
   );

@@ -63,6 +63,24 @@ export class SupabaseExternalCategoryMappingRepository
     return mapRowToEntity(data as ExternalCategoryMappingRow);
   }
 
+  async listByProvider(
+    providerId: ExternalCatalogProviderId,
+    limit: number,
+  ): Promise<readonly CategoryMappingRule[]> {
+    const { data, error } = await this.client
+      .from("external_category_mappings")
+      .select("*")
+      .eq("provider_id", providerId)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to list external category mappings: ${error.message}`);
+    }
+
+    return ((data ?? []) as ExternalCategoryMappingRow[]).map(mapRowToEntity);
+  }
+
   async save(rule: CategoryMappingRule): Promise<void> {
     const row = mapEntityToRow(rule);
     const { error } = await this.client
@@ -71,6 +89,21 @@ export class SupabaseExternalCategoryMappingRepository
 
     if (error) {
       throw new Error(`Failed to save external category mapping: ${error.message}`);
+    }
+  }
+
+  async delete(
+    providerId: ExternalCatalogProviderId,
+    externalCategoryPath: string,
+  ): Promise<void> {
+    const { error } = await this.client
+      .from("external_category_mappings")
+      .delete()
+      .eq("provider_id", providerId)
+      .eq("external_category_path", externalCategoryPath);
+
+    if (error) {
+      throw new Error(`Failed to delete external category mapping: ${error.message}`);
     }
   }
 }

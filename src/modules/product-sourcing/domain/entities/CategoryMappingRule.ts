@@ -44,6 +44,17 @@ export class CategoryMappingRule {
     return new CategoryMappingRule(props);
   }
 
+  retarget(internalCategoryId: string, updatedAt?: string): CategoryMappingRule {
+    return CategoryMappingRule.create({
+      id: this.props.id,
+      providerId: this.props.providerId,
+      externalCategoryPath: this.props.externalCategoryPath,
+      internalCategoryId,
+      createdAt: this.props.createdAt,
+      updatedAt: updatedAt ?? new Date().toISOString(),
+    });
+  }
+
   toPrimitives(): CategoryMappingRulePrimitives {
     return { ...this.props };
   }

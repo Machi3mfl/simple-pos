@@ -3,8 +3,11 @@ import { CreateProductUseCase } from "@/modules/catalog/application/use-cases/Cr
 import { SupabaseProductRepository } from "@/modules/catalog/infrastructure/repositories/SupabaseProductRepository";
 import { SupabaseInventoryRepository } from "@/modules/inventory/infrastructure/repositories/SupabaseInventoryRepository";
 
+import { DeleteExternalCategoryMappingUseCase } from "../../application/use-cases/DeleteExternalCategoryMappingUseCase";
 import { ImportExternalProductsUseCase } from "../../application/use-cases/ImportExternalProductsUseCase";
+import { ListExternalCategoryMappingsUseCase } from "../../application/use-cases/ListExternalCategoryMappingsUseCase";
 import { SearchExternalProductsUseCase } from "../../application/use-cases/SearchExternalProductsUseCase";
+import { UpdateExternalCategoryMappingUseCase } from "../../application/use-cases/UpdateExternalCategoryMappingUseCase";
 import { CatalogCreateProductWriter } from "../adapters/CatalogCreateProductWriter";
 import { CarrefourCatalogProvider } from "../providers/carrefour/CarrefourCatalogProvider";
 import { SupabaseExternalCategoryMappingRepository } from "../repositories/SupabaseExternalCategoryMappingRepository";
@@ -12,8 +15,11 @@ import { SupabaseImportedProductSourceRepository } from "../repositories/Supabas
 import { SupabaseProductImageAssetStore } from "../storage/SupabaseProductImageAssetStore";
 
 export function createProductSourcingRuntime(): {
+  listExternalCategoryMappingsUseCase: ListExternalCategoryMappingsUseCase;
   searchExternalProductsUseCase: SearchExternalProductsUseCase;
   importExternalProductsUseCase: ImportExternalProductsUseCase;
+  updateExternalCategoryMappingUseCase: UpdateExternalCategoryMappingUseCase;
+  deleteExternalCategoryMappingUseCase: DeleteExternalCategoryMappingUseCase;
 } {
   const client = getSupabaseServerClient();
   const productRepository = new SupabaseProductRepository(client);
@@ -29,6 +35,9 @@ export function createProductSourcingRuntime(): {
   const externalCategoryMappingRepository = new SupabaseExternalCategoryMappingRepository(client);
 
   return {
+    listExternalCategoryMappingsUseCase: new ListExternalCategoryMappingsUseCase(
+      externalCategoryMappingRepository,
+    ),
     searchExternalProductsUseCase: new SearchExternalProductsUseCase(
       retailerCatalogProvider,
       externalCategoryMappingRepository,
@@ -37,6 +46,12 @@ export function createProductSourcingRuntime(): {
       catalogProductWriter,
       productImageAssetStore,
       importedProductSourceRepository,
+      externalCategoryMappingRepository,
+    ),
+    updateExternalCategoryMappingUseCase: new UpdateExternalCategoryMappingUseCase(
+      externalCategoryMappingRepository,
+    ),
+    deleteExternalCategoryMappingUseCase: new DeleteExternalCategoryMappingUseCase(
       externalCategoryMappingRepository,
     ),
   };
