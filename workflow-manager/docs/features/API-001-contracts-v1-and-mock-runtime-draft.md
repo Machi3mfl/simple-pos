@@ -95,4 +95,6 @@ paths:
 - Runtime mode switch prepared for release gate:
   - `POS_BACKEND_MODE=mock|supabase` with mock as default.
   - Supabase repositories available for `products`, `stock-movements`, and `sales`.
+  - Mock repositories now share a process-global store so module navigation keeps the same mock data during a running session.
+  - Mock mode is still non-durable across server restarts; persistent validation requires `POS_BACKEND_MODE=supabase`.
 - OpenAPI lint status: `pass` (`npx -y @redocly/cli@latest lint src/app/api/v1/openapi.yaml`)

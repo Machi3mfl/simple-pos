@@ -47,7 +47,25 @@ test("registers inventory movement from UI and shows validation feedback", async
     "Stock movement registered: inbound.",
   );
 
-  const historyItem = page.locator('[data-testid^="inventory-history-item-"]').first();
+  const historyItem = page
+    .locator('[data-testid^="inventory-history-item-"]')
+    .filter({ hasText: uniqueProductName })
+    .first();
   await expect(historyItem).toContainText("inbound");
   await expect(historyItem).toContainText("qty 2");
+  await expect(historyItem).toContainText(uniqueProductName);
+
+  await page.getByTestId("nav-item-reporting").click();
+  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+
+  await page.getByTestId("nav-item-inventory").click();
+  await expect(page.getByRole("heading", { name: "Stock Movement" })).toBeVisible();
+  await page.getByRole("button", { name: "Refresh" }).click();
+
+  const persistedHistoryItem = page
+    .locator('[data-testid^="inventory-history-item-"]')
+    .filter({ hasText: uniqueProductName })
+    .first();
+  await expect(persistedHistoryItem).toContainText("inbound");
+  await expect(persistedHistoryItem).toContainText("qty 2");
 });

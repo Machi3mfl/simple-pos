@@ -68,4 +68,21 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
     .filter({ hasText: "Payment" })
     .first();
   await expect(paymentLedgerEntry).toBeVisible();
+
+  await page.getByTestId("nav-item-reporting").click();
+  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+
+  await page.getByTestId("nav-item-receivables").click();
+  await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
+  await page.getByTestId("debt-refresh-candidates-button").click();
+  await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
+  await page.getByTestId("debt-load-summary-button").click();
+
+  await expect(page.getByText(new RegExp(`Customer ${customerName}`))).toBeVisible();
+  await expect(page.getByTestId("debt-outstanding-value")).toHaveText(
+    `$${afterOutstanding.toFixed(2)}`,
+  );
+  await expect(
+    page.locator('[data-testid^="debt-ledger-entry-"]').filter({ hasText: "Payment" }).first(),
+  ).toBeVisible();
 });

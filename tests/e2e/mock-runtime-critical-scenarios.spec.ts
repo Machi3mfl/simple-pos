@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { z } from "zod";
 
+import { customerDebtSummaryResponseDTOSchema } from "../../src/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
+import { salesHistoryResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/sales-history-response.dto";
 import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/stock-movement-response.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
 import { syncEventsResultResponseDTOSchema } from "../../src/modules/sync/presentation/dtos/sync-events-result.dto";
@@ -70,6 +72,69 @@ test.describe("mock runtime critical scenarios", () => {
     expect(errorResponse.status()).toBe(400);
     const errorBody = await errorResponse.json();
     expect(apiErrorResponseSchema.safeParse(errorBody).success).toBe(true);
+  });
+
+  test("shares mock state across sales, reporting, and debt routes", async ({ request }) => {
+    const customerName = `Mock Persistence ${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
+
+    const saleResponse = await request.post("/api/v1/sales", {
+      data: {
+        items: [{ productId: "product-persistence-001", quantity: 2 }],
+        paymentMethod: "on_account",
+        customerName,
+      },
+    });
+
+    expect(saleResponse.status()).toBe(201);
+    const saleBody = await saleResponse.json();
+    const parsedSale = saleResponseDTOSchema.safeParse(saleBody);
+    expect(parsedSale.success).toBe(true);
+
+    if (!parsedSale.success || !parsedSale.data.customerId) {
+      throw new Error("Expected on_account sale to return customerId");
+    }
+
+    const salesHistoryResponse = await request.get(
+      "/api/v1/reports/sales-history?paymentMethod=on_account",
+    );
+    expect(salesHistoryResponse.status()).toBe(200);
+    const salesHistoryBody = await salesHistoryResponse.json();
+    const parsedSalesHistory = salesHistoryResponseDTOSchema.safeParse(salesHistoryBody);
+    expect(parsedSalesHistory.success).toBe(true);
+
+    if (!parsedSalesHistory.success) {
+      throw new Error("Expected valid sales history payload");
+    }
+
+    expect(
+      parsedSalesHistory.data.items.some(
+        (item) =>
+          item.saleId === parsedSale.data.saleId &&
+          item.customerId === parsedSale.data.customerId &&
+          item.customerName === customerName,
+      ),
+    ).toBe(true);
+
+    const debtSummaryResponse = await request.get(
+      `/api/v1/customers/${parsedSale.data.customerId}/debt`,
+    );
+    expect(debtSummaryResponse.status()).toBe(200);
+    const debtSummaryBody = await debtSummaryResponse.json();
+    const parsedDebtSummary =
+      customerDebtSummaryResponseDTOSchema.safeParse(debtSummaryBody);
+    expect(parsedDebtSummary.success).toBe(true);
+
+    if (!parsedDebtSummary.success) {
+      throw new Error("Expected valid customer debt summary payload");
+    }
+
+    expect(parsedDebtSummary.data.customerName).toBe(customerName);
+    expect(parsedDebtSummary.data.outstandingBalance).toBe(parsedSale.data.total);
+    expect(
+      parsedDebtSummary.data.ledger.some(
+        (entry) => entry.orderId === parsedSale.data.saleId && entry.entryType === "debt",
+      ),
+    ).toBe(true);
   });
 
   test("covers sync happy path and failed event handling", async ({ request }) => {
