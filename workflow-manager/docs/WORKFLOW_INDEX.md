@@ -24,6 +24,7 @@ Mobile-friendly navigation map for the full project workflow.
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
    - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)
+   - [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md)
 12. Iteration 0/1 execution tasks:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)

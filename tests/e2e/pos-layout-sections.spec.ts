@@ -28,11 +28,11 @@ test("renders core POS layout sections and controls", async ({ page }) => {
   await expect(page.getByTestId("nav-item-reporting")).toBeVisible();
   await expect(page.getByTestId("nav-item-sync")).toBeVisible();
 
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-  await expect(page.getByLabel("Search menu")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+  await expect(page.getByLabel("Buscar en el menú")).toBeVisible();
   await expect(page.locator('[data-testid^="product-card-"]').first()).toBeVisible();
 
-  await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
   await expect(page.getByText("Subtotal")).toBeVisible();
   await expect(page.getByText("Total", { exact: true })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeVisible();

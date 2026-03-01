@@ -49,7 +49,7 @@ test.describe("offline debt payment recovery", () => {
     await page.getByTestId("checkout-customer-name-input").fill(customerName);
     await page.getByTestId("checkout-confirm-payment-button").click();
     await expect(page.getByTestId("checkout-feedback")).toContainText(
-      "Checkout completed successfully.",
+      "Venta registrada correctamente.",
     );
 
     await page.getByTestId("nav-item-receivables").click();
@@ -74,7 +74,7 @@ test.describe("offline debt payment recovery", () => {
     await page.getByTestId("debt-register-payment-button").click();
 
     await expect(page.getByTestId("debt-feedback")).toContainText(
-      "Debt payment saved offline. Pending sync.",
+      "Pago de deuda guardado sin conexión. Pendiente de sincronización.",
     );
     await expect(page.getByTestId("debt-retry-offline-sync-button")).toBeVisible();
 
@@ -90,7 +90,7 @@ test.describe("offline debt payment recovery", () => {
     await page.getByTestId("debt-retry-offline-sync-button").click();
 
     await expect(page.getByTestId("debt-feedback")).toContainText(
-      "Offline events synced successfully.",
+      "Los eventos offline se sincronizaron correctamente.",
     );
     await expect(page.getByTestId("debt-retry-offline-sync-button")).toHaveCount(0);
 

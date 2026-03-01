@@ -35,3 +35,5 @@ The baseline run that validates UI vertical slices against Supabase is:
 This suite resets DB state before execution and intentionally keeps generated data after completion for manual verification.
 
 Since `2026-03-01`, this suite explicitly creates products per scenario because the app no longer auto-seeds catalog data or preloads order-list items.
+
+Since `2026-03-01`, the UI E2E assertions for headings, actions, and feedback validate the Spanish i18n layer mounted in `src/app/layout.tsx`.

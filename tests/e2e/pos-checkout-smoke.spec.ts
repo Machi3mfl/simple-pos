@@ -85,25 +85,27 @@ test.beforeEach(async ({ page }) => {
 test("runs checkout smoke in mock mode for cash and on_account", async ({ page }) => {
   await page.goto("/sales");
 
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
   await expect(page.getByTestId("product-card-product-001")).toBeVisible();
   await page.getByTestId("product-card-product-001").click();
 
-  await page.getByRole("button", { name: "Process to Payment" }).click();
+  await page.getByRole("button", { name: "Ir a cobrar" }).click();
   await fillCashReceivedWithExactTotal(page);
-  await page.getByRole("button", { name: "Confirm Payment" }).click();
-  await expect(page.getByText("Checkout completed successfully.")).toBeVisible();
+  await page.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(page.getByText("Venta registrada correctamente.")).toBeVisible();
 
   await page.getByTestId("product-card-product-002").click();
-  await page.getByRole("button", { name: "Process to Payment" }).click();
-  await page.getByRole("button", { name: "On account" }).click();
-  await page.getByRole("button", { name: "Confirm Payment" }).click();
-  await expect(page.getByText("For on-account payment, assign a customer name first.")).toBeVisible();
+  await page.getByRole("button", { name: "Ir a cobrar" }).click();
+  await page.getByRole("button", { name: "Cuenta corriente" }).click();
+  await page.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(
+    page.getByText("Para cuenta corriente primero asigná el nombre del cliente."),
+  ).toBeVisible();
 
-  await page.getByPlaceholder("e.g. Juan Perez").fill("Juan Perez");
-  await page.getByRole("button", { name: "Confirm Payment" }).click();
-  await expect(page.getByText("Checkout completed successfully.")).toBeVisible();
+  await page.getByPlaceholder("Ej. Juan Pérez").fill("Juan Perez");
+  await page.getByRole("button", { name: "Confirmar cobro" }).click();
+  await expect(page.getByText("Venta registrada correctamente.")).toBeVisible();
 });
 
 test("rejects unsupported payment method request in mock mode", async ({ page }) => {

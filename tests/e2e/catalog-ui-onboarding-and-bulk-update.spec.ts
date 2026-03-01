@@ -6,7 +6,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
   const uniqueProductName = `E2E Catalog ${Date.now()}`;
 
   await page.goto("/sales");
-  await page.getByRole("button", { name: "Catalog" }).click();
+  await page.getByTestId("nav-item-catalog").click();
 
   await page.getByTestId("onboarding-name-input").fill(uniqueProductName);
   await page.getByTestId("onboarding-category-select").selectOption("dessert");
@@ -15,7 +15,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
   await page.getByTestId("onboarding-submit-button").click();
 
   await expect(page.getByTestId("onboarding-feedback")).toContainText(
-    `Product created: ${uniqueProductName}`,
+    `Producto creado: ${uniqueProductName}`,
   );
 
   await page.getByTestId("bulk-scope-select").selectOption("selection");
@@ -31,15 +31,17 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
   await selectionItem.locator('input[type="checkbox"]').check();
 
   await page.getByTestId("bulk-preview-button").click();
-  await expect(page.getByTestId("bulk-feedback")).toContainText("Preview ready: 1 rows.");
+  await expect(page.getByTestId("bulk-feedback")).toContainText(
+    "Previsualización lista: 1 filas.",
+  );
 
   await page.getByTestId("bulk-apply-button").click();
   await expect(page.getByTestId("bulk-feedback")).toContainText(
-    "Batch applied: 1 products updated.",
+    "Lote aplicado: 1 productos actualizados.",
   );
 
-  await page.getByRole("button", { name: "Sales" }).click();
-  await page.getByLabel("Search menu").fill(uniqueProductName);
+  await page.getByTestId("nav-item-sales").click();
+  await page.getByLabel("Buscar en el menú").fill(uniqueProductName);
 
   const productCard = page
     .locator('[data-testid^="product-card-"]')
@@ -52,7 +54,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
   await productCard.click();
 
   const orderPanel = page.locator("section").filter({
-    has: page.getByRole("heading", { name: "Order List" }),
+    has: page.getByRole("heading", { name: "Lista del pedido" }),
   });
   const orderLine = orderPanel.locator("article").filter({ hasText: uniqueProductName }).first();
 

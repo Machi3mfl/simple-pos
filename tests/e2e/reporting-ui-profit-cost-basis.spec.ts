@@ -16,7 +16,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   await page.getByTestId("nav-item-reporting").click();
 
   const tomorrow = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 10);
-  await page.getByLabel("Period end").fill(tomorrow);
+  await page.getByLabel("Hasta").fill(tomorrow);
   await page.getByTestId("reporting-apply-filters-button").click();
 
   const beforeCostText = (await page.getByTestId("reporting-cost-value").textContent()) ?? "$0";
@@ -33,7 +33,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   await page.getByTestId("onboarding-stock-input").fill("0");
   await page.getByTestId("onboarding-submit-button").click();
   await expect(page.getByTestId("onboarding-feedback")).toContainText(
-    `Product created: ${productName}`,
+    `Producto creado: ${productName}`,
   );
 
   await page.getByTestId("nav-item-inventory").click();
@@ -45,7 +45,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   await page.getByTestId("inventory-reason-input").fill("profit_cost_basis_inbound");
   await page.getByTestId("inventory-submit-button").click();
   await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Stock movement registered: inbound.",
+    "Movimiento de stock registrado: ingreso.",
   );
 
   await page.getByTestId("inventory-movement-type-select").selectOption("outbound");
@@ -53,11 +53,11 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   await page.getByTestId("inventory-reason-input").fill("profit_cost_basis_outbound");
   await page.getByTestId("inventory-submit-button").click();
   await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Stock movement registered: outbound.",
+    "Movimiento de stock registrado: salida.",
   );
 
   await page.getByTestId("nav-item-reporting").click();
-  await page.getByLabel("Period end").fill(tomorrow);
+  await page.getByLabel("Hasta").fill(tomorrow);
   await page.getByTestId("reporting-apply-filters-button").click();
 
   const afterCostText = (await page.getByTestId("reporting-cost-value").textContent()) ?? "$0";

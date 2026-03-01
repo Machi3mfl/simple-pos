@@ -112,11 +112,16 @@ curl -X POST /api/v1/sales \
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation
-  - cash checkout captures customer payment amount and calculates change due before confirming
+  - cash checkout captures customer payment amount and calculates change due before confirming; blank cash input is treated as exact payment
   - on-account checkout can capture an initial partial payment and shows the remaining balance inline
 - Checkout UX updates:
   - removed `discount` / `tax` rows from the live order panel for now
-  - payment sheet now emphasizes exact total, cash received, change due, and remaining on-account balance
+  - `Ir a cobrar` now opens a large checkout modal so payment becomes a focused final step
+  - the checkout modal emphasizes total, method selection, cash received/change due, and remaining on-account balance
+- Localization updates:
+  - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`
+  - navigation, catalog, checkout, orders, and support workspaces consume a centralized dictionary instead of embedded strings
+  - category labels, payment methods, movement types, and debt status labels are resolved through shared translation helpers
 - Mock E2E coverage:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/e2e/pos-visual-baseline.spec.ts`

@@ -6,31 +6,39 @@ test("navigates all vertical slice UIs from side rail", async ({ page }) => {
 
   await page.getByTestId("nav-item-orders").click();
   await expect(page).toHaveURL(/\/orders$/);
-  await expect(page.getByRole("heading", { name: "Orders Snapshot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Listado de ventas" })).toBeVisible();
 
   await page.getByTestId("nav-item-catalog").click();
   await expect(page).toHaveURL(/\/catalog$/);
-  await expect(page.getByRole("heading", { name: "Guided Product Onboarding" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Bulk Price Update" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Alta guiada de productos" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Actualización masiva de precios" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-inventory").click();
   await expect(page).toHaveURL(/\/inventory$/);
-  await expect(page.getByRole("heading", { name: "Stock Movement" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(page).toHaveURL(/\/receivables$/);
-  await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-reporting").click();
   await expect(page).toHaveURL(/\/reporting$/);
-  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Historial y analítica de ventas" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-sync").click();
   await expect(page).toHaveURL(/\/sync$/);
-  await expect(page.getByRole("heading", { name: "Offline Queue and Sync" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cola offline y sincronización" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-sales").click();
   await expect(page).toHaveURL(/\/sales$/);
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
 });

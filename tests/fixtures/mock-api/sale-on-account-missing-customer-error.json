@@ -1,10 +1,10 @@
 {
   "code": "validation_error",
-  "message": "customerId or customerName is required when paymentMethod is on_account.",
+  "message": "customerId o customerName es obligatorio cuando paymentMethod es on_account.",
   "details": [
     {
       "field": "customerId",
-      "message": "customerId or customerName is required when paymentMethod is on_account."
+      "message": "customerId o customerName es obligatorio cuando paymentMethod es on_account."
     }
   ]
 }

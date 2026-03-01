@@ -17,7 +17,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   await page.goto("/sales");
 
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
 
   await addProductToCart(page, productName);
@@ -27,7 +27,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await page.getByTestId("checkout-confirm-payment-button").click();
 
   await expect(page.getByTestId("checkout-feedback")).toContainText(
-    "For on-account payment, assign a customer name first.",
+    "Para cuenta corriente primero asigná el nombre del cliente.",
   );
 
   await page.getByTestId("checkout-customer-name-input").fill(customerName);
@@ -36,12 +36,14 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await page.getByTestId("checkout-confirm-payment-button").click();
 
   const checkoutFeedback = page.getByTestId("checkout-feedback");
-  await expect(checkoutFeedback).toContainText("Checkout completed successfully.");
+  await expect(checkoutFeedback).toContainText("Venta registrada correctamente.");
   await expect(checkoutFeedback).toContainText(customerName);
-  await expect(checkoutFeedback).toContainText("Remaining on account: $6.00.");
+  await expect(checkoutFeedback).toContainText("Saldo pendiente: $6.00.");
 
   await page.getByTestId("nav-item-receivables").click();
-  await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+  ).toBeVisible();
 
   await page.getByTestId("debt-refresh-candidates-button").click();
   const customerOption = page
@@ -57,18 +59,18 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   const outstandingValue = page.getByTestId("debt-outstanding-value");
   await expect(outstandingValue).toBeVisible();
-  await expect(page.getByText(new RegExp(`Customer ${customerName}`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`Cliente ${customerName}`))).toBeVisible();
 
   const beforeOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const beforeOutstanding = parseMoneyValue(beforeOutstandingRaw);
   expect(beforeOutstanding).toBe(6);
 
-  await expect(page.locator('[data-testid^="debt-ledger-entry-"]').first()).toContainText("Debt");
+  await expect(page.locator('[data-testid^="debt-ledger-entry-"]').first()).toContainText("Deuda");
 
   await page.getByTestId("debt-payment-amount-input").fill("5");
   await page.getByTestId("debt-register-payment-button").click();
 
-  await expect(page.getByTestId("debt-feedback")).toContainText("Payment registered: $5.00.");
+  await expect(page.getByTestId("debt-feedback")).toContainText("Pago registrado: $5.00.");
 
   const afterOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const afterOutstanding = parseMoneyValue(afterOutstandingRaw);
@@ -76,24 +78,28 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   const paymentLedgerEntry = page
     .locator('[data-testid^="debt-ledger-entry-"]')
-    .filter({ hasText: "Payment" })
+    .filter({ hasText: "Pago" })
     .first();
   await expect(paymentLedgerEntry).toBeVisible();
 
   await page.getByTestId("nav-item-reporting").click();
-  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Historial y analítica de ventas" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-receivables").click();
-  await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+  ).toBeVisible();
   await page.getByTestId("debt-refresh-candidates-button").click();
   await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
   await page.getByTestId("debt-load-summary-button").click();
 
-  await expect(page.getByText(new RegExp(`Customer ${customerName}`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`Cliente ${customerName}`))).toBeVisible();
   await expect(page.getByTestId("debt-outstanding-value")).toHaveText(
     `$${afterOutstanding.toFixed(2)}`,
   );
   await expect(
-    page.locator('[data-testid^="debt-ledger-entry-"]').filter({ hasText: "Payment" }).first(),
+    page.locator('[data-testid^="debt-ledger-entry-"]').filter({ hasText: "Pago" }).first(),
   ).toBeVisible();
 });

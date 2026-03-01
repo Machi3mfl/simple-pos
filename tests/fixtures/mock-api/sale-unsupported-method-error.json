@@ -1,10 +1,10 @@
 {
   "code": "validation_error",
-  "message": "Invalid option: expected one of \"cash\"|\"on_account\"",
+  "message": "Opción inválida: se esperaba una de \"cash\"|\"on_account\"",
   "details": [
     {
       "field": "paymentMethod",
-      "message": "Invalid option: expected one of \"cash\"|\"on_account\""
+      "message": "Opción inválida: se esperaba una de \"cash\"|\"on_account\""
     }
   ]
 }

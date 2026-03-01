@@ -46,16 +46,16 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
   );
 
   const marker = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
-  const productName = `Orders Snapshot Product ${marker}`;
-  const customerName = `Orders Snapshot Customer ${marker}`;
+  const productName = `Producto Pedidos ${marker}`;
+  const customerName = `Cliente Pedidos ${marker}`;
 
   await page.goto("/orders");
 
-  await expect(page.getByRole("heading", { name: "Orders Snapshot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Listado de ventas" })).toBeVisible();
   const refreshButton = page.getByTestId("orders-refresh-button");
   await expect(refreshButton).toBeEnabled();
   await refreshButton.click();
-  await expect(refreshButton).toHaveText("Refresh snapshot");
+  await expect(refreshButton).toHaveText("Actualizar");
 
   const beforeTotalCount = Number(
     (await page.getByTestId("orders-total-count").textContent()) ?? "0",
@@ -88,7 +88,7 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
   });
 
   await refreshButton.click();
-  await expect(refreshButton).toHaveText("Refresh snapshot");
+  await expect(refreshButton).toHaveText("Actualizar");
 
   await expect(page.getByTestId("orders-total-count")).toHaveText(
     String(beforeTotalCount + 2),
@@ -109,7 +109,7 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
     customerName,
   );
   await expect(page.getByTestId(`orders-sale-status-${onAccountSale.saleId}`)).toHaveText(
-    "Partial",
+    "Parcial",
   );
   await expect(page.getByTestId(`orders-sale-outstanding-${onAccountSale.saleId}`)).toHaveText(
     "$15.00",
@@ -127,7 +127,7 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
   await page.getByTestId(`orders-partial-payment-button-${onAccountSale.saleId}`).click();
 
   await expect(page.getByTestId("orders-feedback")).toContainText(
-    `Payment registered for ${onAccountSale.saleId}: $7.00.`,
+    `Pago registrado para ${onAccountSale.saleId}: $7.00.`,
   );
   await expect(page.getByTestId(`orders-sale-outstanding-${onAccountSale.saleId}`)).toHaveText(
     "$8.00",

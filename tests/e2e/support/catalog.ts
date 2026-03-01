@@ -42,7 +42,7 @@ export async function addProductToCart(
   productName: string,
   quantity = 1,
 ): Promise<void> {
-  await page.getByLabel("Search menu").fill(productName);
+  await page.getByLabel("Buscar en el menú").fill(productName);
   const productCard = page
     .locator('[data-testid^="product-card-"]')
     .filter({ hasText: productName })

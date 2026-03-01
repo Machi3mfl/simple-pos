@@ -40,11 +40,13 @@ test.describe("offline sync recovery", () => {
     await page.goto("/sales");
     await addProductToCart(page, productName);
 
-    await page.getByRole("button", { name: "Process to Payment" }).click();
+    await page.getByRole("button", { name: "Ir a cobrar" }).click();
     await fillCashReceivedWithExactTotal(page);
-    await page.getByRole("button", { name: "Confirm Payment" }).click();
-    await expect(page.getByText("Sale saved offline. Pending sync.")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Retry Offline Sync/ })).toBeVisible();
+    await page.getByRole("button", { name: "Confirmar cobro" }).click();
+    await expect(
+      page.getByText("Venta guardada sin conexión. Pendiente de sincronización."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Reintentar sincronización/ })).toBeVisible();
 
     const pendingBeforeReconnect = await page.evaluate((key) => {
       const queueRaw = window.localStorage.getItem(key) ?? "[]";
@@ -57,8 +59,10 @@ test.describe("offline sync recovery", () => {
       window.dispatchEvent(new Event("online"));
     });
 
-    await expect(page.getByText("Offline events synced successfully.")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Retry Offline Sync/ })).toHaveCount(0);
+    await expect(
+      page.getByText("Los eventos offline se sincronizaron correctamente."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Reintentar sincronización/ })).toHaveCount(0);
 
     const pendingAfterReconnect = await page.evaluate((key) => {
       const queueRaw = window.localStorage.getItem(key) ?? "[]";

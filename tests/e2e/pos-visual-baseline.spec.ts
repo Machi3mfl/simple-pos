@@ -23,8 +23,8 @@ test("renders tablet three-zone layout baseline", async ({ page }) => {
   await page.goto("/sales");
 
   await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
 
   await expect(page).toHaveScreenshot("pos-tablet-layout.png", {
     fullPage: true,
@@ -40,8 +40,8 @@ test.describe("responsive layout baseline", () => {
     await page.goto("/sales");
 
     await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Order List" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
 
     await expect(page).toHaveScreenshot("pos-tablet-layout-compact.png", {
       fullPage: true,

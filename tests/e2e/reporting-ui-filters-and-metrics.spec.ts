@@ -20,11 +20,11 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await page.getByTestId("onboarding-stock-input").fill("50");
   await page.getByTestId("onboarding-submit-button").click();
   await expect(page.getByTestId("onboarding-feedback")).toContainText(
-    `Product created: ${productName}`,
+    `Producto creado: ${productName}`,
   );
 
   await page.getByTestId("nav-item-sales").click();
-  await page.getByLabel("Search menu").fill(productName);
+  await page.getByLabel("Buscar en el menú").fill(productName);
   const productCard = page
     .locator('[data-testid^="product-card-"]')
     .filter({ hasText: productName })
@@ -36,10 +36,10 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await fillCashReceivedWithExactTotal(page);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
-    "Checkout completed successfully.",
+    "Venta registrada correctamente.",
   );
 
-  await page.getByLabel("Search menu").fill(productName);
+  await page.getByLabel("Buscar en el menú").fill(productName);
   await expect(productCard).toBeVisible();
   await productCard.click();
   await page.getByTestId("checkout-open-payment-button").click();
@@ -47,16 +47,18 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await page.getByTestId("checkout-customer-name-input").fill(customerName);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
-    "Checkout completed successfully.",
+    "Venta registrada correctamente.",
   );
 
   await page.getByTestId("nav-item-reporting").click();
 
   const tomorrow = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 10);
-  await page.getByLabel("Period end").fill(tomorrow);
+  await page.getByLabel("Hasta").fill(tomorrow);
   await page.getByTestId("reporting-apply-filters-button").click();
 
-  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Historial y analítica de ventas" }),
+  ).toBeVisible();
   await expect(page.locator('[data-testid^="reporting-sales-item-"]').first()).toBeVisible();
   await expect(page.locator('[data-testid^="reporting-top-product-item-"]').first()).toBeVisible();
 
@@ -68,13 +70,16 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await page.getByTestId("reporting-apply-filters-button").click();
 
   await expect(
-    page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: "on_account" }).first(),
+    page
+      .locator('[data-testid^="reporting-sales-item-"]')
+      .filter({ hasText: "Cuenta corriente" })
+      .first(),
   ).toBeVisible();
   await expect(
     page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: customerName }),
   ).toHaveCount(1);
   await expect(
-    page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: "cash" }),
+    page.locator('[data-testid^="reporting-sales-item-"]').filter({ hasText: "Efectivo" }),
   ).toHaveCount(0);
 
   await expect(

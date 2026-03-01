@@ -12,12 +12,12 @@ test("registers inventory movement from UI and shows validation feedback", async
   await page.getByTestId("onboarding-stock-input").fill("5");
   await page.getByTestId("onboarding-submit-button").click();
   await expect(page.getByTestId("onboarding-feedback")).toContainText(
-    `Product created: ${uniqueProductName}`,
+    `Producto creado: ${uniqueProductName}`,
   );
 
   await page.getByTestId("nav-item-inventory").click();
 
-  await expect(page.getByRole("heading", { name: "Stock Movement" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
   await expect(page.getByTestId("inventory-product-select")).toBeVisible();
   await expect(
     page
@@ -36,7 +36,7 @@ test("registers inventory movement from UI and shows validation feedback", async
   await page.getByTestId("inventory-submit-button").click();
 
   await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Inbound movement requires unit cost greater than zero.",
+    "El ingreso requiere costo unitario mayor a cero.",
   );
 
   await page.getByTestId("inventory-unit-cost-input").fill("12");
@@ -44,28 +44,30 @@ test("registers inventory movement from UI and shows validation feedback", async
   await page.getByTestId("inventory-submit-button").click();
 
   await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Stock movement registered: inbound.",
+    "Movimiento de stock registrado: ingreso.",
   );
 
   const historyItem = page
     .locator('[data-testid^="inventory-history-item-"]')
     .filter({ hasText: uniqueProductName })
     .first();
-  await expect(historyItem).toContainText("inbound");
-  await expect(historyItem).toContainText("qty 2");
+  await expect(historyItem).toContainText("Ingreso");
+  await expect(historyItem).toContainText("cantidad 2");
   await expect(historyItem).toContainText(uniqueProductName);
 
   await page.getByTestId("nav-item-reporting").click();
-  await expect(page.getByRole("heading", { name: "Sales History and Analytics" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Historial y analítica de ventas" }),
+  ).toBeVisible();
 
   await page.getByTestId("nav-item-inventory").click();
-  await expect(page.getByRole("heading", { name: "Stock Movement" })).toBeVisible();
-  await page.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
+  await page.getByRole("button", { name: "Actualizar" }).click();
 
   const persistedHistoryItem = page
     .locator('[data-testid^="inventory-history-item-"]')
     .filter({ hasText: uniqueProductName })
     .first();
-  await expect(persistedHistoryItem).toContainText("inbound");
-  await expect(persistedHistoryItem).toContainText("qty 2");
+  await expect(persistedHistoryItem).toContainText("Ingreso");
+  await expect(persistedHistoryItem).toContainText("cantidad 2");
 });

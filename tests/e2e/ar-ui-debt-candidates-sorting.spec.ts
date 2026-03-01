@@ -25,7 +25,7 @@ async function createOnAccountSale(
   await page.getByTestId("checkout-customer-name-input").fill(input.customerName);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
-    "Checkout completed successfully.",
+    "Venta registrada correctamente.",
   );
   await expect(page.getByTestId("checkout-feedback")).toContainText(input.customerName);
 }
@@ -42,7 +42,7 @@ test("lists receivables by customer name and sorts candidates by outstanding bal
   await createCatalogProduct(request, { name: productName });
 
   await page.goto("/sales");
-  await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
 
   await createOnAccountSale(page, {
@@ -62,7 +62,9 @@ test("lists receivables by customer name and sorts candidates by outstanding bal
   });
 
   await page.getByTestId("nav-item-receivables").click();
-  await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+  ).toBeVisible();
   await page.getByTestId("debt-refresh-candidates-button").click();
 
   const markerOptions = page
@@ -87,6 +89,6 @@ test("lists receivables by customer name and sorts candidates by outstanding bal
     .getByTestId("debt-customer-candidates-select")
     .selectOption(mediumCustomerId ?? "");
   await page.getByTestId("debt-load-summary-button").click();
-  await expect(page.getByText(new RegExp(`Customer ${mediumDebtCustomer}`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`Cliente ${mediumDebtCustomer}`))).toBeVisible();
   await expect(page.getByTestId("debt-outstanding-value")).not.toHaveText("$0.00");
 });
