@@ -7,21 +7,21 @@ export class SaleDomainError extends Error {
 
 export class EmptySaleItemsError extends SaleDomainError {
   constructor() {
-    super("A sale requires at least one item.");
+    super("La venta debe incluir al menos un ítem.");
     this.name = "EmptySaleItemsError";
   }
 }
 
 export class InvalidSaleQuantityError extends SaleDomainError {
   constructor(productId: string) {
-    super(`Invalid quantity for product '${productId}'.`);
+    super(`Cantidad inválida para el producto '${productId}'.`);
     this.name = "InvalidSaleQuantityError";
   }
 }
 
 export class SaleCustomerRequiredError extends SaleDomainError {
   constructor() {
-    super("Customer is required when payment method is on_account.");
+    super("El cliente es obligatorio cuando el método de pago es cuenta corriente.");
     this.name = "SaleCustomerRequiredError";
   }
 }
@@ -29,7 +29,7 @@ export class SaleCustomerRequiredError extends SaleDomainError {
 export class SaleInitialPaymentOutOfRangeError extends SaleDomainError {
   constructor(total: number) {
     super(
-      `Initial on-account payment must be greater than or equal to 0 and lower than total ${total}.`,
+      `El pago inicial en cuenta corriente debe ser mayor o igual a 0 y menor al total ${total}.`,
     );
     this.name = "SaleInitialPaymentOutOfRangeError";
   }

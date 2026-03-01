@@ -33,14 +33,14 @@ export async function GET(request: Request): Promise<Response> {
   if (periodStart === "invalid" || periodEnd === "invalid") {
     return errorResponse(400, {
       code: "validation_error",
-      message: "periodStart/periodEnd must be valid dates when provided.",
+      message: "periodStart/periodEnd deben ser fechas válidas cuando se informan.",
     });
   }
 
   if (periodStart && periodEnd && periodStart > periodEnd) {
     return errorResponse(400, {
       code: "validation_error",
-      message: "periodStart must be earlier than or equal to periodEnd.",
+      message: "periodStart debe ser menor o igual a periodEnd.",
     });
   }
 
@@ -53,7 +53,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",
-      message: "Response violates profit summary contract.",
+      message: "La respuesta viola el contrato del resumen de ganancia.",
     });
   }
 

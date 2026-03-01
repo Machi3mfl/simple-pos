@@ -32,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return errorResponse(400, {
       code: "invalid_json",
-      message: "Request body must be valid JSON.",
+      message: "El body de la request debe ser JSON válido.",
     });
   }
 
@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return errorResponse(400, {
       code: "validation_error",
-      message: "Sync batch payload validation failed.",
+      message: "La validación del lote de sincronización falló.",
       details,
     });
   }
@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",
-      message: "Response violates sync result contract.",
+      message: "La respuesta viola el contrato del resultado de sincronización.",
     });
   }
 

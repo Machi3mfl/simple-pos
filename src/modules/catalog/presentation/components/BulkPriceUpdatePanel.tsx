@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
 interface ProductListItem {
@@ -60,14 +61,11 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-function formatMoney(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 export function BulkPriceUpdatePanel({
   onPricesUpdated,
   refreshToken,
 }: BulkPriceUpdatePanelProps): JSX.Element {
+  const { messages, formatCurrency, labelForCategory } = useI18n();
   const [products, setProducts] = useState<readonly ProductListItem[]>([]);
   const [scopeType, setScopeType] = useState<"all" | "category" | "selection">("category");
   const [categoryId, setCategoryId] = useState<string>("");
@@ -134,7 +132,7 @@ export function BulkPriceUpdatePanel({
       const payload = data;
 
       if (!response.ok || !payload) {
-        throw new Error("Failed to load products for repricing.");
+        throw new Error(messages.catalog.bulkPriceUpdate.requestError);
       }
 
       setProducts(payload.items);
@@ -154,7 +152,7 @@ export function BulkPriceUpdatePanel({
     } finally {
       setIsLoadingProducts(false);
     }
-  }, []);
+  }, [messages.catalog.bulkPriceUpdate.requestError]);
 
   useEffect(() => {
     void loadProducts();
@@ -202,25 +200,25 @@ export function BulkPriceUpdatePanel({
 
     if (!Number.isFinite(parsedValue)) {
       setIsError(true);
-      setFeedback("Update value must be a valid number.");
+      setFeedback(messages.catalog.bulkPriceUpdate.invalidValue);
       return;
     }
 
     if (scopeType === "category" && !categoryId) {
       setIsError(true);
-      setFeedback("Select a category for category scope.");
+      setFeedback(messages.catalog.bulkPriceUpdate.missingCategory);
       return;
     }
 
     if (scopeType === "selection" && selectedProductIds.length === 0) {
       setIsError(true);
-      setFeedback("Select at least one product for selection scope.");
+      setFeedback(messages.catalog.bulkPriceUpdate.missingSelection);
       return;
     }
 
     if (shouldBlockByEmptyScope) {
       setIsError(true);
-      setFeedback("No products found for the selected scope. Create or select products first.");
+      setFeedback(messages.catalog.bulkPriceUpdate.emptyScopeSelection);
       return;
     }
 
@@ -245,7 +243,7 @@ export function BulkPriceUpdatePanel({
 
       if (!response.ok) {
         setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Bulk price update failed."));
+        setFeedback(resolveApiMessage(payload, messages.catalog.bulkPriceUpdate.requestError));
         setLastResult(null);
         return;
       }
@@ -254,8 +252,12 @@ export function BulkPriceUpdatePanel({
       setIsError(false);
       setFeedback(
         previewOnly
-          ? `Preview ready: ${(payload as BulkPriceUpdateResponse).items.length} rows.`
-          : `Batch applied: ${(payload as BulkPriceUpdateResponse).updatedCount} products updated.`,
+          ? messages.catalog.bulkPriceUpdate.previewReady(
+              (payload as BulkPriceUpdateResponse).items.length,
+            )
+          : messages.catalog.bulkPriceUpdate.applied(
+              (payload as BulkPriceUpdateResponse).updatedCount,
+            ),
       );
 
       if (!previewOnly) {
@@ -264,7 +266,7 @@ export function BulkPriceUpdatePanel({
       }
     } catch {
       setIsError(true);
-      setFeedback("Bulk price update failed.");
+      setFeedback(messages.catalog.bulkPriceUpdate.requestError);
       setLastResult(null);
     } finally {
       setIsSubmitting(false);
@@ -274,24 +276,28 @@ export function BulkPriceUpdatePanel({
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
       <header>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900">Bulk Price Update</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+          {messages.catalog.bulkPriceUpdate.title}
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
-          UC-009: Preview and apply percentage/fixed updates with audit-ready output.
+          {messages.catalog.bulkPriceUpdate.subtitle}
         </p>
         <p className="mt-1 text-xs font-semibold text-slate-500">
-          Eligible products in current scope: {scopedProducts.length}
+          {messages.catalog.bulkPriceUpdate.eligibleProducts(scopedProducts.length)}
         </p>
       </header>
 
       {isLoadingProducts ? (
         <p className="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600">
-          Loading products and categories...
+          {messages.catalog.bulkPriceUpdate.loadingProducts}
         </p>
       ) : null}
 
       <div className="mt-4 grid gap-3 md:grid-cols-5">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Scope</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.scope}
+          </span>
           <select
             data-testid="bulk-scope-select"
             value={scopeType}
@@ -300,14 +306,18 @@ export function BulkPriceUpdatePanel({
             }
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            <option value="all">All products</option>
-            <option value="category">By category</option>
-            <option value="selection">Selected products</option>
+            <option value="all">{messages.catalog.bulkPriceUpdate.scopes.all}</option>
+            <option value="category">{messages.catalog.bulkPriceUpdate.scopes.category}</option>
+            <option value="selection">
+              {messages.catalog.bulkPriceUpdate.scopes.selection}
+            </option>
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Mode</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.mode}
+          </span>
           <select
             data-testid="bulk-mode-select"
             value={mode}
@@ -316,13 +326,19 @@ export function BulkPriceUpdatePanel({
             }
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            <option value="percentage">Percentage</option>
-            <option value="fixed_amount">Fixed amount</option>
+            <option value="percentage">
+              {messages.catalog.bulkPriceUpdate.modes.percentage}
+            </option>
+            <option value="fixed_amount">
+              {messages.catalog.bulkPriceUpdate.modes.fixed_amount}
+            </option>
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Value</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.value}
+          </span>
           <input
             data-testid="bulk-value-input"
             type="number"
@@ -334,7 +350,9 @@ export function BulkPriceUpdatePanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Category</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.category}
+          </span>
           <select
             data-testid="bulk-category-select"
             value={categoryId}
@@ -344,7 +362,7 @@ export function BulkPriceUpdatePanel({
           >
             {categories.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {labelForCategory(category)}
               </option>
             ))}
           </select>
@@ -360,7 +378,7 @@ export function BulkPriceUpdatePanel({
             disabled={isSubmitting || shouldBlockByEmptyScope}
             className="min-h-11 rounded-xl border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-700 disabled:border-slate-200 disabled:text-slate-400"
           >
-            Preview
+            {messages.common.actions.preview}
           </button>
           <button
             data-testid="bulk-apply-button"
@@ -371,21 +389,22 @@ export function BulkPriceUpdatePanel({
             disabled={isSubmitting || shouldBlockByEmptyScope}
             className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            Apply
+            {messages.common.actions.apply}
           </button>
         </div>
       </div>
 
       {shouldBlockByEmptyScope ? (
         <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
-          No products available for this scope yet. Create products in the onboarding panel or
-          change scope.
+          {messages.catalog.bulkPriceUpdate.noProductsForScope}
         </p>
       ) : null}
 
       {scopeType === "selection" ? (
         <div className="mt-3 rounded-xl border border-slate-200 p-2">
-          <p className="px-1 text-xs font-semibold text-slate-600">Select products</p>
+          <p className="px-1 text-xs font-semibold text-slate-600">
+            {messages.catalog.bulkPriceUpdate.selectProducts}
+          </p>
           <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto md:grid-cols-2">
             {products.map((product) => (
               <li key={product.id}>
@@ -400,7 +419,7 @@ export function BulkPriceUpdatePanel({
                     onChange={() => toggleProductSelection(product.id)}
                   />
                   <span className="truncate">
-                    {product.name} ({formatMoney(product.price)})
+                    {product.name} ({formatCurrency(product.price)})
                   </span>
                 </label>
               </li>
@@ -425,40 +444,48 @@ export function BulkPriceUpdatePanel({
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
           <div className="rounded-xl border border-slate-200">
             <div className="border-b border-slate-200 px-3 py-2">
-              <p className="text-sm font-semibold text-slate-700">Result items</p>
+              <p className="text-sm font-semibold text-slate-700">
+                {messages.catalog.bulkPriceUpdate.resultItems}
+              </p>
             </div>
             <ul className="max-h-56 space-y-1 overflow-y-auto p-2">
               {lastResult.items.map((item) => (
                 <li key={item.productId} className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700">
                   <p className="font-semibold text-slate-900">
-                    {productNameById.get(item.productId) ?? "Unknown product"}
+                    {productNameById.get(item.productId) ?? messages.common.fallbacks.unknownProduct}
                   </p>
                   <p>
-                    {formatMoney(item.oldPrice)} → {formatMoney(item.newPrice)}
+                    {formatCurrency(item.oldPrice)} → {formatCurrency(item.newPrice)}
                   </p>
                 </li>
               ))}
               {lastResult.items.length === 0 ? (
-                <li className="px-2 py-2 text-xs text-slate-500">No updated items in this result.</li>
+                <li className="px-2 py-2 text-xs text-slate-500">
+                  {messages.catalog.bulkPriceUpdate.noUpdatedItems}
+                </li>
               ) : null}
             </ul>
           </div>
 
           <div className="rounded-xl border border-slate-200">
             <div className="border-b border-slate-200 px-3 py-2">
-              <p className="text-sm font-semibold text-slate-700">Invalid items</p>
+              <p className="text-sm font-semibold text-slate-700">
+                {messages.catalog.bulkPriceUpdate.invalidItems}
+              </p>
             </div>
             <ul className="max-h-56 space-y-1 overflow-y-auto p-2">
               {lastResult.invalidItems.map((item) => (
                 <li key={`${item.productId}-${item.reason}`} className="rounded-lg bg-rose-50 px-2 py-2 text-xs text-rose-700">
                   <p className="font-semibold">
-                    {productNameById.get(item.productId) ?? "Unknown product"}
+                    {productNameById.get(item.productId) ?? messages.common.fallbacks.unknownProduct}
                   </p>
                   <p>{item.reason}</p>
                 </li>
               ))}
               {lastResult.invalidItems.length === 0 ? (
-                <li className="px-2 py-2 text-xs text-slate-500">No invalid items.</li>
+                <li className="px-2 py-2 text-xs text-slate-500">
+                  {messages.catalog.bulkPriceUpdate.noInvalidItems}
+                </li>
               ) : null}
             </ul>
           </div>

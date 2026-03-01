@@ -7,14 +7,14 @@ export class InventoryDomainError extends Error {
 
 export class InvalidInventoryQuantityError extends InventoryDomainError {
   constructor() {
-    super("Stock movement quantity must be greater than 0.");
+    super("La cantidad del movimiento de stock debe ser mayor a 0.");
     this.name = "InvalidInventoryQuantityError";
   }
 }
 
 export class InvalidInboundUnitCostError extends InventoryDomainError {
   constructor() {
-    super("Inbound stock movement requires unitCost greater than 0.");
+    super("El ingreso de stock requiere un costo unitario mayor a 0.");
     this.name = "InvalidInboundUnitCostError";
   }
 }
@@ -22,7 +22,7 @@ export class InvalidInboundUnitCostError extends InventoryDomainError {
 export class InsufficientStockError extends InventoryDomainError {
   constructor(productId: string, requested: number, available: number) {
     super(
-      `Insufficient stock for product ${productId}. Requested ${requested}, available ${available}.`,
+      `Stock insuficiente para el producto ${productId}. Pedido ${requested}, disponible ${available}.`,
     );
     this.name = "InsufficientStockError";
   }

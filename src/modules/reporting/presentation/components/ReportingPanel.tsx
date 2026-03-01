@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+
 interface SalesHistoryItem {
   readonly saleId: string;
   readonly paymentMethod: "cash" | "on_account";
@@ -41,10 +43,6 @@ function toDateInputValue(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function formatMoney(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -59,6 +57,12 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
 }
 
 export function ReportingPanel(): JSX.Element {
+  const {
+    messages,
+    formatCurrency,
+    formatDateTime,
+    labelForPaymentMethod,
+  } = useI18n();
   const [periodStart, setPeriodStart] = useState<string>(() =>
     toDateInputValue(new Date(Date.now() - 1000 * 60 * 60 * 24 * 7)),
   );
@@ -105,13 +109,15 @@ export function ReportingPanel(): JSX.Element {
       ])) as [SalesHistoryResponse | ApiErrorPayload, TopProductsResponse | ApiErrorPayload, ProfitSummary | ApiErrorPayload];
 
       if (!salesResponse.ok) {
-        throw new Error(resolveApiMessage(salesPayload, "Could not load sales history."));
+        throw new Error(resolveApiMessage(salesPayload, messages.reporting.loadSalesError));
       }
       if (!topProductsResponse.ok) {
-        throw new Error(resolveApiMessage(topPayload, "Could not load top products."));
+        throw new Error(
+          resolveApiMessage(topPayload, messages.reporting.loadTopProductsError),
+        );
       }
       if (!profitSummaryResponse.ok) {
-        throw new Error(resolveApiMessage(profitPayload, "Could not load profit summary."));
+        throw new Error(resolveApiMessage(profitPayload, messages.reporting.loadProfitError));
       }
 
       setSalesHistory((salesPayload as SalesHistoryResponse).items);
@@ -120,11 +126,19 @@ export function ReportingPanel(): JSX.Element {
       setIsError(false);
     } catch (error: unknown) {
       setIsError(true);
-      setFeedback(error instanceof Error ? error.message : "Could not load reporting data.");
+      setFeedback(
+        error instanceof Error ? error.message : messages.reporting.loadReportingError,
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [queryString]);
+  }, [
+    messages.reporting.loadProfitError,
+    messages.reporting.loadReportingError,
+    messages.reporting.loadSalesError,
+    messages.reporting.loadTopProductsError,
+    queryString,
+  ]);
 
   useEffect(() => {
     void loadReports();
@@ -134,7 +148,7 @@ export function ReportingPanel(): JSX.Element {
     event.preventDefault();
     if (periodStart && periodEnd && periodStart > periodEnd) {
       setIsError(true);
-      setFeedback("periodStart must be earlier than or equal to periodEnd.");
+      setFeedback(messages.reporting.invalidPeriodRange);
       return;
     }
 
@@ -145,16 +159,18 @@ export function ReportingPanel(): JSX.Element {
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
       <header>
         <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-          Sales History and Analytics
+          {messages.reporting.title}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          UC-004: Explore sales history, top products, and profit summary.
+          {messages.reporting.subtitle}
         </p>
       </header>
 
       <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={handleFilterSubmit}>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Period start</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.periodStart}
+          </span>
           <input
             type="date"
             value={periodStart}
@@ -164,7 +180,9 @@ export function ReportingPanel(): JSX.Element {
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Period end</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.periodEnd}
+          </span>
           <input
             type="date"
             value={periodEnd}
@@ -174,7 +192,9 @@ export function ReportingPanel(): JSX.Element {
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Payment method</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.paymentMethod}
+          </span>
           <select
             data-testid="reporting-payment-method-select"
             value={paymentMethod}
@@ -183,9 +203,9 @@ export function ReportingPanel(): JSX.Element {
             }
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            <option value="all">All</option>
-            <option value="cash">Cash</option>
-            <option value="on_account">On account</option>
+            <option value="all">{messages.common.paymentMethods.all}</option>
+            <option value="cash">{messages.common.paymentMethods.cash}</option>
+            <option value="on_account">{messages.common.paymentMethods.on_account}</option>
           </select>
         </label>
 
@@ -196,7 +216,7 @@ export function ReportingPanel(): JSX.Element {
             disabled={isLoading}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            {isLoading ? "Loading..." : "Apply filters"}
+            {isLoading ? messages.common.states.loading : messages.common.actions.applyFilters}
           </button>
         </div>
       </form>
@@ -215,21 +235,27 @@ export function ReportingPanel(): JSX.Element {
 
       <section className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Revenue</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.revenue}
+          </p>
           <p data-testid="reporting-revenue-value" className="text-lg font-semibold text-slate-900">
-            {profitSummary ? formatMoney(profitSummary.revenue) : "-"}
+            {profitSummary ? formatCurrency(profitSummary.revenue) : "-"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Cost</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.cost}
+          </p>
           <p data-testid="reporting-cost-value" className="text-lg font-semibold text-slate-900">
-            {profitSummary ? formatMoney(profitSummary.cost) : "-"}
+            {profitSummary ? formatCurrency(profitSummary.cost) : "-"}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Profit</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.profit}
+          </p>
           <p data-testid="reporting-profit-value" className="text-lg font-semibold text-slate-900">
-            {profitSummary ? formatMoney(profitSummary.profit) : "-"}
+            {profitSummary ? formatCurrency(profitSummary.profit) : "-"}
           </p>
         </div>
       </section>
@@ -237,7 +263,9 @@ export function ReportingPanel(): JSX.Element {
       <section className="mt-4 grid gap-4 xl:grid-cols-2">
         <div className="rounded-xl border border-slate-200">
           <div className="border-b border-slate-200 px-3 py-2">
-            <p className="text-sm font-semibold text-slate-700">Sales history</p>
+            <p className="text-sm font-semibold text-slate-700">
+              {messages.reporting.salesHistory}
+            </p>
           </div>
           <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
             {salesHistory.map((sale) => (
@@ -247,23 +275,30 @@ export function ReportingPanel(): JSX.Element {
                 className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
               >
                 <p className="font-semibold text-slate-900">
-                  {sale.paymentMethod} • {formatMoney(sale.total)} • {sale.itemCount} items
+                  {labelForPaymentMethod(sale.paymentMethod)} • {formatCurrency(sale.total)} •{" "}
+                  {sale.itemCount} {messages.common.labels.items.toLowerCase()}
                 </p>
                 <p className="mt-1">
-                  {new Date(sale.createdAt).toLocaleString()}
-                  {sale.customerName ? ` • Customer ${sale.customerName}` : ""}
+                  {formatDateTime(sale.createdAt)}
+                  {sale.customerName
+                    ? ` • ${messages.reporting.customerLabel(sale.customerName)}`
+                    : ""}
                 </p>
               </li>
             ))}
             {salesHistory.length === 0 ? (
-              <li className="px-2 py-2 text-xs text-slate-500">No sales in selected range.</li>
+              <li className="px-2 py-2 text-xs text-slate-500">
+                {messages.reporting.noSalesInRange}
+              </li>
             ) : null}
           </ul>
         </div>
 
         <div className="rounded-xl border border-slate-200">
           <div className="border-b border-slate-200 px-3 py-2">
-            <p className="text-sm font-semibold text-slate-700">Top products</p>
+            <p className="text-sm font-semibold text-slate-700">
+              {messages.reporting.topProducts}
+            </p>
           </div>
           <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
             {topProducts.map((item) => (
@@ -273,13 +308,17 @@ export function ReportingPanel(): JSX.Element {
                 className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
               >
                 <p className="font-semibold text-slate-900">
-                  {item.name} • qty {item.quantitySold}
+                  {item.name} • {messages.reporting.quantitySold(item.quantitySold)}
                 </p>
-                <p className="mt-1">Revenue {formatMoney(item.revenue)}</p>
+                <p className="mt-1">
+                  {messages.reporting.revenueLabel(formatCurrency(item.revenue))}
+                </p>
               </li>
             ))}
             {topProducts.length === 0 ? (
-              <li className="px-2 py-2 text-xs text-slate-500">No top-product data yet.</li>
+              <li className="px-2 py-2 text-xs text-slate-500">
+                {messages.reporting.noTopProducts}
+              </li>
             ) : null}
           </ul>
         </div>

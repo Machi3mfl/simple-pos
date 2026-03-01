@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+
 export interface PosNavItem {
   readonly id: string;
   readonly label: string;
@@ -17,6 +19,8 @@ export function LeftNavRail({
   activeItemId,
   onItemSelect,
 }: LeftNavRailProps): JSX.Element {
+  const { messages } = useI18n();
+
   return (
     <aside className="bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:p-6">
       <div className="mt-4 flex items-center gap-3 px-1">
@@ -25,7 +29,9 @@ export function LeftNavRail({
         </div>
         <div>
           <p className="text-[2rem] leading-none font-semibold tracking-tight">Putri</p>
-          <p className="mt-1 text-[0.85rem] text-slate-400">Cashire</p>
+          <p className="mt-1 text-[0.85rem] text-slate-400">
+            {messages.shell.cashierRole}
+          </p>
         </div>
       </div>
 

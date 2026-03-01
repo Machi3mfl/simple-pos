@@ -7,42 +7,42 @@ export class ProductDomainError extends Error {
 
 export class InvalidProductNameError extends ProductDomainError {
   constructor() {
-    super("Product name must contain at least 2 characters.");
+    super("El nombre del producto debe tener al menos 2 caracteres.");
     this.name = "InvalidProductNameError";
   }
 }
 
 export class InvalidCategoryIdError extends ProductDomainError {
   constructor() {
-    super("Product category is required.");
+    super("La categoría del producto es obligatoria.");
     this.name = "InvalidCategoryIdError";
   }
 }
 
 export class InvalidProductPriceError extends ProductDomainError {
   constructor() {
-    super("Product price must be greater than 0.");
+    super("El precio del producto debe ser mayor a 0.");
     this.name = "InvalidProductPriceError";
   }
 }
 
 export class InvalidInitialStockError extends ProductDomainError {
   constructor() {
-    super("Initial stock must be zero or greater.");
+    super("El stock inicial debe ser cero o mayor.");
     this.name = "InvalidInitialStockError";
   }
 }
 
 export class InvalidUnitCostError extends ProductDomainError {
   constructor() {
-    super("Product cost must be greater than 0 when provided.");
+    super("El costo del producto debe ser mayor a 0 cuando se informa.");
     this.name = "InvalidUnitCostError";
   }
 }
 
 export class InvalidBulkPriceUpdateValueError extends ProductDomainError {
   constructor() {
-    super("Bulk price update value must be a finite number.");
+    super("El valor del ajuste masivo debe ser un número finito.");
     this.name = "InvalidBulkPriceUpdateValueError";
   }
 }
@@ -51,8 +51,8 @@ export class MissingBulkPriceScopeParameterError extends ProductDomainError {
   constructor(scopeType: "category" | "selection") {
     super(
       scopeType === "category"
-        ? "Scope category requires categoryId."
-        : "Scope selection requires productIds.",
+        ? "El alcance por categoría requiere categoryId."
+        : "El alcance por selección requiere productIds.",
     );
     this.name = "MissingBulkPriceScopeParameterError";
   }
@@ -60,7 +60,7 @@ export class MissingBulkPriceScopeParameterError extends ProductDomainError {
 
 export class NoProductsFoundForBulkPriceUpdateError extends ProductDomainError {
   constructor() {
-    super("No products found for the requested bulk price scope.");
+    super("No se encontraron productos para el alcance solicitado.");
     this.name = "NoProductsFoundForBulkPriceUpdateError";
   }
 }
@@ -72,7 +72,7 @@ export interface InvalidBulkPriceItem {
 
 export class BulkPriceUpdateConflictError extends ProductDomainError {
   constructor(readonly invalidItems: readonly InvalidBulkPriceItem[]) {
-    super("Bulk price update contains invalid resulting prices.");
+    super("La actualización masiva contiene precios resultantes inválidos.");
     this.name = "BulkPriceUpdateConflictError";
   }
 }

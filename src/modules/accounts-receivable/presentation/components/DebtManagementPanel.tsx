@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
   enqueueOfflineSyncEvent,
@@ -64,13 +65,10 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-function formatMoney(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 export function DebtManagementPanel({
   refreshToken,
 }: DebtManagementPanelProps): JSX.Element {
+  const { messages, formatCurrency, formatDateTime } = useI18n();
   const [candidateCustomers, setCandidateCustomers] = useState<readonly CustomerCandidate[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [manualCustomerId, setManualCustomerId] = useState<string>("");
@@ -190,7 +188,7 @@ export function DebtManagementPanel({
 
         if (!response.ok || !payload) {
           setIsError(true);
-          setFeedback(resolveApiMessage(payload, "Could not load debt summary."));
+          setFeedback(resolveApiMessage(payload, messages.receivables.loadSummaryError));
           setSummary(null);
           return;
         }
@@ -199,13 +197,13 @@ export function DebtManagementPanel({
         setIsError(false);
       } catch {
         setIsError(true);
-        setFeedback("Could not load debt summary.");
+        setFeedback(messages.receivables.loadSummaryError);
         setSummary(null);
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    [messages.receivables.loadSummaryError],
   );
 
   const refreshPendingSyncCount = useCallback((): void => {
@@ -218,15 +216,15 @@ export function DebtManagementPanel({
 
     if (result.synced > 0 && result.failed === 0 && result.pending === 0) {
       setIsError(false);
-      setFeedback("Offline events synced successfully.");
+      setFeedback(messages.common.feedback.offlineSyncSuccess);
       return;
     }
 
     if (result.failed > 0 || result.pending > 0) {
       setIsError(true);
-      setFeedback("Offline sync still has pending/failed events. Retry again.");
+      setFeedback(messages.common.feedback.offlineSyncPending);
     }
-  }, [refreshPendingSyncCount]);
+  }, [messages.common.feedback.offlineSyncPending, messages.common.feedback.offlineSyncSuccess, refreshPendingSyncCount]);
 
   useEffect(() => {
     void loadCustomerCandidates();
@@ -247,7 +245,7 @@ export function DebtManagementPanel({
   async function handleLoadSummary(): Promise<void> {
     if (!targetCustomerId) {
       setIsError(true);
-      setFeedback("Select a customer first.");
+      setFeedback(messages.receivables.selectCustomerFirst);
       return;
     }
 
@@ -259,7 +257,7 @@ export function DebtManagementPanel({
 
     if (!targetCustomerId) {
       setIsError(true);
-      setFeedback("Select a customer first.");
+      setFeedback(messages.receivables.selectCustomerFirst);
       return;
     }
 
@@ -273,7 +271,7 @@ export function DebtManagementPanel({
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       setIsError(true);
-      setFeedback("Payment amount must be greater than zero.");
+      setFeedback(messages.receivables.invalidPaymentAmount);
       return;
     }
 
@@ -292,12 +290,16 @@ export function DebtManagementPanel({
 
       if (!response.ok) {
         setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Could not register debt payment."));
+        setFeedback(resolveApiMessage(payload, messages.receivables.registerPaymentError));
         return;
       }
 
       setIsError(false);
-      setFeedback(`Payment registered: ${formatMoney((payload as DebtPaymentResponse).amount)}.`);
+      setFeedback(
+        messages.receivables.registerPaymentSuccess(
+          formatCurrency((payload as DebtPaymentResponse).amount),
+        ),
+      );
       setPaymentAmount("1");
       setPaymentNotes("");
       refreshPendingSyncCount();
@@ -312,7 +314,7 @@ export function DebtManagementPanel({
 
       refreshPendingSyncCount();
       setIsError(false);
-      setFeedback("Debt payment saved offline. Pending sync.");
+      setFeedback(messages.receivables.saveOfflineSuccess);
       setPaymentAmount("1");
       setPaymentNotes("");
     } finally {
@@ -324,16 +326,18 @@ export function DebtManagementPanel({
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
       <header>
         <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-          Customer Debt Management
+          {messages.receivables.title}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          UC-007: load customer ledger, register payments, and reduce outstanding debt.
+          {messages.receivables.subtitle}
         </p>
       </header>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Customer candidates</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.receivables.customerCandidates}
+          </span>
           <select
             data-testid="debt-customer-candidates-select"
             value={selectedCustomerId}
@@ -341,13 +345,13 @@ export function DebtManagementPanel({
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
             {candidateCustomers.length === 0 ? (
-              <option value="">No on-account customers yet</option>
+              <option value="">{messages.receivables.noOnAccountCustomers}</option>
             ) : null}
             {candidateCustomers.map((customer) => (
               <option key={customer.customerId} value={customer.customerId}>
-                {customer.customerName ?? "Unnamed customer"}
+                {customer.customerName ?? messages.common.fallbacks.unnamedCustomer}
                 {typeof customer.outstandingBalance === "number"
-                  ? ` • ${formatMoney(customer.outstandingBalance)}`
+                  ? ` • ${formatCurrency(customer.outstandingBalance)}`
                   : ""}
               </option>
             ))}
@@ -355,12 +359,14 @@ export function DebtManagementPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Manual customer reference</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.receivables.manualCustomerReference}
+          </span>
           <input
             data-testid="debt-manual-customer-id-input"
             value={manualCustomerId}
             onChange={(event) => setManualCustomerId(event.target.value)}
-            placeholder="Optional advanced lookup"
+            placeholder={messages.common.placeholders.advancedLookup}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           />
         </label>
@@ -375,7 +381,7 @@ export function DebtManagementPanel({
           }}
           className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
         >
-          Refresh candidates
+          {messages.common.actions.refreshCandidates}
         </button>
         <button
           data-testid="debt-load-summary-button"
@@ -386,23 +392,29 @@ export function DebtManagementPanel({
           disabled={isLoading}
           className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
         >
-          {isLoading ? "Loading..." : "Load debt summary"}
+          {isLoading ? messages.common.states.loading : messages.common.actions.loadDebtSummary}
         </button>
       </div>
 
       {summary ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Customer {summary.customerName}</p>
-          <p className="text-xs font-semibold text-slate-500">Outstanding balance</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.receivables.summaryCustomer(summary.customerName)}
+          </p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.outstanding}
+          </p>
           <p data-testid="debt-outstanding-value" className="text-lg font-semibold text-slate-900">
-            {formatMoney(summary.outstandingBalance)}
+            {formatCurrency(summary.outstandingBalance)}
           </p>
         </div>
       ) : null}
 
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleRegisterPayment}>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Payment amount</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.paymentAmount}
+          </span>
           <input
             data-testid="debt-payment-amount-input"
             type="number"
@@ -415,7 +427,9 @@ export function DebtManagementPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Notes (optional)</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.notesOptional}
+          </span>
           <input
             data-testid="debt-payment-notes-input"
             value={paymentNotes}
@@ -431,7 +445,7 @@ export function DebtManagementPanel({
             disabled={isSubmitting}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            {isSubmitting ? "Registering..." : "Register payment"}
+            {isSubmitting ? messages.common.states.registering : messages.common.actions.registerPayment}
           </button>
         </div>
       </form>
@@ -457,13 +471,15 @@ export function DebtManagementPanel({
           }}
           className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
         >
-          Retry Offline Sync ({pendingSyncCount})
+          {messages.common.actions.retryOfflineSync} ({pendingSyncCount})
         </button>
       ) : null}
 
       <div className="mt-4 rounded-xl border border-slate-200">
         <div className="border-b border-slate-200 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-700">Debt ledger</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {messages.receivables.debtLedger}
+          </p>
         </div>
         <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
           {summary?.ledger.map((entry) => (
@@ -478,21 +494,23 @@ export function DebtManagementPanel({
               ].join(" ")}
             >
               <p className="font-semibold">
-                {entry.entryType === "debt" ? "Debt" : "Payment"} • {formatMoney(entry.amount)}
+                {messages.receivables.ledgerEntryType[entry.entryType]} •{" "}
+                {formatCurrency(entry.amount)}
               </p>
-              <p className="mt-1">{new Date(entry.occurredAt).toLocaleString()}</p>
+              <p className="mt-1">{formatDateTime(entry.occurredAt)}</p>
             </li>
           ))}
 
           {!summary || summary.ledger.length === 0 ? (
-            <li className="px-2 py-2 text-xs text-slate-500">No ledger entries loaded.</li>
+            <li className="px-2 py-2 text-xs text-slate-500">
+              {messages.receivables.noLedgerEntries}
+            </li>
           ) : null}
         </ul>
       </div>
 
       <p className="mt-3 text-xs text-slate-500">
-        To create debt entries, run checkout with payment method <strong>on_account</strong> from the
-        Sales screen.
+        {messages.receivables.createDebtHint}
       </p>
     </article>
   );

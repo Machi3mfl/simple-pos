@@ -56,11 +56,11 @@ export async function GET(request: Request): Promise<Response> {
   ) {
     return errorResponse(400, {
       code: "validation_error",
-      message: "movementType must be inbound, outbound, or adjustment.",
+      message: "movementType debe ser inbound, outbound o adjustment.",
       details: [
         {
           field: "movementType",
-          message: "Expected inbound | outbound | adjustment.",
+          message: "Se esperaba inbound | outbound | adjustment.",
         },
       ],
     });
@@ -69,14 +69,14 @@ export async function GET(request: Request): Promise<Response> {
   if (dateFrom === "invalid" || dateTo === "invalid") {
     return errorResponse(400, {
       code: "validation_error",
-      message: "dateFrom/dateTo must be valid dates when provided.",
+      message: "dateFrom/dateTo deben ser fechas válidas cuando se informan.",
     });
   }
 
   if (dateFrom && dateTo && dateFrom > dateTo) {
     return errorResponse(400, {
       code: "validation_error",
-      message: "dateFrom must be earlier than or equal to dateTo.",
+      message: "dateFrom debe ser menor o igual a dateTo.",
     });
   }
 
@@ -91,7 +91,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",
-      message: "Response violates stock movement history contract.",
+      message: "La respuesta viola el contrato del historial de stock.",
     });
   }
 
@@ -107,7 +107,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return errorResponse(400, {
       code: "invalid_json",
-      message: "Request body must be valid JSON.",
+      message: "El body de la request debe ser JSON válido.",
     });
   }
 
@@ -120,7 +120,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return errorResponse(400, {
       code: "validation_error",
-      message: "Stock movement payload validation failed.",
+      message: "La validación del payload de stock falló.",
       details,
     });
   }
@@ -132,7 +132,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!parsedResponse.success) {
       return errorResponse(500, {
         code: "response_contract_error",
-        message: "Response violates stock movement contract.",
+        message: "La respuesta viola el contrato de movimiento de stock.",
       });
     }
 
@@ -147,7 +147,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return errorResponse(500, {
       code: "internal_error",
-      message: "Unexpected error while registering stock movement.",
+      message: "Ocurrió un error inesperado al registrar el movimiento de stock.",
     });
   }
 }

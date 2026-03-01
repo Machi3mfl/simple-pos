@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
 interface SalesHistoryItem {
@@ -35,10 +36,6 @@ interface OrdersPanelProps {
   readonly refreshToken?: number;
 }
 
-function formatMoney(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -50,17 +47,6 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-function paymentStatusLabel(status: SalesHistoryItem["paymentStatus"]): string {
-  switch (status) {
-    case "paid":
-      return "Paid";
-    case "partial":
-      return "Partial";
-    default:
-      return "Pending";
-  }
 }
 
 function paymentStatusClasses(status: SalesHistoryItem["paymentStatus"]): string {
@@ -77,6 +63,13 @@ function paymentStatusClasses(status: SalesHistoryItem["paymentStatus"]): string
 export function OrdersPanel({
   refreshToken,
 }: OrdersPanelProps): JSX.Element {
+  const {
+    messages,
+    formatCurrency,
+    formatDateTime,
+    labelForPaymentMethod,
+    labelForPaymentStatus,
+  } = useI18n();
   const [salesHistory, setSalesHistory] = useState<readonly SalesHistoryItem[]>([]);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<
     "all" | "cash" | "on_account"
@@ -99,18 +92,18 @@ export function OrdersPanel({
       >("/api/v1/reports/sales-history");
 
       if (!response.ok || !data) {
-        throw new Error(resolveApiMessage(data, "Could not load orders snapshot."));
+        throw new Error(resolveApiMessage(data, messages.orders.loadError));
       }
 
       setSalesHistory((data as SalesHistoryResponse).items);
       setIsError(false);
     } catch (error: unknown) {
       setIsError(true);
-      setFeedback(error instanceof Error ? error.message : "Could not load orders snapshot.");
+      setFeedback(error instanceof Error ? error.message : messages.orders.loadError);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [messages.orders.loadError]);
 
   useEffect(() => {
     void loadOrders();
@@ -140,7 +133,7 @@ export function OrdersPanel({
   async function handleRegisterPartialPayment(sale: SalesHistoryItem): Promise<void> {
     if (!sale.customerId) {
       setIsError(true);
-      setFeedback("This order is not linked to a customer.");
+      setFeedback(messages.orders.missingCustomer);
       return;
     }
 
@@ -149,13 +142,13 @@ export function OrdersPanel({
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       setIsError(true);
-      setFeedback("Partial payment amount must be greater than zero.");
+      setFeedback(messages.orders.invalidPartialPayment);
       return;
     }
 
     if (parsedAmount > sale.outstandingAmount) {
       setIsError(true);
-      setFeedback("Partial payment cannot exceed the remaining balance for this order.");
+      setFeedback(messages.orders.partialPaymentTooHigh);
       return;
     }
 
@@ -180,7 +173,7 @@ export function OrdersPanel({
 
       if (!response.ok) {
         setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Could not register order payment."));
+        setFeedback(resolveApiMessage(payload, messages.orders.registerPaymentError));
         return;
       }
 
@@ -188,16 +181,16 @@ export function OrdersPanel({
         ...current,
         [sale.saleId]: "",
       }));
-      const successMessage =
-        `Payment registered for ${sale.saleId}: ${formatMoney(
-          (payload as DebtPaymentResponse).amount,
-        )}.`;
+      const successMessage = messages.orders.registerPaymentSuccess(
+        sale.saleId,
+        formatCurrency((payload as DebtPaymentResponse).amount),
+      );
       await loadOrders();
       setIsError(false);
       setFeedback(successMessage);
     } catch {
       setIsError(true);
-      setFeedback("Could not register order payment.");
+      setFeedback(messages.orders.registerPaymentError);
     } finally {
       setSubmittingSaleId(null);
     }
@@ -208,16 +201,18 @@ export function OrdersPanel({
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-            Orders Snapshot
+            {messages.orders.title}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Review every recorded sale, the amount already collected, and any remaining balance.
+            {messages.orders.subtitle}
           </p>
         </div>
 
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-slate-600">Payment method</span>
+            <span className="text-xs font-semibold text-slate-600">
+              {messages.common.labels.paymentMethod}
+            </span>
             <select
               data-testid="orders-payment-method-filter"
               value={paymentMethodFilter}
@@ -228,9 +223,9 @@ export function OrdersPanel({
               }
               className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
             >
-              <option value="all">All</option>
-              <option value="cash">Cash</option>
-              <option value="on_account">On account</option>
+              <option value="all">{messages.common.paymentMethods.all}</option>
+              <option value="cash">{messages.common.paymentMethods.cash}</option>
+              <option value="on_account">{messages.common.paymentMethods.on_account}</option>
             </select>
           </label>
 
@@ -243,7 +238,7 @@ export function OrdersPanel({
             disabled={isLoading}
             className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            {isLoading ? "Refreshing..." : "Refresh snapshot"}
+            {isLoading ? messages.common.states.refreshing : messages.common.actions.refresh}
           </button>
         </div>
       </header>
@@ -262,40 +257,46 @@ export function OrdersPanel({
 
       <section className="mt-4 grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Orders</p>
+          <p className="text-xs font-semibold text-slate-500">{messages.shell.nav.orders}</p>
           <p data-testid="orders-total-count" className="text-lg font-semibold text-slate-900">
             {visibleSales.length}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Revenue</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.revenue}
+          </p>
           <p data-testid="orders-total-revenue" className="text-lg font-semibold text-slate-900">
-            {formatMoney(totalRevenue)}
+            {formatCurrency(totalRevenue)}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Collected</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.collected}
+          </p>
           <p
             data-testid="orders-total-collected"
             className="text-lg font-semibold text-slate-900"
           >
-            {formatMoney(totalCollected)}
+            {formatCurrency(totalCollected)}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Outstanding</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.outstanding}
+          </p>
           <p
             data-testid="orders-total-outstanding"
             className="text-lg font-semibold text-slate-900"
           >
-            {formatMoney(totalOutstanding)}
+            {formatCurrency(totalOutstanding)}
           </p>
         </div>
       </section>
 
       <section className="mt-4 rounded-xl border border-slate-200">
         <div className="border-b border-slate-200 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-700">Recorded sales</p>
+          <p className="text-sm font-semibold text-slate-700">{messages.orders.recordedSales}</p>
         </div>
 
         <ul className="max-h-[32rem] space-y-2 overflow-y-auto p-3">
@@ -309,7 +310,9 @@ export function OrdersPanel({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-slate-900">
-                      {sale.paymentMethod === "cash" ? "Cash sale" : "On-account sale"}
+                      {sale.paymentMethod === "cash"
+                        ? messages.common.paymentMethods.cashSale
+                        : messages.common.paymentMethods.onAccountSale}
                     </p>
                     <span
                       data-testid={`orders-sale-status-${sale.saleId}`}
@@ -318,63 +321,78 @@ export function OrdersPanel({
                         paymentStatusClasses(sale.paymentStatus),
                       ].join(" ")}
                     >
-                      {paymentStatusLabel(sale.paymentStatus)}
+                      {labelForPaymentStatus(sale.paymentStatus)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {new Date(sale.createdAt).toLocaleString()}
+                    {formatDateTime(sale.createdAt)}
                   </p>
                 </div>
 
                 <div className="text-left lg:text-right">
                   <p className="text-base font-semibold text-slate-900">
-                    {formatMoney(sale.total)}
+                    {formatCurrency(sale.total)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">{sale.itemCount} items</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {sale.itemCount} {messages.common.labels.items.toLowerCase()}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-3">
                 <p>
-                  <span className="font-semibold text-slate-900">Sale ID:</span> {sale.saleId}
+                  <span className="font-semibold text-slate-900">
+                    {messages.common.labels.saleId}:
+                  </span>{" "}
+                  {sale.saleId}
                 </p>
                 <p>
-                  <span className="font-semibold text-slate-900">Method:</span>{" "}
-                  {sale.paymentMethod}
+                  <span className="font-semibold text-slate-900">
+                    {messages.common.labels.method}:
+                  </span>{" "}
+                  {labelForPaymentMethod(sale.paymentMethod)}
                 </p>
                 <p>
-                  <span className="font-semibold text-slate-900">Customer:</span>{" "}
-                  {sale.customerName ?? "Walk-in"}
+                  <span className="font-semibold text-slate-900">
+                    {messages.common.labels.customer}:
+                  </span>{" "}
+                  {sale.customerName ?? messages.common.fallbacks.walkInCustomer}
                 </p>
               </div>
 
               <div className="mt-3 grid gap-2 text-xs md:grid-cols-3">
                 <div className="rounded-lg bg-white px-3 py-2">
-                  <p className="font-semibold text-slate-500">Total</p>
+                  <p className="font-semibold text-slate-500">{messages.common.labels.total}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {formatMoney(sale.total)}
+                    {formatCurrency(sale.total)}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2">
-                  <p className="font-semibold text-slate-500">Collected</p>
+                  <p className="font-semibold text-slate-500">
+                    {messages.common.labels.collected}
+                  </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {formatMoney(sale.amountPaid)}
+                    {formatCurrency(sale.amountPaid)}
                   </p>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2">
-                  <p className="font-semibold text-slate-500">Outstanding</p>
+                  <p className="font-semibold text-slate-500">
+                    {messages.common.labels.outstanding}
+                  </p>
                   <p
                     data-testid={`orders-sale-outstanding-${sale.saleId}`}
                     className="mt-1 text-sm font-semibold text-slate-900"
                   >
-                    {formatMoney(sale.outstandingAmount)}
+                    {formatCurrency(sale.outstandingAmount)}
                   </p>
                 </div>
               </div>
 
               {sale.paymentMethod === "on_account" && sale.outstandingAmount > 0 ? (
                 <div className="mt-4 rounded-xl border border-slate-200 bg-white px-3 py-3">
-                  <p className="text-xs font-semibold text-slate-600">Register partial payment</p>
+                  <p className="text-xs font-semibold text-slate-600">
+                    {messages.orders.partialPaymentTitle}
+                  </p>
                   <div className="mt-2 flex flex-col gap-2 md:flex-row">
                     <input
                       data-testid={`orders-partial-payment-amount-input-${sale.saleId}`}
@@ -382,7 +400,7 @@ export function OrdersPanel({
                       min="0.01"
                       max={sale.outstandingAmount.toFixed(2)}
                       step="0.01"
-                      placeholder="Amount"
+                      placeholder={messages.common.placeholders.amount}
                       value={partialPaymentAmountBySaleId[sale.saleId] ?? ""}
                       onChange={(event) =>
                         setPartialPaymentAmountBySaleId((current) => ({
@@ -402,11 +420,13 @@ export function OrdersPanel({
                       disabled={submittingSaleId === sale.saleId}
                       className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
                     >
-                      {submittingSaleId === sale.saleId ? "Applying..." : "Apply payment"}
+                      {submittingSaleId === sale.saleId
+                        ? messages.common.states.applying
+                        : messages.common.actions.applyPayment}
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
-                    Apply a payment directly to this order without leaving the snapshot.
+                    {messages.orders.partialPaymentHelp}
                   </p>
                 </div>
               ) : null}
@@ -415,7 +435,7 @@ export function OrdersPanel({
 
           {visibleSales.length === 0 ? (
             <li className="rounded-xl bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
-              No sales recorded yet for this filter.
+              {messages.orders.noSalesForFilter}
             </li>
           ) : null}
         </ul>

@@ -26,9 +26,9 @@ export function OrderSummaryPanel({
     <section className="flex h-full flex-col rounded-[2rem] bg-white/95 p-5 shadow-xl shadow-slate-300/30 lg:p-6">
       <header className="mb-4 flex items-baseline justify-between">
         <h2 className="text-3xl font-semibold tracking-tight text-slate-900">
-          Order List
+          Lista del pedido
         </h2>
-        <p className="text-xs text-slate-500">MVP Demo</p>
+        <p className="text-xs text-slate-500">Demo MVP</p>
       </header>
 
       <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
@@ -58,7 +58,7 @@ export function OrderSummaryPanel({
                 <button
                   type="button"
                   className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-slate-300 text-lg font-semibold"
-                  aria-label={`decrease ${item.name}`}
+                  aria-label={`disminuir ${item.name}`}
                 >
                   -
                 </button>
@@ -68,7 +68,7 @@ export function OrderSummaryPanel({
                 <button
                   type="button"
                   className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-blue-500 text-lg font-semibold text-white"
-                  aria-label={`increase ${item.name}`}
+                  aria-label={`aumentar ${item.name}`}
                 >
                   +
                 </button>
@@ -79,19 +79,19 @@ export function OrderSummaryPanel({
       </div>
 
       <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-700">Payment Method</p>
+        <p className="text-sm font-semibold text-slate-700">Método de pago</p>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
             className="min-h-11 flex-1 rounded-xl bg-blue-500 px-3 text-sm font-semibold text-white"
           >
-            Cash
+            Efectivo
           </button>
           <button
             type="button"
             className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700"
           >
-            On account
+            Cuenta corriente
           </button>
         </div>
       </div>
@@ -113,7 +113,7 @@ export function OrderSummaryPanel({
             type="button"
             className="mt-4 min-h-12 w-full rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-900/30"
           >
-            Proceed to payment
+            Ir a cobrar
           </button>
         </div>
       </footer>

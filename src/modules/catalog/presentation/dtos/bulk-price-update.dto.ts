@@ -18,7 +18,7 @@ export const bulkPriceUpdateScopeDTOSchema = z
       context.addIssue({
         code: "custom",
         path: ["categoryId"],
-        message: "categoryId is required when scope.type is category.",
+        message: "categoryId es obligatorio cuando scope.type es category.",
       });
     }
 
@@ -26,7 +26,7 @@ export const bulkPriceUpdateScopeDTOSchema = z
       context.addIssue({
         code: "custom",
         path: ["productIds"],
-        message: "productIds is required when scope.type is selection.",
+        message: "productIds es obligatorio cuando scope.type es selection.",
       });
     }
   });

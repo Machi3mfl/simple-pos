@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
 interface ProductListItem {
@@ -45,14 +46,11 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-function formatMoney(value: number): string {
-  return `$${value.toFixed(2)}`;
-}
-
 export function ProductOnboardingPanel({
   onProductCreated,
   refreshToken,
 }: ProductOnboardingPanelProps): JSX.Element {
+  const { messages, formatCurrency, labelForCategory } = useI18n();
   const [name, setName] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("main");
   const [price, setPrice] = useState<string>("10");
@@ -81,18 +79,18 @@ export function ProductOnboardingPanel({
 
       if (!response.ok || !payload) {
         setIsError(true);
-        setFeedback("Failed to load products for onboarding.");
+        setFeedback(messages.catalog.onboarding.loadError);
         return;
       }
 
       setProducts(payload.items);
     } catch {
       setIsError(true);
-      setFeedback("Failed to load products for onboarding.");
+      setFeedback(messages.catalog.onboarding.loadError);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [messages.catalog.onboarding.loadError]);
 
   useEffect(() => {
     void loadProducts();
@@ -118,19 +116,19 @@ export function ProductOnboardingPanel({
 
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
       setIsError(true);
-      setFeedback("Price must be greater than zero.");
+      setFeedback(messages.catalog.onboarding.invalidPrice);
       return;
     }
 
     if (!Number.isFinite(parsedStock) || !Number.isInteger(parsedStock) || parsedStock < 0) {
       setIsError(true);
-      setFeedback("Initial stock must be an integer greater than or equal to zero.");
+      setFeedback(messages.catalog.onboarding.invalidInitialStock);
       return;
     }
 
     if (parsedCost !== undefined && (!Number.isFinite(parsedCost) || parsedCost <= 0)) {
       setIsError(true);
-      setFeedback("Cost must be greater than zero when provided.");
+      setFeedback(messages.catalog.onboarding.invalidCost);
       return;
     }
 
@@ -155,12 +153,14 @@ export function ProductOnboardingPanel({
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
       if (!response.ok) {
         setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Could not create product."));
+        setFeedback(resolveApiMessage(payload, messages.catalog.onboarding.createError));
         return;
       }
 
       setIsError(false);
-      setFeedback(`Product created: ${(payload as ProductResponse).item.name}`);
+      setFeedback(
+        messages.catalog.onboarding.createSuccess((payload as ProductResponse).item.name),
+      );
       setName("");
       setPrice("10");
       setCost("");
@@ -170,7 +170,7 @@ export function ProductOnboardingPanel({
       await onProductCreated?.();
     } catch {
       setIsError(true);
-      setFeedback("Could not create product.");
+      setFeedback(messages.catalog.onboarding.createError);
     } finally {
       setIsSubmitting(false);
     }
@@ -181,30 +181,34 @@ export function ProductOnboardingPanel({
       <header className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-            Guided Product Onboarding
+            {messages.catalog.onboarding.title}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            UC-002: Create products with minimum fields and optional image.
+            {messages.catalog.onboarding.subtitle}
           </p>
         </div>
       </header>
 
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleSubmit}>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Name</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.catalog.onboarding.nameLabel}
+          </span>
           <input
             data-testid="onboarding-name-input"
             required
             minLength={2}
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. Empanada"
+            placeholder={messages.catalog.onboarding.namePlaceholder}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           />
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Category</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.category}
+          </span>
           <select
             data-testid="onboarding-category-select"
             value={categoryId}
@@ -213,14 +217,16 @@ export function ProductOnboardingPanel({
           >
             {categories.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {labelForCategory(option)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Price</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.catalog.onboarding.priceLabel}
+          </span>
           <input
             data-testid="onboarding-price-input"
             type="number"
@@ -233,7 +239,9 @@ export function ProductOnboardingPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Cost (optional)</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.catalog.onboarding.costLabel}
+          </span>
           <input
             data-testid="onboarding-cost-input"
             type="number"
@@ -246,7 +254,9 @@ export function ProductOnboardingPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Initial stock</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.catalog.onboarding.initialStockLabel}
+          </span>
           <input
             data-testid="onboarding-stock-input"
             type="number"
@@ -259,12 +269,14 @@ export function ProductOnboardingPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Image URL (optional)</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.catalog.onboarding.imageUrlLabel}
+          </span>
           <input
             data-testid="onboarding-image-input"
             value={imageUrl}
             onChange={(event) => setImageUrl(event.target.value)}
-            placeholder="https://..."
+            placeholder={messages.common.placeholders.imageUrl}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           />
         </label>
@@ -276,7 +288,7 @@ export function ProductOnboardingPanel({
             disabled={isSubmitting}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            {isSubmitting ? "Creating..." : "Create product"}
+            {isSubmitting ? messages.common.states.creating : messages.common.actions.createProduct}
           </button>
         </div>
       </form>
@@ -295,7 +307,9 @@ export function ProductOnboardingPanel({
 
       <div className="mt-4 rounded-xl border border-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-700">Recent products</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {messages.catalog.onboarding.recentProducts}
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -304,7 +318,7 @@ export function ProductOnboardingPanel({
             disabled={isLoading}
             className="text-xs font-semibold text-blue-600 disabled:text-slate-400"
           >
-            {isLoading ? "Loading..." : "Refresh"}
+            {isLoading ? messages.common.states.loading : messages.common.actions.refresh}
           </button>
         </div>
 
@@ -315,16 +329,18 @@ export function ProductOnboardingPanel({
               className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
             >
               <span className="min-w-0 truncate">
-                {product.name} ({product.categoryId})
+                {product.name} ({labelForCategory(product.categoryId)})
               </span>
               <span className="ml-2 shrink-0 font-semibold text-slate-900">
-                {formatMoney(product.price)}
+                {formatCurrency(product.price)}
               </span>
             </li>
           ))}
 
           {products.length === 0 && !isLoading ? (
-            <li className="px-2 py-2 text-xs text-slate-500">No products yet.</li>
+            <li className="px-2 py-2 text-xs text-slate-500">
+              {messages.catalog.onboarding.emptyProducts}
+            </li>
           ) : null}
         </ul>
       </div>

@@ -12,6 +12,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/components/DebtManagementPanel";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
@@ -46,24 +47,6 @@ interface ProductListApiItem {
 interface ProductListApiResponse {
   readonly items: readonly ProductListApiItem[];
 }
-
-const navItems: readonly PosNavItem[] = [
-  { id: "sales", label: "Sales", icon: ShoppingCart },
-  { id: "orders", label: "Orders", icon: ReceiptText },
-  { id: "catalog", label: "Catalog", icon: Package },
-  { id: "inventory", label: "Inventory", icon: Boxes },
-  { id: "receivables", label: "Receivables", icon: Wallet },
-  { id: "reporting", label: "Reporting", icon: BarChart3 },
-  { id: "sync", label: "Sync", icon: CloudOff },
-];
-
-const baseCategories: readonly CatalogCategory[] = [
-  { id: "all", label: "All", emoji: "🧃" },
-  { id: "main", label: "Main", emoji: "🍜" },
-  { id: "drink", label: "Drink", emoji: "🥤" },
-  { id: "snack", label: "Snack", emoji: "🍔" },
-  { id: "dessert", label: "Dessert", emoji: "🍬" },
-];
 
 const categoryEmojiById: Record<string, string> = {
   all: "🧃",
@@ -100,20 +83,19 @@ function resolveProductEmoji(name: string, categoryId: string): string {
   return resolveCategoryEmoji(categoryId);
 }
 
-function resolveProductSubtitle(name: string, categoryId: string): string {
-  const categoryLabel =
-    baseCategories.find((category) => category.id === categoryId)?.label ??
-    categoryId;
-
-  return `${name} • ${categoryLabel}`;
+function resolveProductSubtitle(categoryLabel: string): string {
+  return categoryLabel;
 }
 
-function toCatalogProduct(item: ProductListApiItem): CatalogProduct {
+function toCatalogProduct(
+  item: ProductListApiItem,
+  categoryLabel: string,
+): CatalogProduct {
   return {
     id: item.id,
     name: item.name,
     categoryId: item.categoryId,
-    subtitle: resolveProductSubtitle(item.name, item.categoryId),
+    subtitle: resolveProductSubtitle(categoryLabel),
     price: item.price,
     isAvailable: item.isActive,
     emoji: resolveProductEmoji(item.name, item.categoryId),
@@ -142,6 +124,7 @@ interface PosLayoutProps {
 export function PosLayout({
   initialWorkspace = "sales",
 }: PosLayoutProps): JSX.Element {
+  const { messages, labelForCategory } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [catalogRefreshToken, setCatalogRefreshToken] = useState<number>(0);
@@ -154,6 +137,28 @@ export function PosLayout({
   const activeNavItemId = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
+  );
+  const navItems = useMemo<readonly PosNavItem[]>(
+    () => [
+      { id: "sales", label: messages.shell.nav.sales, icon: ShoppingCart },
+      { id: "orders", label: messages.shell.nav.orders, icon: ReceiptText },
+      { id: "catalog", label: messages.shell.nav.catalog, icon: Package },
+      { id: "inventory", label: messages.shell.nav.inventory, icon: Boxes },
+      { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
+      { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
+      { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
+    ],
+    [messages],
+  );
+  const baseCategories = useMemo<readonly CatalogCategory[]>(
+    () => [
+      { id: "all", label: labelForCategory("all"), emoji: "🧃" },
+      { id: "main", label: labelForCategory("main"), emoji: "🍜" },
+      { id: "drink", label: labelForCategory("drink"), emoji: "🥤" },
+      { id: "snack", label: labelForCategory("snack"), emoji: "🍔" },
+      { id: "dessert", label: labelForCategory("dessert"), emoji: "🍬" },
+    ],
+    [labelForCategory],
   );
 
   const categories = useMemo(() => {
@@ -168,14 +173,14 @@ export function PosLayout({
       if (!dynamicCategories.has(categoryId)) {
         dynamicCategories.set(categoryId, {
           id: categoryId,
-          label: categoryId[0]?.toUpperCase() + categoryId.slice(1),
+          label: labelForCategory(categoryId),
           emoji: resolveCategoryEmoji(categoryId),
         });
       }
     }
 
     return Array.from(dynamicCategories.values());
-  }, [catalogProducts]);
+  }, [baseCategories, catalogProducts, labelForCategory]);
 
   const loadCatalogProducts = useCallback(async (): Promise<readonly CatalogProduct[]> => {
     const { response, data } = await fetchJsonNoStore<ProductListApiResponse>(
@@ -183,11 +188,13 @@ export function PosLayout({
     );
 
     if (!response.ok || !data) {
-      throw new Error("Failed to load catalog products.");
+      throw new Error("No se pudo cargar el catálogo.");
     }
 
-    return data.items.map(toCatalogProduct);
-  }, []);
+    return data.items.map((item) =>
+      toCatalogProduct(item, labelForCategory(item.categoryId)),
+    );
+  }, [labelForCategory]);
 
   const refreshCatalog = useCallback(async (): Promise<void> => {
     setIsLoadingProducts(true);

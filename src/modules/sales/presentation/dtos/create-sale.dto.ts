@@ -25,7 +25,7 @@ export const createSaleDTOSchema = z.object({
       code: "custom",
       path: ["customerId"],
       message:
-        "customerId or customerName is required when paymentMethod is on_account.",
+        "customerId o customerName es obligatorio cuando paymentMethod es on_account.",
     });
   }
 
@@ -37,7 +37,7 @@ export const createSaleDTOSchema = z.object({
       code: "custom",
       path: ["initialPaymentAmount"],
       message:
-        "initialPaymentAmount is only supported when paymentMethod is on_account.",
+        "initialPaymentAmount solo está permitido cuando paymentMethod es on_account.",
     });
   }
 });

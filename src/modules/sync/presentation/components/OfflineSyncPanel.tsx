@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import {
   flushOfflineSyncQueue,
   getOfflineSyncQueueStorageKey,
@@ -15,6 +16,7 @@ interface SyncResult {
 }
 
 export function OfflineSyncPanel(): JSX.Element {
+  const { messages } = useI18n();
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -62,26 +64,32 @@ export function OfflineSyncPanel(): JSX.Element {
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
       <header>
         <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-          Offline Queue and Sync
+          {messages.sync.title}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          UC-008: keep critical events while offline and synchronize later.
+          {messages.sync.subtitle}
         </p>
       </header>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Network</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.network}
+          </p>
           <p className={isOnline ? "text-sm font-semibold text-emerald-700" : "text-sm font-semibold text-rose-700"}>
-            {isOnline ? "Online" : "Offline"}
+            {isOnline ? messages.common.states.online : messages.common.states.offline}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Pending events</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.pendingEvents}
+          </p>
           <p className="text-sm font-semibold text-slate-900">{pendingCount}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">Queue storage key</p>
+          <p className="text-xs font-semibold text-slate-500">
+            {messages.common.labels.queueStorageKey}
+          </p>
           <p className="text-xs font-semibold text-slate-900">
             {getOfflineSyncQueueStorageKey()}
           </p>
@@ -97,20 +105,20 @@ export function OfflineSyncPanel(): JSX.Element {
           disabled={isSyncing}
           className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
         >
-          {isSyncing ? "Syncing..." : "Retry Offline Sync"}
+          {isSyncing ? messages.common.states.syncing : messages.common.actions.retryOfflineSync}
         </button>
       </div>
 
       {lastResult ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-700">
           <p>
-            Synced: <strong>{lastResult.synced}</strong>
+            {messages.sync.synced}: <strong>{lastResult.synced}</strong>
           </p>
           <p>
-            Failed: <strong>{lastResult.failed}</strong>
+            {messages.sync.failed}: <strong>{lastResult.failed}</strong>
           </p>
           <p>
-            Pending: <strong>{lastResult.pending}</strong>
+            {messages.sync.pending}: <strong>{lastResult.pending}</strong>
           </p>
         </div>
       ) : null}

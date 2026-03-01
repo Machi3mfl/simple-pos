@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+
+import { I18nProvider } from "@/infrastructure/i18n/I18nProvider";
+
 import "./globals.css";
 
 const poppins = Poppins({
@@ -18,8 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={poppins.className}>{children}</body>
+    <html lang="es">
+      <body className={poppins.className}>
+        <I18nProvider>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

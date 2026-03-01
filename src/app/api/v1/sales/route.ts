@@ -70,7 +70,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return errorResponse(400, {
       code: "invalid_json",
-      message: "Request body must be valid JSON.",
+      message: "El body de la request debe ser JSON válido.",
     });
   }
 
@@ -83,7 +83,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return errorResponse(400, {
       code: "validation_error",
-      message: "Sale payload validation failed.",
+      message: "La validación del payload de venta falló.",
       details,
     });
   }
@@ -102,7 +102,7 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof ZodError) {
       return errorResponse(400, {
         code: "validation_error",
-        message: "Invalid request payload.",
+        message: "El payload enviado es inválido.",
       });
     }
 
@@ -115,7 +115,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return errorResponse(500, {
       code: "internal_error",
-      message: "Unexpected error while creating sale.",
+      message: "Ocurrió un error inesperado al crear la venta.",
     });
   }
 }

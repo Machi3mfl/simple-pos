@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
 interface ProductItem {
@@ -54,6 +55,11 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
 export function StockMovementPanel({
   refreshToken,
 }: StockMovementPanelProps): JSX.Element {
+  const {
+    messages,
+    formatCurrency,
+    labelForMovementType,
+  } = useI18n();
   const [products, setProducts] = useState<readonly ProductItem[]>([]);
   const [movements, setMovements] = useState<readonly StockMovementItem[]>([]);
   const [productId, setProductId] = useState<string>("");
@@ -84,7 +90,7 @@ export function StockMovementPanel({
     const payload = data;
 
     if (!response.ok || !payload) {
-      throw new Error("Failed to load products.");
+      throw new Error(messages.inventory.loadError);
     }
 
     setProducts(payload.items);
@@ -94,7 +100,7 @@ export function StockMovementPanel({
       }
       return payload.items[0]?.id ?? "";
     });
-  }, []);
+  }, [messages.inventory.loadError]);
 
   const loadMovementHistory = useCallback(async (): Promise<void> => {
     const { response, data } = await fetchJsonNoStore<StockMovementListResponse>(
@@ -103,11 +109,11 @@ export function StockMovementPanel({
     const payload = data;
 
     if (!response.ok || !payload) {
-      throw new Error("Failed to load stock movements.");
+      throw new Error(messages.inventory.loadError);
     }
 
     setMovements(payload.items);
-  }, []);
+  }, [messages.inventory.loadError]);
 
   const loadData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
@@ -115,11 +121,11 @@ export function StockMovementPanel({
       await Promise.all([loadProducts(), loadMovementHistory()]);
     } catch {
       setIsError(true);
-      setFeedback("Could not load stock data.");
+      setFeedback(messages.inventory.loadError);
     } finally {
       setIsLoading(false);
     }
-  }, [loadMovementHistory, loadProducts]);
+  }, [loadMovementHistory, loadProducts, messages.inventory.loadError]);
 
   useEffect(() => {
     void loadData();
@@ -134,13 +140,13 @@ export function StockMovementPanel({
 
     if (!productId) {
       setIsError(true);
-      setFeedback("Select a product first.");
+      setFeedback(messages.inventory.missingProduct);
       return;
     }
 
     if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
       setIsError(true);
-      setFeedback("Quantity must be greater than zero.");
+      setFeedback(messages.inventory.invalidQuantity);
       return;
     }
 
@@ -149,7 +155,7 @@ export function StockMovementPanel({
       (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
     ) {
       setIsError(true);
-      setFeedback("Inbound movement requires unit cost greater than zero.");
+      setFeedback(messages.inventory.invalidInboundCost);
       return;
     }
 
@@ -173,18 +179,22 @@ export function StockMovementPanel({
       const payload = (await response.json()) as StockMovementItem | ApiErrorPayload;
       if (!response.ok) {
         setIsError(true);
-        setFeedback(resolveApiMessage(payload, "Could not register stock movement."));
+        setFeedback(resolveApiMessage(payload, messages.inventory.registerError));
         return;
       }
 
       setIsError(false);
-      setFeedback(`Stock movement registered: ${(payload as StockMovementItem).movementType}.`);
+      setFeedback(
+        messages.inventory.registerSuccess(
+          labelForMovementType((payload as StockMovementItem).movementType).toLowerCase(),
+        ),
+      );
       setQuantity("1");
       setReason("");
       await loadMovementHistory();
     } catch {
       setIsError(true);
-      setFeedback("Could not register stock movement.");
+      setFeedback(messages.inventory.registerError);
     } finally {
       setIsSubmitting(false);
     }
@@ -193,15 +203,19 @@ export function StockMovementPanel({
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
       <header>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900">Stock Movement</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+          {messages.inventory.title}
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
-          UC-003: Register inbound/outbound/adjustment with mandatory inbound cost.
+          {messages.inventory.subtitle}
         </p>
       </header>
 
       <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleSubmit}>
         <label className="flex flex-col gap-1 md:col-span-2">
-          <span className="text-xs font-semibold text-slate-600">Product</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.product}
+          </span>
           <select
             data-testid="inventory-product-select"
             value={productId}
@@ -209,7 +223,7 @@ export function StockMovementPanel({
             disabled={isLoading || !hasProducts}
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            {!hasProducts ? <option value="">No products available</option> : null}
+            {!hasProducts ? <option value="">{messages.inventory.noProductsOption}</option> : null}
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name}
@@ -219,7 +233,9 @@ export function StockMovementPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Movement type</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.inventory.movementTypeLabel}
+          </span>
           <select
             data-testid="inventory-movement-type-select"
             value={movementType}
@@ -228,14 +244,16 @@ export function StockMovementPanel({
             }
             className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
           >
-            <option value="inbound">Inbound</option>
-            <option value="outbound">Outbound</option>
-            <option value="adjustment">Adjustment</option>
+            <option value="inbound">{messages.common.movementTypes.inbound}</option>
+            <option value="outbound">{messages.common.movementTypes.outbound}</option>
+            <option value="adjustment">{messages.common.movementTypes.adjustment}</option>
           </select>
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Quantity</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.common.labels.quantity}
+          </span>
           <input
             data-testid="inventory-quantity-input"
             type="number"
@@ -248,7 +266,9 @@ export function StockMovementPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Unit cost</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.inventory.unitCostLabel}
+          </span>
           <input
             data-testid="inventory-unit-cost-input"
             type="number"
@@ -262,7 +282,9 @@ export function StockMovementPanel({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">Reason (optional)</span>
+          <span className="text-xs font-semibold text-slate-600">
+            {messages.inventory.reasonLabel}
+          </span>
           <input
             data-testid="inventory-reason-input"
             value={reason}
@@ -278,14 +300,14 @@ export function StockMovementPanel({
             disabled={isSubmitting || isLoading || !hasProducts}
             className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
           >
-            {isSubmitting ? "Saving..." : "Register movement"}
+            {isSubmitting ? messages.common.states.saving : messages.common.actions.registerMovement}
           </button>
         </div>
       </form>
 
       {!isLoading && !hasProducts ? (
         <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
-          No products available yet. Create products from Catalog first, then come back.
+          {messages.inventory.noProductsWarning}
         </p>
       ) : null}
 
@@ -303,7 +325,9 @@ export function StockMovementPanel({
 
       <div className="mt-4 rounded-xl border border-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-700">Recent stock movements</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {messages.inventory.recentMovements}
+          </p>
           <button
             type="button"
             disabled={isLoading}
@@ -312,7 +336,7 @@ export function StockMovementPanel({
             }}
             className="text-xs font-semibold text-blue-600 disabled:text-slate-400"
           >
-            {isLoading ? "Loading..." : "Refresh"}
+            {isLoading ? messages.common.states.loading : messages.common.actions.refresh}
           </button>
         </div>
 
@@ -324,17 +348,22 @@ export function StockMovementPanel({
               className="rounded-lg bg-slate-50 px-2 py-2 text-xs text-slate-700"
             >
               <p className="font-semibold text-slate-900">
-                {movement.movementType} • qty {movement.quantity} • stock {movement.stockOnHandAfter}
+                {labelForMovementType(movement.movementType)} •{" "}
+                {messages.common.labels.quantity.toLowerCase()} {movement.quantity} • stock{" "}
+                {movement.stockOnHandAfter}
               </p>
               <p className="mt-1">
-                Product {productNameById.get(movement.productId) ?? "Unknown product"} • cost{" "}
-                {movement.unitCost.toFixed(2)}
+                {messages.common.labels.product}{" "}
+                {productNameById.get(movement.productId) ?? messages.common.fallbacks.unknownProduct}{" "}
+                • {messages.common.labels.cost.toLowerCase()} {formatCurrency(movement.unitCost)}
               </p>
             </li>
           ))}
 
           {movements.length === 0 ? (
-            <li className="px-2 py-2 text-xs text-slate-500">No movement events yet.</li>
+            <li className="px-2 py-2 text-xs text-slate-500">
+              {messages.inventory.emptyMovements}
+            </li>
           ) : null}
         </ul>
       </div>

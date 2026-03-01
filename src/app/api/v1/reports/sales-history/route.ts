@@ -57,25 +57,25 @@ export async function GET(request: Request): Promise<Response> {
   if (periodStart === "invalid" || periodEnd === "invalid") {
     return errorResponse(400, {
       code: "validation_error",
-      message: "periodStart/periodEnd must be valid dates when provided.",
+      message: "periodStart/periodEnd deben ser fechas válidas cuando se informan.",
     });
   }
 
   if (periodStart && periodEnd && periodStart > periodEnd) {
     return errorResponse(400, {
       code: "validation_error",
-      message: "periodStart must be earlier than or equal to periodEnd.",
+      message: "periodStart debe ser menor o igual a periodEnd.",
     });
   }
 
   if (paymentMethod === "invalid") {
     return errorResponse(400, {
       code: "validation_error",
-      message: "paymentMethod must be cash or on_account when provided.",
+      message: "paymentMethod debe ser cash u on_account cuando se informa.",
       details: [
         {
           field: "paymentMethod",
-          message: "Expected cash | on_account.",
+          message: "Se esperaba cash | on_account.",
         },
       ],
     });
@@ -91,7 +91,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",
-      message: "Response violates sales history report contract.",
+      message: "La respuesta viola el contrato del historial de ventas.",
     });
   }
 

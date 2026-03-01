@@ -1,3 +1,5 @@
+import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+
 export interface CatalogCategory {
   readonly id: string;
   readonly label: string;
@@ -38,20 +40,27 @@ export function ProductCatalogPanel({
   onProductSelect,
   onOpenCatalogWorkspace,
 }: ProductCatalogPanelProps): JSX.Element {
+  const { messages } = useI18n();
+  const activeCategoryLabel =
+    categories.find((category) => category.id === activeCategoryId)?.label ??
+    messages.sales.catalog.allProducts;
+  const sectionTitle =
+    activeCategoryId === "all" ? messages.sales.catalog.allProducts : activeCategoryLabel;
+
   return (
     <section className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="whitespace-nowrap text-[2.45rem] font-semibold tracking-tight text-slate-900">
-          Choose Categories
+          {messages.sales.catalog.title}
         </h1>
         <label className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 shadow-[0_10px_30px_rgba(16,24,40,0.05)] lg:w-[300px]">
           <input
             type="text"
             value={searchTerm}
             onChange={(event) => onSearchTermChange(event.target.value)}
-            placeholder="Search products"
+            placeholder={messages.common.placeholders.searchProducts}
             className="w-full bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
-            aria-label="Search menu"
+            aria-label={messages.common.placeholders.searchMenuAria}
           />
           <span className="ml-2 text-xl text-slate-400">⌕</span>
         </label>
@@ -81,14 +90,16 @@ export function ProductCatalogPanel({
       </div>
 
       <h2 className="mt-10 text-[2.3rem] font-semibold tracking-tight text-slate-900">
-        Main Course
+        {sectionTitle}
       </h2>
 
       {products.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-          <p className="text-lg font-semibold text-slate-800">No products yet</p>
+          <p className="text-lg font-semibold text-slate-800">
+            {messages.sales.catalog.emptyTitle}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            Add products from onboarding to fill this catalog.
+            {messages.sales.catalog.emptyDescription}
           </p>
           <button
             type="button"
@@ -98,7 +109,7 @@ export function ProductCatalogPanel({
             disabled={isLoading}
             className="mt-4 min-h-12 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white"
           >
-            {isLoading ? "Loading..." : "Open catalog"}
+            {isLoading ? messages.common.states.loading : messages.common.actions.openCatalog}
           </button>
         </div>
       ) : (
@@ -140,7 +151,9 @@ export function ProductCatalogPanel({
                   ].join(" ")}
                 >
                   <span className="size-2 rounded-full bg-current" />
-                  {product.isAvailable ? "Available" : "Not available"}
+                  {product.isAvailable
+                    ? messages.common.availability.available
+                    : messages.common.availability.unavailable}
                 </span>
                 <span className="text-[2.1rem] leading-none font-bold tracking-tight text-slate-900">
                   ${product.price.toFixed(0)}
