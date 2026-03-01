@@ -31,11 +31,14 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   );
 
   await page.getByTestId("checkout-customer-name-input").fill(customerName);
+  await page.getByTestId("checkout-on-account-initial-payment-input").fill("4");
+  await expect(page.getByTestId("checkout-on-account-remaining-value")).toHaveText("$6.00");
   await page.getByTestId("checkout-confirm-payment-button").click();
 
   const checkoutFeedback = page.getByTestId("checkout-feedback");
   await expect(checkoutFeedback).toContainText("Checkout completed successfully.");
   await expect(checkoutFeedback).toContainText(customerName);
+  await expect(checkoutFeedback).toContainText("Remaining on account: $6.00.");
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(page.getByRole("heading", { name: "Customer Debt Management" })).toBeVisible();
@@ -58,7 +61,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   const beforeOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const beforeOutstanding = parseMoneyValue(beforeOutstandingRaw);
-  expect(beforeOutstanding).toBeGreaterThan(0);
+  expect(beforeOutstanding).toBe(6);
 
   await expect(page.locator('[data-testid^="debt-ledger-entry-"]').first()).toContainText("Debt");
 

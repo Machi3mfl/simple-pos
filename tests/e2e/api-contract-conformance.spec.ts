@@ -42,6 +42,7 @@ test.describe("API contract conformance", () => {
         items: [{ productId: "product-002", quantity: 1 }],
         paymentMethod: "on_account",
         customerName: "Carlos Perez",
+        initialPaymentAmount: 5,
       },
     ];
 
@@ -122,6 +123,7 @@ test.describe("API contract conformance", () => {
       customerId: "customer-001",
       amount: 3000,
       paymentMethod: "cash",
+      orderId: "sale-001",
     });
     expect(validDebtPayment.success).toBe(true);
 
@@ -129,6 +131,7 @@ test.describe("API contract conformance", () => {
       paymentId: "payment-001",
       customerId: "customer-001",
       amount: 3000,
+      orderId: "sale-001",
       createdAt: "2026-02-27T12:15:00.000Z",
     });
     expect(validDebtPaymentResponse.success).toBe(true);
@@ -180,6 +183,9 @@ test.describe("API contract conformance", () => {
           saleId: "sale-001",
           paymentMethod: "cash",
           total: 30,
+          amountPaid: 30,
+          outstandingAmount: 0,
+          paymentStatus: "paid",
           itemCount: 3,
           createdAt: "2026-02-27T12:00:00.000Z",
         },
@@ -189,6 +195,9 @@ test.describe("API contract conformance", () => {
           customerId: "customer-001",
           customerName: "Carlos Perez",
           total: 20,
+          amountPaid: 5,
+          outstandingAmount: 15,
+          paymentStatus: "partial",
           itemCount: 2,
           createdAt: "2026-02-27T12:10:00.000Z",
         },

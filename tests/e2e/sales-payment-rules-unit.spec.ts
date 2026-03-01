@@ -28,9 +28,20 @@ test.describe("sales payment rules (unit)", () => {
       items: [{ productId: "prod-001", quantity: 1 }],
       paymentMethod: "on_account",
       customerName: "Cliente Test",
+      initialPaymentAmount: 4,
     });
 
     expect(parsed.success).toBeTruthy();
+  });
+
+  test("dto rejects initialPaymentAmount for cash payloads", () => {
+    const parsed = createSaleDTOSchema.safeParse({
+      items: [{ productId: "prod-001", quantity: 1 }],
+      paymentMethod: "cash",
+      initialPaymentAmount: 4,
+    });
+
+    expect(parsed.success).toBeFalsy();
   });
 
   test("sale entity enforces customer assignment for on_account", () => {

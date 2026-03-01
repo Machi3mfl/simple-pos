@@ -2,6 +2,7 @@ export interface RecordOnAccountDebtInput {
   readonly saleId: string;
   readonly customerId: string;
   readonly amount: number;
+  readonly initialPaymentAmount?: number;
   readonly occurredAt: Date;
 }
 

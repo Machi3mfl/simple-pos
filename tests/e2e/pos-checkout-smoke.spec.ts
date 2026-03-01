@@ -5,6 +5,7 @@ import onAccountMissingCustomer from "../fixtures/mock-api/sale-on-account-missi
 import onAccountSuccess from "../fixtures/mock-api/sale-on-account-success.json";
 import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
 import unsupportedMethod from "../fixtures/mock-api/sale-unsupported-method-error.json";
+import { fillCashReceivedWithExactTotal } from "./support/checkout";
 
 interface CreateSaleRequestPayload {
   readonly paymentMethod?: string;
@@ -90,6 +91,7 @@ test("runs checkout smoke in mock mode for cash and on_account", async ({ page }
   await page.getByTestId("product-card-product-001").click();
 
   await page.getByRole("button", { name: "Process to Payment" }).click();
+  await fillCashReceivedWithExactTotal(page);
   await page.getByRole("button", { name: "Confirm Payment" }).click();
   await expect(page.getByText("Checkout completed successfully.")).toBeVisible();
 

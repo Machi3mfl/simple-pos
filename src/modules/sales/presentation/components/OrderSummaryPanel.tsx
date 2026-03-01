@@ -10,8 +10,6 @@ export interface OrderSummaryItem {
 interface OrderSummaryPanelProps {
   readonly items: readonly OrderSummaryItem[];
   readonly subtotal: number;
-  readonly discount: number;
-  readonly tax: number;
 }
 
 function currency(amount: number): string {
@@ -21,10 +19,8 @@ function currency(amount: number): string {
 export function OrderSummaryPanel({
   items,
   subtotal,
-  discount,
-  tax,
 }: OrderSummaryPanelProps): JSX.Element {
-  const total = subtotal - discount + tax;
+  const total = subtotal;
 
   return (
     <section className="flex h-full flex-col rounded-[2rem] bg-white/95 p-5 shadow-xl shadow-slate-300/30 lg:p-6">
@@ -105,14 +101,6 @@ export function OrderSummaryPanel({
           <div className="flex items-center justify-between">
             <span>Subtotal</span>
             <span className="font-semibold text-slate-900">{currency(subtotal)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Discount</span>
-            <span className="font-semibold text-slate-900">-{currency(discount)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Tax</span>
-            <span className="font-semibold text-slate-900">{currency(tax)}</span>
           </div>
         </div>
 

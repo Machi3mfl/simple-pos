@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import {
   CustomerNotFoundForDebtError,
+  DebtOrderNotFoundError,
+  DebtPaymentExceedsOrderOutstandingError,
   DebtPaymentExceedsOutstandingError,
   AccountsReceivableDomainError,
 } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
@@ -99,7 +101,17 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    if (error instanceof DebtPaymentExceedsOutstandingError) {
+    if (error instanceof DebtOrderNotFoundError) {
+      return errorResponse(404, {
+        code: "debt_order_not_found",
+        message: error.message,
+      });
+    }
+
+    if (
+      error instanceof DebtPaymentExceedsOutstandingError ||
+      error instanceof DebtPaymentExceedsOrderOutstandingError
+    ) {
       return errorResponse(409, {
         code: "debt_payment_conflict",
         message: error.message,

@@ -3,5 +3,7 @@
   "paymentMethod": "on_account",
   "customerId": "customer-mock-001",
   "total": 20,
+  "amountPaid": 0,
+  "outstandingAmount": 20,
   "createdAt": "2026-02-27T00:00:00.000Z"
 }

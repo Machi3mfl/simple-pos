@@ -44,6 +44,7 @@ curl -X POST /api/v1/sales \
 ```ts
 export interface CreateDebtPaymentDTO {
   customerId: string;
+  orderId?: string;
   amount: number;
   paymentMethod: "cash";
   notes?: string;
@@ -58,6 +59,8 @@ export interface CreateDebtPaymentDTO {
 - [x] Debt entries are stored per originating order.
 - [x] Debt payments create immutable ledger events.
 - [x] Outstanding balance decreases correctly for partial and full payments.
+- [x] On-account checkout can register an initial partial payment and leave only the remainder outstanding.
+- [x] Order-specific payments can target one sale directly from the Orders snapshot.
 
 ## Current Output
 
@@ -72,6 +75,7 @@ export interface CreateDebtPaymentDTO {
   - Domain:
     - `src/modules/accounts-receivable/domain/entities/DebtLedgerEntry.ts`
     - `src/modules/accounts-receivable/domain/services/CalculateOutstandingBalance.ts`
+    - `src/modules/accounts-receivable/domain/services/SummarizeDebtByOrder.ts`
     - `src/modules/accounts-receivable/domain/repositories/DebtLedgerRepository.ts`
   - Application:
     - `RecordOnAccountDebtUseCase`
@@ -90,7 +94,9 @@ export interface CreateDebtPaymentDTO {
   - stable UI selectors (`data-testid`) added for candidate/select/load/payment/ledger actions
 - Sales integration:
   - `CreateSaleUseCase` now records debt entry for `on_account` sales with `orderId = saleId`.
-  - `PosLayout` propagates a sales refresh token after checkout success to refresh `Receivables`
+  - `CreateSaleUseCase` accepts `initialPaymentAmount` for `on_account` and records the immediate payment as a second immutable ledger event.
+  - `RegisterDebtPaymentUseCase` accepts optional `orderId` so a payment can reduce one specific order instead of the full customer balance.
+- `PosLayout` propagates a sales refresh token after checkout success to refresh `Receivables`
 - Test evidence:
   - `tests/e2e/ar-debt-ledger-and-payments-api.spec.ts`
   - `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`

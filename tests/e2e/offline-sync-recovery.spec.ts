@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
+import { fillCashReceivedWithExactTotal } from "./support/checkout";
 
 test.describe("offline sync recovery", () => {
   test("queues checkout event during outage and syncs it after reconnect", async ({
@@ -40,6 +41,7 @@ test.describe("offline sync recovery", () => {
     await addProductToCart(page, productName);
 
     await page.getByRole("button", { name: "Process to Payment" }).click();
+    await fillCashReceivedWithExactTotal(page);
     await page.getByRole("button", { name: "Confirm Payment" }).click();
     await expect(page.getByText("Sale saved offline. Pending sync.")).toBeVisible();
     await expect(page.getByRole("button", { name: /Retry Offline Sync/ })).toBeVisible();

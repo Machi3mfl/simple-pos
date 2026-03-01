@@ -15,6 +15,7 @@ export class OnAccountDebtRecorderAdapter implements OnAccountDebtRecorder {
       customerId: input.customerId,
       saleId: input.saleId,
       amount: input.amount,
+      initialPaymentAmount: input.initialPaymentAmount,
       occurredAt: input.occurredAt,
     });
   }

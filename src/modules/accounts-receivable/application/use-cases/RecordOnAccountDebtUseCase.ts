@@ -5,6 +5,7 @@ export interface RecordOnAccountDebtUseCaseInput {
   readonly customerId: string;
   readonly saleId: string;
   readonly amount: number;
+  readonly initialPaymentAmount?: number;
   readonly occurredAt: Date;
 }
 
@@ -21,5 +22,18 @@ export class RecordOnAccountDebtUseCase {
     });
 
     await this.debtLedgerRepository.append(entry);
+
+    if (input.initialPaymentAmount && input.initialPaymentAmount > 0) {
+      const paymentEntry = DebtLedgerEntry.recordPayment({
+        id: crypto.randomUUID(),
+        customerId: input.customerId,
+        amount: input.initialPaymentAmount,
+        occurredAt: input.occurredAt,
+        orderId: input.saleId,
+        notes: "Initial on-account payment",
+      });
+
+      await this.debtLedgerRepository.append(paymentEntry);
+    }
   }
 }

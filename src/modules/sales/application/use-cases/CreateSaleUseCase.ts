@@ -6,6 +6,7 @@ import {
 import { calculateSaleTotal } from "@/modules/sales/domain/policies/SalePricingPolicy";
 
 import { Sale } from "../../domain/entities/Sale";
+import { SaleInitialPaymentOutOfRangeError } from "../../domain/errors/SaleDomainError";
 import type { SaleRepository } from "../../domain/repositories/SaleRepository";
 
 export interface CreateSaleUseCaseInput {
@@ -16,6 +17,7 @@ export interface CreateSaleUseCaseInput {
   readonly paymentMethod: "cash" | "on_account";
   readonly customerId?: string;
   readonly customerName?: string;
+  readonly initialPaymentAmount?: number;
 }
 
 export interface CreateSaleUseCaseOutput {
@@ -23,6 +25,8 @@ export interface CreateSaleUseCaseOutput {
   readonly paymentMethod: "cash" | "on_account";
   readonly customerId?: string;
   readonly total: number;
+  readonly amountPaid: number;
+  readonly outstandingAmount: number;
   readonly createdAt: string;
 }
 
@@ -54,6 +58,18 @@ export class CreateSaleUseCase {
 
     sale.ensureCheckoutRules();
     const total = calculateSaleTotal(sale.getItems());
+    const initialPaymentAmount =
+      sale.getPaymentMethod() === "on_account"
+        ? Number((input.initialPaymentAmount ?? 0).toFixed(2))
+        : 0;
+
+    if (
+      sale.getPaymentMethod() === "on_account" &&
+      (initialPaymentAmount < 0 || initialPaymentAmount >= total)
+    ) {
+      throw new SaleInitialPaymentOutOfRangeError(total);
+    }
+
     await this.saleRepository.save(sale);
 
     if (sale.getPaymentMethod() === "on_account" && sale.getCustomerId()) {
@@ -61,15 +77,23 @@ export class CreateSaleUseCase {
         saleId: sale.getId(),
         customerId: sale.getCustomerId() as string,
         amount: total,
+        initialPaymentAmount,
         occurredAt: sale.getCreatedAt(),
       });
     }
+
+    const amountPaid =
+      sale.getPaymentMethod() === "cash" ? total : initialPaymentAmount;
+    const outstandingAmount =
+      sale.getPaymentMethod() === "cash" ? 0 : Number((total - amountPaid).toFixed(2));
 
     return {
       saleId: sale.getId(),
       paymentMethod: sale.getPaymentMethod(),
       customerId: sale.getCustomerId(),
       total,
+      amountPaid,
+      outstandingAmount,
       createdAt: sale.getCreatedAt().toISOString(),
     };
   }

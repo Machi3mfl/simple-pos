@@ -14,6 +14,7 @@ export const createSaleDTOSchema = z.object({
   paymentMethod: paymentMethodSchema,
   customerId: z.string().min(1).optional(),
   customerName: z.string().min(2).max(120).optional(),
+  initialPaymentAmount: z.number().min(0).optional(),
 }).superRefine((payload, context) => {
   if (
     payload.paymentMethod === "on_account" &&
@@ -25,6 +26,18 @@ export const createSaleDTOSchema = z.object({
       path: ["customerId"],
       message:
         "customerId or customerName is required when paymentMethod is on_account.",
+    });
+  }
+
+  if (
+    payload.paymentMethod !== "on_account" &&
+    payload.initialPaymentAmount !== undefined
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["initialPaymentAmount"],
+      message:
+        "initialPaymentAmount is only supported when paymentMethod is on_account.",
     });
   }
 });

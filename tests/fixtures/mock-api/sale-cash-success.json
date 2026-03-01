@@ -2,5 +2,7 @@
   "saleId": "sale-mock-cash-001",
   "paymentMethod": "cash",
   "total": 40,
+  "amountPaid": 40,
+  "outstandingAmount": 0,
   "createdAt": "2026-02-27T00:00:00.000Z"
 }

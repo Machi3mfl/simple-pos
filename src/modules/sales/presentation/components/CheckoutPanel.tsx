@@ -20,8 +20,6 @@ export interface CheckoutOrderItem {
 interface CheckoutPanelProps {
   readonly items: readonly CheckoutOrderItem[];
   readonly subtotal: number;
-  readonly discount: number;
-  readonly tax: number;
   readonly onIncreaseQuantity: (productId: string) => void;
   readonly onDecreaseQuantity: (productId: string) => void;
   readonly onCheckoutSuccess: () => void;
@@ -35,10 +33,12 @@ interface CheckoutApiError {
 interface CheckoutSuccessPayload {
   readonly paymentMethod?: PaymentMethodDTO;
   readonly customerId?: string;
+  readonly amountPaid?: number;
+  readonly outstandingAmount?: number;
 }
 
 function currency(amount: number): string {
-  return `$${amount.toFixed(0)}`;
+  return `$${amount.toFixed(2)}`;
 }
 
 function resolveCheckoutError(errorBody: unknown): string {
@@ -54,23 +54,75 @@ function resolveCheckoutError(errorBody: unknown): string {
   return "Checkout failed. Try again.";
 }
 
+function parseMonetaryInput(rawValue: string): number {
+  const normalizedValue = rawValue.trim();
+  if (normalizedValue.length === 0) {
+    return 0;
+  }
+
+  const parsedValue = Number(normalizedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : Number.NaN;
+}
+
 export function CheckoutPanel({
   items,
   subtotal,
-  discount,
-  tax,
   onIncreaseQuantity,
   onDecreaseQuantity,
   onCheckoutSuccess,
 }: CheckoutPanelProps): JSX.Element {
-  const total = useMemo(() => subtotal - discount + tax, [subtotal, discount, tax]);
+  const total = subtotal;
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodDTO>("cash");
   const [customerName, setCustomerName] = useState<string>("");
+  const [cashReceivedAmount, setCashReceivedAmount] = useState<string>("");
+  const [onAccountInitialPaymentAmount, setOnAccountInitialPaymentAmount] =
+    useState<string>("");
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+
+  const itemCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items],
+  );
+  const cashReceivedValue = useMemo(
+    () => parseMonetaryInput(cashReceivedAmount),
+    [cashReceivedAmount],
+  );
+  const onAccountInitialPaymentValue = useMemo(
+    () => parseMonetaryInput(onAccountInitialPaymentAmount),
+    [onAccountInitialPaymentAmount],
+  );
+  const cashMissingAmount = useMemo(() => {
+    if (!Number.isFinite(cashReceivedValue)) {
+      return total;
+    }
+
+    return Math.max(0, Number((total - cashReceivedValue).toFixed(2)));
+  }, [cashReceivedValue, total]);
+  const cashChangeDue = useMemo(() => {
+    if (!Number.isFinite(cashReceivedValue) || cashReceivedValue <= total) {
+      return 0;
+    }
+
+    return Number((cashReceivedValue - total).toFixed(2));
+  }, [cashReceivedValue, total]);
+  const onAccountRemainingAmount = useMemo(() => {
+    if (!Number.isFinite(onAccountInitialPaymentValue)) {
+      return total;
+    }
+
+    return Math.max(0, Number((total - onAccountInitialPaymentValue).toFixed(2)));
+  }, [onAccountInitialPaymentValue, total]);
+
+  const resetPaymentInputs = useCallback((): void => {
+    setCashReceivedAmount("");
+    setOnAccountInitialPaymentAmount("");
+    setCustomerName("");
+    setPaymentMethod("cash");
+  }, []);
 
   const refreshPendingSyncCount = useCallback(() => {
     setPendingSyncCount(getPendingOfflineSyncCount());
@@ -116,10 +168,42 @@ export function CheckoutPanel({
       return;
     }
 
+    if (paymentMethod === "cash") {
+      if (!Number.isFinite(cashReceivedValue)) {
+        setIsError(true);
+        setFeedback("Customer payment must be a valid number.");
+        return;
+      }
+
+      if (cashReceivedValue < total) {
+        setIsError(true);
+        setFeedback("Cash received must cover the total to complete checkout.");
+        return;
+      }
+    }
+
     if (paymentMethod === "on_account" && customerName.trim().length < 2) {
       setIsError(true);
       setFeedback("For on-account payment, assign a customer name first.");
       return;
+    }
+
+    const initialPaymentAmount = Number.isFinite(onAccountInitialPaymentValue)
+      ? Number(onAccountInitialPaymentValue.toFixed(2))
+      : Number.NaN;
+
+    if (paymentMethod === "on_account") {
+      if (!Number.isFinite(initialPaymentAmount) || initialPaymentAmount < 0) {
+        setIsError(true);
+        setFeedback("Initial payment must be a valid amount greater than or equal to zero.");
+        return;
+      }
+
+      if (initialPaymentAmount >= total) {
+        setIsError(true);
+        setFeedback("If the customer pays the full amount now, use cash instead of on-account.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -135,7 +219,12 @@ export function CheckoutPanel({
           })),
           paymentMethod,
           ...(paymentMethod === "on_account"
-            ? { customerName: customerName.trim() }
+            ? {
+                customerName: customerName.trim(),
+                ...(initialPaymentAmount > 0
+                  ? { initialPaymentAmount }
+                  : {}),
+              }
             : {}),
         }),
       });
@@ -148,18 +237,24 @@ export function CheckoutPanel({
       }
 
       const successPayload = responseData as CheckoutSuccessPayload;
-      const onAccountConfirmation =
-        successPayload.paymentMethod === "on_account" && customerName.trim().length > 0
-          ? ` Customer: ${customerName.trim()}.`
-          : "";
+      const successMessageParts = ["Checkout completed successfully."];
+
+      if (successPayload.paymentMethod === "cash") {
+        successMessageParts.push(`Change due: ${currency(cashChangeDue)}.`);
+      }
+
+      if (successPayload.paymentMethod === "on_account") {
+        successMessageParts.push(`Customer: ${customerName.trim()}.`);
+        successMessageParts.push(
+          `Remaining on account: ${currency(successPayload.outstandingAmount ?? onAccountRemainingAmount)}.`,
+        );
+      }
 
       setIsError(false);
-      setFeedback(`Checkout completed successfully.${onAccountConfirmation}`);
+      setFeedback(successMessageParts.join(" "));
       setIsPaymentSheetOpen(false);
+      resetPaymentInputs();
       onCheckoutSuccess();
-      if (paymentMethod === "cash") {
-        setCustomerName("");
-      }
     } catch {
       enqueueOfflineSyncEvent({
         eventType: "sale_created",
@@ -170,6 +265,10 @@ export function CheckoutPanel({
           })),
           paymentMethod,
           customerName: paymentMethod === "on_account" ? customerName.trim() : undefined,
+          initialPaymentAmount:
+            paymentMethod === "on_account" && initialPaymentAmount > 0
+              ? initialPaymentAmount
+              : undefined,
         },
         idempotencyKey: `sale-offline-${crypto.randomUUID()}`,
       });
@@ -177,6 +276,7 @@ export function CheckoutPanel({
       setIsError(false);
       setFeedback("Sale saved offline. Pending sync.");
       setIsPaymentSheetOpen(false);
+      resetPaymentInputs();
     } finally {
       setIsSubmitting(false);
     }
@@ -207,10 +307,6 @@ export function CheckoutPanel({
                   {item.name}
                 </p>
                 <p className="mt-1 text-[0.88rem] text-slate-500">{currency(item.price)}</p>
-                <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[0.72rem] text-slate-500">
-                  <span aria-hidden>🗒️</span>
-                  Add Notes
-                </p>
               </div>
 
               <div className="shrink-0 flex items-center gap-1">
@@ -240,86 +336,189 @@ export function CheckoutPanel({
       </div>
 
       <footer className="sticky bottom-0 z-10 mt-4 rounded-2xl bg-[#f2f2f4] p-1">
-        <div className="space-y-2 text-[0.92rem] text-slate-600">
-          <div className="flex items-center justify-between">
-            <span>Subtotal</span>
-            <span className="font-semibold text-slate-900">{currency(subtotal)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Disc</span>
-            <span className="font-semibold text-slate-900">-{currency(discount)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Tax</span>
-            <span className="font-semibold text-slate-900">-{currency(tax)}</span>
-          </div>
-        </div>
-
-        <div className="mt-4 border-t border-slate-300 pt-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[1.75rem] font-semibold text-slate-900">Total</p>
-            <p className="text-[2.25rem] leading-none font-bold tracking-tight text-slate-900">
-              {currency(total)}
-            </p>
+        <div className="rounded-2xl bg-white p-4 shadow-[0_14px_22px_rgba(15,23,42,0.08)]">
+          <div className="space-y-2 text-[0.92rem] text-slate-600">
+            <div className="flex items-center justify-between">
+              <span>Subtotal</span>
+              <span className="font-semibold text-slate-900">{currency(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Items</span>
+              <span className="font-semibold text-slate-900">{itemCount}</span>
+            </div>
           </div>
 
-          <button
-            data-testid="checkout-open-payment-button"
-            type="button"
-            disabled={items.length === 0}
-            onClick={() => setIsPaymentSheetOpen(true)}
-            className="mt-4 min-h-[54px] w-full rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.95rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.4)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
-          >
-            Process to Payment
-          </button>
+          <div className="mt-4 border-t border-slate-300 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[1.75rem] font-semibold text-slate-900">Total</p>
+              <p
+                data-testid="checkout-total-value"
+                className="text-[2.25rem] leading-none font-bold tracking-tight text-slate-900"
+              >
+                {currency(total)}
+              </p>
+            </div>
+
+            <button
+              data-testid="checkout-open-payment-button"
+              type="button"
+              disabled={items.length === 0}
+              onClick={() => setIsPaymentSheetOpen(true)}
+              className="mt-4 min-h-[54px] w-full rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.95rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.4)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
+            >
+              Process to Payment
+            </button>
+          </div>
         </div>
 
         {isPaymentSheetOpen ? (
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_16px_30px_rgba(15,23,42,0.12)]">
-            <p className="text-sm font-semibold text-slate-700">Select Payment Method</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                data-testid="checkout-payment-cash-button"
-                type="button"
-                onClick={() => setPaymentMethod("cash")}
-                className={[
-                  "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
-                  paymentMethod === "cash"
-                    ? "bg-blue-500 text-white"
-                    : "border border-slate-300 bg-white text-slate-700",
-                ].join(" ")}
-              >
-                Cash
-              </button>
-              <button
-                data-testid="checkout-payment-on-account-button"
-                type="button"
-                onClick={() => setPaymentMethod("on_account")}
-                className={[
-                  "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
-                  paymentMethod === "on_account"
-                    ? "bg-blue-500 text-white"
-                    : "border border-slate-300 bg-white text-slate-700",
-                ].join(" ")}
-              >
-                On account
-              </button>
+          <div className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-[0_16px_30px_rgba(15,23,42,0.12)]">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">
+                Method
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  data-testid="checkout-payment-cash-button"
+                  type="button"
+                  onClick={() => setPaymentMethod("cash")}
+                  className={[
+                    "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
+                    paymentMethod === "cash"
+                      ? "bg-blue-500 text-white"
+                      : "border border-slate-300 bg-white text-slate-700",
+                  ].join(" ")}
+                >
+                  Cash
+                </button>
+                <button
+                  data-testid="checkout-payment-on-account-button"
+                  type="button"
+                  onClick={() => setPaymentMethod("on_account")}
+                  className={[
+                    "min-h-11 rounded-xl px-3 text-sm font-semibold transition",
+                    paymentMethod === "on_account"
+                      ? "bg-blue-500 text-white"
+                      : "border border-slate-300 bg-white text-slate-700",
+                  ].join(" ")}
+                >
+                  On account
+                </button>
+              </div>
             </div>
 
-            <label className="mt-3 block">
-              <span className="text-xs font-semibold text-slate-600">
-                Customer {paymentMethod === "on_account" ? "(required)" : "(optional)"}
-              </span>
-              <input
-                data-testid="checkout-customer-name-input"
-                type="text"
-                placeholder="e.g. Juan Perez"
-                value={customerName}
-                onChange={(event) => setCustomerName(event.target.value)}
-                disabled={isSubmitting || paymentMethod === "cash"}
-                className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
-              />
-            </label>
+            {paymentMethod === "cash" ? (
+              <div className="mt-3 space-y-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">Customer pays</span>
+                  <input
+                    data-testid="checkout-cash-received-input"
+                    type="number"
+                    min={total.toFixed(2)}
+                    step="0.01"
+                    placeholder={total.toFixed(2)}
+                    value={cashReceivedAmount}
+                    onChange={(event) => setCashReceivedAmount(event.target.value)}
+                    disabled={isSubmitting}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCashReceivedAmount(total.toFixed(2))}
+                    className="min-h-10 rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700"
+                  >
+                    Exact
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCashReceivedAmount((total + 5).toFixed(2))}
+                    className="min-h-10 rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700"
+                  >
+                    +5
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCashReceivedAmount((total + 10).toFixed(2))}
+                    className="min-h-10 rounded-xl border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-700"
+                  >
+                    +10
+                  </button>
+                </div>
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-semibold text-slate-500">Due</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {currency(cashMissingAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+                    <p className="text-xs font-semibold text-emerald-700">Change</p>
+                    <p
+                      data-testid="checkout-change-due-value"
+                      className="text-lg font-semibold text-emerald-800"
+                    >
+                      {currency(cashChangeDue)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">Customer</span>
+                  <input
+                    data-testid="checkout-customer-name-input"
+                    type="text"
+                    placeholder="e.g. Juan Perez"
+                    value={customerName}
+                    onChange={(event) => setCustomerName(event.target.value)}
+                    disabled={isSubmitting}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-600">Pays now</span>
+                  <input
+                    data-testid="checkout-on-account-initial-payment-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={onAccountInitialPaymentAmount}
+                    onChange={(event) => setOnAccountInitialPaymentAmount(event.target.value)}
+                    disabled={isSubmitting}
+                    className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-semibold text-slate-500">Paid</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      {currency(
+                        Number.isFinite(onAccountInitialPaymentValue)
+                          ? Math.max(0, onAccountInitialPaymentValue)
+                          : 0,
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+                    <p className="text-xs font-semibold text-amber-700">Remaining</p>
+                    <p
+                      data-testid="checkout-on-account-remaining-value"
+                      className="text-lg font-semibold text-amber-800"
+                    >
+                      {currency(onAccountRemainingAmount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-3 flex items-center gap-2">
               <button

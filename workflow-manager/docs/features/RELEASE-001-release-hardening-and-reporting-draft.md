@@ -59,7 +59,9 @@ export interface SaleFilters {
   - `src/modules/reporting/infrastructure/runtime/reportingRuntime.ts`
 - Reporting UI surface integrated:
   - `src/modules/reporting/presentation/components/ReportingPanel.tsx`
+  - `src/modules/reporting/presentation/components/OrdersPanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Reporting`)
+  - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Orders`)
 - Reporting API routes added:
   - `src/app/api/v1/reports/top-products/route.ts`
   - `src/app/api/v1/reports/profit-summary/route.ts`
@@ -68,6 +70,7 @@ export interface SaleFilters {
   - `GetTopProductsReportUseCase`
   - `GetProfitSummaryReportUseCase`
   - `GetSalesHistoryReportUseCase`
+  - `GetSalesHistoryReportUseCase` now enriches each sale with `amountPaid`, `outstandingAmount`, and `paymentStatus`
 - Sales repository now supports filtered listing for reporting:
   - `src/modules/sales/domain/repositories/SaleRepository.ts`
   - `src/modules/sales/infrastructure/repositories/SupabaseSaleRepository.ts`
@@ -82,7 +85,9 @@ export interface SaleFilters {
     - `src/modules/sync/infrastructure/repositories/SupabaseSyncEventRepository.ts`
 - Contract updates:
   - `src/app/api/v1/openapi.yaml` (`/reports/sales-history`, `SalesHistoryResponse`)
+  - `src/app/api/v1/openapi.yaml` (`/sales`, `/debt-payments`, `SaleResponse`, `DebtPaymentResponse`)
   - reporting DTOs now use Zod schemas.
+- Orders workspace now reuses `sales-history` as an operational snapshot and can register per-order partial payments without leaving the list.
 - Quality gates revalidated (`2026-02-28`):
   - `npm run lint` ✅
   - `npm run build` ✅
@@ -90,6 +95,8 @@ export interface SaleFilters {
 - Test evidence:
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
   - `tests/e2e/reporting-ui-filters-and-metrics.spec.ts`
+  - `tests/e2e/orders-ui-sales-snapshot.spec.ts`
+  - `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`
   - `tests/e2e/api-contract-conformance.spec.ts`
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/e2e/release-gate-real-backend.spec.ts` (gated by `POS_BACKEND_MODE=supabase`)

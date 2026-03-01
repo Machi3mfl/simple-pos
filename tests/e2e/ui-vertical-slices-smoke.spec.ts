@@ -4,6 +4,10 @@ test("navigates all vertical slice UIs from side rail", async ({ page }) => {
   await page.goto("/sales");
   await expect(page).toHaveURL(/\/sales$/);
 
+  await page.getByTestId("nav-item-orders").click();
+  await expect(page).toHaveURL(/\/orders$/);
+  await expect(page.getByRole("heading", { name: "Orders Snapshot" })).toBeVisible();
+
   await page.getByTestId("nav-item-catalog").click();
   await expect(page).toHaveURL(/\/catalog$/);
   await expect(page.getByRole("heading", { name: "Guided Product Onboarding" })).toBeVisible();

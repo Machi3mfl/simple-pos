@@ -27,3 +27,19 @@ export class DebtPaymentExceedsOutstandingError extends AccountsReceivableDomain
     this.name = "DebtPaymentExceedsOutstandingError";
   }
 }
+
+export class DebtOrderNotFoundError extends AccountsReceivableDomainError {
+  constructor(customerId: string, orderId: string) {
+    super(`Order ${orderId} has no outstanding debt for customer ${customerId}.`);
+    this.name = "DebtOrderNotFoundError";
+  }
+}
+
+export class DebtPaymentExceedsOrderOutstandingError extends AccountsReceivableDomainError {
+  constructor(orderId: string, amount: number, outstanding: number) {
+    super(
+      `Debt payment amount ${amount} exceeds outstanding balance ${outstanding} for order ${orderId}.`,
+    );
+    this.name = "DebtPaymentExceedsOrderOutstandingError";
+  }
+}

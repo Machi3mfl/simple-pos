@@ -3,6 +3,7 @@ import { SupabaseProductRepository } from "@/modules/catalog/infrastructure/repo
 import { SupabaseInventoryRepository } from "@/modules/inventory/infrastructure/repositories/SupabaseInventoryRepository";
 import { SupabaseSaleRepository } from "@/modules/sales/infrastructure/repositories/SupabaseSaleRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
+import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 
 import { GetProfitSummaryReportUseCase } from "../../application/use-cases/GetProfitSummaryReportUseCase";
 import { GetSalesHistoryReportUseCase } from "../../application/use-cases/GetSalesHistoryReportUseCase";
@@ -18,6 +19,7 @@ export function createReportingRuntime(): {
   const productRepository = new SupabaseProductRepository(client);
   const inventoryRepository = new SupabaseInventoryRepository(client);
   const customerRepository = new SupabaseCustomerRepository(client);
+  const debtLedgerRepository = new SupabaseDebtLedgerRepository(client);
 
   return {
     getTopProductsReportUseCase: new GetTopProductsReportUseCase(
@@ -31,6 +33,7 @@ export function createReportingRuntime(): {
     getSalesHistoryReportUseCase: new GetSalesHistoryReportUseCase(
       saleRepository,
       customerRepository,
+      debtLedgerRepository,
     ),
   };
 }

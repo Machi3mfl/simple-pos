@@ -51,6 +51,7 @@ function mapRowToEntry(row: DebtLedgerRow): DebtLedgerEntry {
     customerId: row.customer_id,
     amount: toNumber(row.amount),
     occurredAt: new Date(row.occurred_at),
+    orderId: row.order_id ?? undefined,
     notes: row.notes ?? undefined,
   });
 }

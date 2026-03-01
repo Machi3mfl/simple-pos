@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { fillCashReceivedWithExactTotal } from "./support/checkout";
+
 function uniqueMarker(): string {
   return `report-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }
@@ -31,6 +33,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await productCard.click();
   await page.getByTestId("checkout-open-payment-button").click();
   await page.getByTestId("checkout-payment-cash-button").click();
+  await fillCashReceivedWithExactTotal(page);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
     "Checkout completed successfully.",

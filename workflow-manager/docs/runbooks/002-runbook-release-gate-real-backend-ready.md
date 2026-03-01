@@ -51,7 +51,7 @@ This command now:
 - auto-loads `API_URL` and `SERVICE_ROLE_KEY` from `supabase status -o env`
 - maps them to `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 
-5. Run the real-backend UI suite by module (catalog, inventory, sales, receivables, reporting, sync):
+5. Run the real-backend UI suite by module (orders, catalog, inventory, sales, receivables, reporting, sync):
 
 ```bash
 npm run test:e2e:ui:real:modules
@@ -63,9 +63,11 @@ This command resets the local Supabase DB before executing tests and intentional
 
 - `tests/e2e/release-gate-real-backend.spec.ts` passes.
 - `tests/e2e/sync-idempotency-and-retry-api.spec.ts` passes.
+- `tests/e2e/orders-ui-sales-snapshot.spec.ts` passes inside the real-module UI suite.
 - No contract/build/lint regressions from the real-backend baseline.
 
 ## Notes
 
 - Sales opens with an empty order list unless the operator explicitly adds products.
+- Orders shows a snapshot list of recorded sales by consuming the same `sales-history` read model used by Reporting.
 - Real-module UI specs create their own products because no demo catalog is auto-seeded anymore.

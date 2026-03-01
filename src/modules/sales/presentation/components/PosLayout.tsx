@@ -5,6 +5,7 @@ import {
   Boxes,
   CloudOff,
   Package,
+  ReceiptText,
   ShoppingCart,
   Wallet,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { ProductOnboardingPanel } from "@/modules/catalog/presentation/components/ProductOnboardingPanel";
 import { StockMovementPanel } from "@/modules/inventory/presentation/components/StockMovementPanel";
+import { OrdersPanel } from "@/modules/reporting/presentation/components/OrdersPanel";
 import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
 import { OfflineSyncPanel } from "@/modules/sync/presentation/components/OfflineSyncPanel";
 import {
@@ -47,6 +49,7 @@ interface ProductListApiResponse {
 
 const navItems: readonly PosNavItem[] = [
   { id: "sales", label: "Sales", icon: ShoppingCart },
+  { id: "orders", label: "Orders", icon: ReceiptText },
   { id: "catalog", label: "Catalog", icon: Package },
   { id: "inventory", label: "Inventory", icon: Boxes },
   { id: "receivables", label: "Receivables", icon: Wallet },
@@ -342,6 +345,14 @@ export function PosLayout({
       );
     }
 
+    if (activeNavItemId === "orders") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+          <OrdersPanel refreshToken={salesRefreshToken} />
+        </section>
+      );
+    }
+
     return (
       <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
         <OfflineSyncPanel />
@@ -380,8 +391,6 @@ export function PosLayout({
             <CheckoutPanel
               items={cartItems}
               subtotal={subtotal}
-              discount={0}
-              tax={0}
               onIncreaseQuantity={increaseQuantity}
               onDecreaseQuantity={decreaseQuantity}
               onCheckoutSuccess={handleCheckoutSuccess}

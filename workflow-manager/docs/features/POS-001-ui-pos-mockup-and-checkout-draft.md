@@ -29,7 +29,7 @@ Canonical reference doc: `workflow-manager/docs/planning/005-ui-reference-pos-v1
   - product cards grid as primary interaction surface.
 - Right order panel with:
   - order list,
-  - subtotal/discount/tax/total summary,
+  - compact subtotal/items/total summary,
   - prominent checkout action button.
 - Large clickable controls and clear text hierarchy for 60+ operator.
 
@@ -58,6 +58,7 @@ export interface CreateSaleDTO {
   items: Array<{ productId: string; quantity: number }>;
   paymentMethod: PaymentMethod;
   customerId?: string; // required when paymentMethod = "on_account"
+  initialPaymentAmount?: number; // optional when paymentMethod = "on_account"
 }
 ```
 
@@ -81,10 +82,11 @@ curl -X POST /api/v1/sales \
 - [x] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [x] Product cards, category chips, and checkout action preserve large-target touch usability.
 - [x] Side rail navigation opens each module UI surface while preserving `Sales` layout baseline.
+- [x] Side rail exposes an `Orders` workspace with a list snapshot of recorded sales.
 
 ## Current Output
 
-- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/catalog`, `/inventory`, `/receivables`, `/reporting`, `/sync`)
+- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/orders`, `/catalog`, `/inventory`, `/receivables`, `/reporting`, `/sync`)
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
@@ -92,6 +94,7 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Integrated side-rail workspaces in `PosLayout`:
   - `Sales`: POS catalog + cart + checkout
+  - `Orders`: all recorded sales shown as a list snapshot
   - `Catalog`: onboarding + bulk price update UI
   - `Inventory`: stock movement UI
   - `Receivables`: debt management UI
@@ -109,8 +112,15 @@ curl -X POST /api/v1/sales \
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation
+  - cash checkout captures customer payment amount and calculates change due before confirming
+  - on-account checkout can capture an initial partial payment and shows the remaining balance inline
+- Checkout UX updates:
+  - removed `discount` / `tax` rows from the live order panel for now
+  - payment sheet now emphasizes exact total, cash received, change due, and remaining on-account balance
 - Mock E2E coverage:
   - `tests/e2e/pos-checkout-smoke.spec.ts`
   - `tests/e2e/pos-visual-baseline.spec.ts`
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - deterministic UI fixtures for product catalog in POS specs
+- Real-backend Orders snapshot coverage:
+  - `tests/e2e/orders-ui-sales-snapshot.spec.ts`

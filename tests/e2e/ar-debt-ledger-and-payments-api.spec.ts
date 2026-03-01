@@ -4,6 +4,7 @@ import { z } from "zod";
 import { debtPaymentResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
 import { customerDebtSummaryResponseDTOSchema } from "../../src/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
+import { createCatalogProduct } from "./support/catalog";
 
 const apiErrorResponseSchema = z
   .object({
@@ -30,14 +31,24 @@ test.describe("accounts receivable debt flows", () => {
   test("creates debt per order and reduces outstanding with partial/full payments", async ({
     request,
   }) => {
+    const firstProduct = await createCatalogProduct(request, {
+      name: `AR Product A ${Date.now()}-${Math.floor(Math.random() * 10_000)}`,
+      price: 10,
+    });
+    const secondProduct = await createCatalogProduct(request, {
+      name: `AR Product B ${Date.now()}-${Math.floor(Math.random() * 10_000)}`,
+      price: 10,
+    });
+
     const saleResponse = await request.post("/api/v1/sales", {
       data: {
         items: [
-          { productId: "prod-ar-001", quantity: 2 },
-          { productId: "prod-ar-002", quantity: 1 },
+          { productId: firstProduct.id, quantity: 2 },
+          { productId: secondProduct.id, quantity: 1 },
         ],
         paymentMethod: "on_account",
         customerName: uniqueCustomerName(),
+        initialPaymentAmount: 12,
       },
     });
 
@@ -54,6 +65,8 @@ test.describe("accounts receivable debt flows", () => {
     const saleId = parsedSale.data.saleId;
     const saleTotal = parsedSale.data.total;
     expect(saleTotal).toBe(30);
+    expect(parsedSale.data.amountPaid).toBe(12);
+    expect(parsedSale.data.outstandingAmount).toBe(18);
 
     const initialDebtSummaryResponse = await request.get(
       `/api/v1/customers/${customerId}/debt`,
@@ -68,24 +81,31 @@ test.describe("accounts receivable debt flows", () => {
       throw new Error("Expected valid customer debt summary payload");
     }
 
-    expect(initialDebtSummary.data.outstandingBalance).toBe(30);
+    expect(initialDebtSummary.data.outstandingBalance).toBe(18);
     expect(initialDebtSummary.data.ledger.some((entry) => entry.orderId === saleId)).toBe(
       true,
     );
     expect(initialDebtSummary.data.ledger.some((entry) => entry.entryType === "debt")).toBe(
       true,
     );
+    expect(
+      initialDebtSummary.data.ledger.some(
+        (entry) => entry.entryType === "payment" && entry.orderId === saleId && entry.amount === 12,
+      ),
+    ).toBe(true);
 
     const firstPayment = await request.post("/api/v1/debt-payments", {
       data: {
         customerId,
-        amount: 10,
+        orderId: saleId,
+        amount: 8,
         paymentMethod: "cash",
       },
     });
     expect(firstPayment.status()).toBe(201);
     const firstPaymentBody = await firstPayment.json();
     expect(debtPaymentResponseDTOSchema.safeParse(firstPaymentBody).success).toBe(true);
+    expect(firstPaymentBody.orderId).toBe(saleId);
 
     const afterFirstPayment = await request.get(`/api/v1/customers/${customerId}/debt`);
     expect(afterFirstPayment.status()).toBe(200);
@@ -98,7 +118,7 @@ test.describe("accounts receivable debt flows", () => {
       throw new Error("Expected valid debt summary after first payment");
     }
 
-    expect(afterFirstPaymentSummary.data.outstandingBalance).toBe(20);
+    expect(afterFirstPaymentSummary.data.outstandingBalance).toBe(10);
     expect(
       afterFirstPaymentSummary.data.ledger.some((entry) => entry.entryType === "payment"),
     ).toBe(true);
@@ -106,7 +126,7 @@ test.describe("accounts receivable debt flows", () => {
     const secondPayment = await request.post("/api/v1/debt-payments", {
       data: {
         customerId,
-        amount: 20,
+        amount: 10,
         paymentMethod: "cash",
       },
     });

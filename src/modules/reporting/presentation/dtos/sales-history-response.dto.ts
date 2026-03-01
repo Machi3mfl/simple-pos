@@ -7,6 +7,9 @@ export const saleHistoryItemDTOSchema = z
     customerId: z.string().min(1).optional(),
     customerName: z.string().min(2).max(120).optional(),
     total: z.number().min(0),
+    amountPaid: z.number().min(0),
+    outstandingAmount: z.number().min(0),
+    paymentStatus: z.enum(["paid", "partial", "pending"]),
     itemCount: z.number().int().min(0),
     createdAt: z.string().datetime(),
   })

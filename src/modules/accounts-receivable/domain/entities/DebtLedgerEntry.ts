@@ -45,6 +45,7 @@ export class DebtLedgerEntry {
     readonly customerId: string;
     readonly amount: number;
     readonly occurredAt: Date;
+    readonly orderId?: string;
     readonly notes?: string;
   }): DebtLedgerEntry {
     if (!Number.isFinite(input.amount) || input.amount <= 0) {
@@ -57,6 +58,7 @@ export class DebtLedgerEntry {
       entryType: "payment",
       amount: Number(input.amount.toFixed(2)),
       occurredAt: input.occurredAt,
+      orderId: input.orderId,
       notes: input.notes,
     });
   }

@@ -25,3 +25,12 @@ export class SaleCustomerRequiredError extends SaleDomainError {
     this.name = "SaleCustomerRequiredError";
   }
 }
+
+export class SaleInitialPaymentOutOfRangeError extends SaleDomainError {
+  constructor(total: number) {
+    super(
+      `Initial on-account payment must be greater than or equal to 0 and lower than total ${total}.`,
+    );
+    this.name = "SaleInitialPaymentOutOfRangeError";
+  }
+}

@@ -560,6 +560,9 @@ components:
           type: [string, 'null']
         customerName:
           type: string
+        initialPaymentAmount:
+          type: number
+          minimum: 0
       anyOf:
         - required: [customerId]
         - required: [customerName]
@@ -571,7 +574,7 @@ components:
 
     SaleResponse:
       type: object
-      required: [saleId, paymentMethod, total, createdAt]
+      required: [saleId, paymentMethod, total, amountPaid, outstandingAmount, createdAt]
       properties:
         saleId:
           type: string
@@ -581,6 +584,10 @@ components:
         customerId:
           type: [string, 'null']
         total:
+          type: number
+        amountPaid:
+          type: number
+        outstandingAmount:
           type: number
         createdAt:
           type: string
@@ -695,7 +702,7 @@ components:
 
     SalesHistoryItem:
       type: object
-      required: [saleId, paymentMethod, total, itemCount, createdAt]
+      required: [saleId, paymentMethod, total, amountPaid, outstandingAmount, paymentStatus, itemCount, createdAt]
       properties:
         saleId:
           type: string
@@ -704,8 +711,17 @@ components:
           enum: [cash, on_account]
         customerId:
           type: [string, 'null']
+        customerName:
+          type: [string, 'null']
         total:
           type: number
+        amountPaid:
+          type: number
+        outstandingAmount:
+          type: number
+        paymentStatus:
+          type: string
+          enum: [paid, partial, pending]
         itemCount:
           type: integer
           minimum: 0
@@ -785,6 +801,8 @@ components:
       properties:
         customerId:
           type: string
+        orderId:
+          type: [string, 'null']
         amount:
           type: number
           exclusiveMinimum: 0
@@ -802,6 +820,8 @@ components:
           type: string
         customerId:
           type: string
+        orderId:
+          type: [string, 'null']
         amount:
           type: number
         createdAt:

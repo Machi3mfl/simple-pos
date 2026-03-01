@@ -5,6 +5,7 @@ export const debtPaymentResponseDTOSchema = z
     paymentId: z.string().min(1),
     customerId: z.string().min(1),
     amount: z.number().positive(),
+    orderId: z.string().min(1).optional(),
     createdAt: z.string().datetime(),
   })
   .strict();
