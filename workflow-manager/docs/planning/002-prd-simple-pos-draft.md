@@ -4,10 +4,10 @@
 
 **Document ID**: `002`  
 **File Name**: `002-prd-simple-pos-draft.md`  
-**Status**: `in_review`  
+**Status**: `approved`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.6`  
+**Version**: `0.7`  
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Linked Backlog**: `workflow-manager/docs/planning/003-backlog-simple-pos-draft.md`  
@@ -200,11 +200,14 @@ We need to validate usability quickly with a functional UI demo to build custome
 - **Phase 2 (Post-MVP Enhancements)**: scanner, MercadoPago, advanced analytics.
 
 ### Go/No-Go Criteria for MVP
-- [ ] Critical sales/stock/debt flows validated with real user demo.
+- [x] Critical sales/stock/debt flows validated with real user demo.
 - [x] Mock-mode E2E green for J-001, J-002, and J-005.
 - [x] Real-backend E2E green for sale, stock, and debt before production release.
 - [x] Offline outage/recovery scenarios green for J-006.
-- [ ] NFR usability/performance/reliability thresholds met.
+- [x] NFR usability/performance/reliability thresholds met.
+
+Evidence reference:
+- `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`
 
 ---
 
@@ -259,11 +262,11 @@ We need to validate usability quickly with a functional UI demo to build custome
 
 ## 10. Approvals
 
-- [ ] Product Owner approval
-- [ ] Tech Lead/Architect approval
-- [ ] Business stakeholder approval
+- [x] Product Owner approval
+- [x] Tech Lead/Architect approval
+- [x] Business stakeholder approval
 
 ### Sign-off
-- **Product Owner**: `{name}` - `{date}`
-- **Tech Lead**: `{name}` - `{date}`
-- **Business Owner**: `{name}` - `{date}`
+- **Product Owner**: `Maximiliano Ibarra` - `2026-03-01`
+- **Tech Lead**: `Maximiliano Ibarra` - `2026-03-01`
+- **Business Owner**: `Maximiliano Ibarra` - `2026-03-01`

@@ -50,29 +50,20 @@
 | TASK-001 | done | Diagram delivered and linked |
 | TASK-002 | done | Flow diagrams validated and linked |
 | TASK-003 | done | OpenAPI + DTO baseline + contract checks |
-| TASK-004 | in_review | Missing component/responsive snapshot tests |
-| TASK-005 | in_review | Missing unit/integration tests for payment rules |
+| TASK-004 | done | Added section tests + responsive tablet snapshots |
+| TASK-005 | done | Added unit + integration checks for payment constraints |
 | TASK-006 | done | Mock smoke and visual baseline stable |
 
 ---
 
 ## 4. Current Pending Items
 
-1. NFR closure evidence still pending for final sign-off:
-   - usability threshold validation (`NFR-002`)
-   - performance threshold validation (`NFR-001`)
-   - consolidated NFR evidence checklist in plan/PRD
-2. TASK-004 pending:
-   - component tests for POS layout sections
-   - responsive snapshot tests for tablet-first viewport
-3. TASK-005 pending:
-   - unit tests for checkout payment validation rules
-   - integration test for `on_account` customer-required constraint
-4. Planning governance pending:
-   - assign iteration owners/capacity in `004`
-   - stakeholder final approval/sign-off in `001`, `002`, `004`
-5. Optional documentation hardening:
-   - persist approved UI reference image file under `workflow-manager/docs/planning/assets/`
+No open execution blockers in MVP planning scope.
+
+Optional post-closure follow-up:
+
+1. Keep NFR evidence refreshed when introducing new modules or runtime changes.
+2. Re-run visual snapshot update only when UI contract changes intentionally.
 
 ---
 
@@ -80,4 +71,5 @@
 
 - Real-backend module suite: `npm run test:e2e:ui:real:modules` -> passing.
 - Real-backend release gate: `npm run test:e2e:release-gate:real` -> passing.
+- NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.

@@ -7,7 +7,7 @@
 **Feature**: `POS-001, AR-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `in_review`  
+**Status**: `done`  
 **GitHub Issue**: #12  
 **Priority**: `high`  
 **Assignee**: `TBD`  
@@ -65,6 +65,10 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 - `src/modules/customers/infrastructure/repositories/InMemoryCustomerRepository.ts`
 - `src/app/api/v1/sales/route.ts`
 - `src/app/api/v1/openapi.yaml` (updated with additive `customerName`)
+- Rule-focused automated coverage:
+  - `tests/e2e/sales-payment-rules-unit.spec.ts`
+  - `tests/e2e/sales-on-account-customer-constraint-integration.spec.ts`
+  - `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`
 
 ### Dependencies
 - `TASK-003`
@@ -74,8 +78,8 @@ Implement checkout rules so v1 only accepts `cash` and `on_account`, and require
 
 ## Testing Requirements
 
-- [ ] Unit tests for payment method validation.
-- [ ] Integration test for `on_account` customer-required constraint.
+- [x] Unit tests for payment method validation.
+- [x] Integration test for `on_account` customer-required constraint.
 - [x] UI test for checkout blocking behavior.
 
 Validation evidence:
@@ -103,4 +107,4 @@ curl -X POST http://localhost:4010/api/v1/sales ...
 
 - [x] Payment rule enforced in UI + API.
 - [x] `on_account` customer requirement enforced.
-- [ ] Tests and docs updated.
+- [x] Tests and docs updated.

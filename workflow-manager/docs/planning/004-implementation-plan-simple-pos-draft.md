@@ -4,10 +4,10 @@
 
 **Document ID**: `004`  
 **File Name**: `004-implementation-plan-simple-pos-draft.md`  
-**Status**: `in_review`  
+**Status**: `approved`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.4`  
+**Version**: `0.5`  
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Input Documents**: `001-requirements-simple-pos-draft.md`, `002-prd-simple-pos-draft.md`, `003-backlog-simple-pos-draft.md`
@@ -193,8 +193,20 @@ The POS UI must follow the user-approved visual reference image provided in this
 **PBIs**: PBI-013, PBI-011, PBI-012  
 **Exit Criteria**
 - [x] Real-backend release gate green.
-- [ ] FR/NFR traceability checks pass.
+- [x] FR/NFR traceability checks pass.
 - [x] Reporting/history UI consumes real-backend endpoints with validated data.
+
+### 4.1 Iteration Owners and Capacity
+
+| Iteration | Owner | Capacity |
+| --- | --- | --- |
+| Iteration 0 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 1 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 2 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 3 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 4 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 5 | Maximiliano Ibarra | 1 engineer (full-time) |
+| Iteration 6 | Maximiliano Ibarra | 1 engineer (full-time) |
 
 ---
 
@@ -227,9 +239,12 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 
 ### Release Gates (Must Pass)
 - [x] FR coverage: FR-001..FR-015 mapped to implemented PBIs.
-- [ ] NFR coverage: NFR-001..NFR-007 validated with evidence.
-- [ ] No critical unresolved risk in planning risk list.
+- [x] NFR coverage: NFR-001..NFR-007 validated with evidence.
+- [x] No critical unresolved risk in planning risk list.
 - [x] API backward compatibility review completed for `/api/v1`.
+
+NFR evidence reference:
+- `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`
 
 ---
 
@@ -270,14 +285,14 @@ Rule: no medium/large feature starts implementation without updated diagrams lin
 ## 9. Planning Completion Checklist
 
 - [x] Feature docs created and linked from this plan.
-- [ ] Iteration owners and capacity assigned.
+- [x] Iteration owners and capacity assigned.
 - [x] GitHub issues created from PBIs/features.
 - [x] Diagram artifacts committed and linked.
 - [x] UI baseline reference linked in POS feature and related issues/PRs.
 - [x] All FR/UC items mapped to at least one integrated UI surface.
-- [ ] Stakeholder review completed.
+- [x] Stakeholder review completed.
 
 ### Sign-off
-- **Product Owner**: `{name}` - `{date}`
-- **Tech Lead / Architect**: `{name}` - `{date}`
-- **Business Owner**: `{name}` - `{date}`
+- **Product Owner**: `Maximiliano Ibarra` - `2026-03-01`
+- **Tech Lead / Architect**: `Maximiliano Ibarra` - `2026-03-01`
+- **Business Owner**: `Maximiliano Ibarra` - `2026-03-01`

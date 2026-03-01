@@ -19,10 +19,8 @@
 ## 1. Source of Truth
 
 - Design approved by the project owner from the provided UI image (tablet POS layout).
-- Target placement for image file in repository:
+- Canonical image file in repository:
   - `workflow-manager/docs/planning/assets/pos-ui-reference-v1.png`
-
-Note: until the file is stored in repository, this document remains the textual contract for visual parity.
 
 ---
 

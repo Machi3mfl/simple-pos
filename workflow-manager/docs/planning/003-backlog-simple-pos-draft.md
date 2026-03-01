@@ -4,11 +4,11 @@
 
 **Document ID**: `003`  
 **File Name**: `003-backlog-simple-pos-draft.md`  
-**Status**: `in_review`  
+**Status**: `approved`  
 **GitHub Issue**: #2  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.7`  
+**Version**: `0.8`  
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Linked PRD**: `workflow-manager/docs/planning/002-prd-simple-pos-draft.md`
@@ -184,7 +184,7 @@
 - [x] Unit/integration/E2E tests added as required.
 - [x] Architecture rules respected (Hexagonal boundaries).
 - [x] Documentation updated (PRD/backlog/feature/task links).
-- [ ] Reviewed and accepted by stakeholder.
+- [x] Reviewed and accepted by stakeholder.
 
 ---
 

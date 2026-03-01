@@ -7,7 +7,7 @@
 **Feature**: `POS-001`  
 **Entity**: `task`  
 **Pull Request**: `TBD`  
-**Status**: `in_review`  
+**Status**: `done`  
 **GitHub Issue**: #14  
 **Priority**: `high`  
 **Assignee**: `TBD`  
@@ -58,6 +58,12 @@ Build the tablet-first static UI structure following the approved visual referen
 - `src/modules/sales/presentation/components/OrderSummaryPanel.tsx`
 - `src/app/(admin)/pos/page.tsx`
 - `src/app/page.tsx` now redirects to `/pos`
+- Layout section test coverage:
+  - `tests/e2e/pos-layout-sections.spec.ts`
+- Responsive visual baseline:
+  - `tests/e2e/pos-visual-baseline.spec.ts`
+  - `tests/e2e/pos-visual-baseline.spec.ts-snapshots/pos-tablet-layout-darwin.png`
+  - `tests/e2e/pos-visual-baseline.spec.ts-snapshots/pos-tablet-layout-compact-darwin.png`
 
 ### Dependencies
 - `TASK-001`
@@ -68,8 +74,8 @@ Build the tablet-first static UI structure following the approved visual referen
 
 ## Testing Requirements
 
-- [ ] Component tests for layout sections.
-- [ ] Responsive snapshot tests for tablet-first viewport.
+- [x] Component tests for layout sections.
+- [x] Responsive snapshot tests for tablet-first viewport.
 - [x] Manual visual parity check against approved reference.
 
 Validation evidence:
@@ -95,4 +101,4 @@ npm run build
 
 - [x] Layout implemented with three-zone structure.
 - [x] UI baseline parity reviewed.
-- [ ] Tests and docs updated.
+- [x] Tests and docs updated.

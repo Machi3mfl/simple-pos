@@ -4,11 +4,11 @@
 
 **Document ID**: `001`  
 **File Name**: `001-requirements-simple-pos-draft.md`  
-**Status**: `in_review`  
+**Status**: `approved`  
 **Priority**: `high`  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.8`  
+**Version**: `0.9`  
 **Created At**: `2026-02-27`  
 **Last Updated**: `2026-03-01`  
 **Related Epic/Feature**: `pending-definition`  
@@ -497,7 +497,7 @@ Delivery note: each detailed UC below inherits the mandatory integrated-slice ev
 
 - [x] Scope approved by business owner
 - [x] Functional requirements validated
-- [ ] Non-functional requirements validated
+- [x] Non-functional requirements validated
 - [x] High-level use cases reviewed
 - [x] Detailed use cases reviewed
 - [x] Traceability matrix completed
@@ -505,9 +505,9 @@ Delivery note: each detailed UC below inherits the mandatory integrated-slice ev
 - [x] Ready to create planning document
 
 ### Sign-off
-- **Business Owner**: `{name}` - `{date}`
-- **Product Owner**: `{name}` - `{date}`
-- **Tech Lead / Architect**: `{name}` - `{date}`
+- **Business Owner**: `Maximiliano Ibarra` - `2026-03-01`
+- **Product Owner**: `Maximiliano Ibarra` - `2026-03-01`
+- **Tech Lead / Architect**: `Maximiliano Ibarra` - `2026-03-01`
 
 ---
 
