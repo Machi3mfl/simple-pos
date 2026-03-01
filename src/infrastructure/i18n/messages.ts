@@ -10,6 +10,7 @@ const spanishMessages = {
     nav: {
       sales: "Ventas",
       orders: "Pedidos",
+      products: "Productos",
       catalog: "Catálogo",
       inventory: "Inventario",
       receivables: "Deudas",
@@ -54,7 +55,8 @@ const spanishMessages = {
     actions: {
       refresh: "Actualizar",
       cancel: "Cancelar",
-      openCatalog: "Abrir catálogo",
+      close: "Cerrar",
+      openCatalog: "Abrir productos",
       processPayment: "Ir a cobrar",
       confirmPayment: "Confirmar cobro",
       retryOfflineSync: "Reintentar sincronización",
@@ -132,7 +134,7 @@ const spanishMessages = {
       title: "Elegir categorías",
       allProducts: "Todos los productos",
       emptyTitle: "Todavía no hay productos",
-      emptyDescription: "Cargá productos desde Catálogo para llenar esta vista.",
+      emptyDescription: "Cargá productos desde Productos para llenar esta vista.",
     },
     checkout: {
       orderListTitle: "Lista del pedido",
@@ -179,6 +181,153 @@ const spanishMessages = {
     registerPaymentSuccess: (saleId: string, amount: string): string =>
       `Pago registrado para ${saleId}: ${amount}.`,
   },
+  productsWorkspace: {
+    title: "Productos e inventario",
+    searchPlaceholder: "Buscar por nombre, SKU o código",
+    listTitle: "Listado de productos",
+    detailTitle: "Ficha del producto",
+    movementHistoryTitle: "Movimientos recientes",
+    quickActionsTitle: "Acciones rápidas",
+    emptyState: "No hay productos para los filtros actuales.",
+    loadError: "No se pudo cargar el workspace de productos.",
+    movementsLoadError: "No se pudieron cargar los movimientos del producto.",
+    forms: {
+      activeOnlyHelp: "Solo visible en listados activos",
+    },
+    summary: {
+      withStock: "Con stock",
+      lowStock: "Stock bajo",
+      outOfStock: "Sin stock",
+      stockValue: "Valor estimado",
+    },
+    filters: {
+      all: "Todos",
+      withStock: "Con stock",
+      lowStock: "Stock bajo",
+      outOfStock: "Sin stock",
+      activeOnly: "Solo activos",
+      allCategories: "Todas las categorías",
+      orderByStock: "Ordenar por stock",
+      orderByName: "Ordenar por nombre",
+      orderByRecent: "Último movimiento",
+    },
+    categories: {
+      beverages: "Bebidas",
+      snacks: "Snacks",
+      candy: "Golosinas",
+      pantry: "Almacén",
+      other: "Otros",
+    },
+    actions: {
+      newProduct: "Nuevo producto",
+      bulkProducts: "Carga masiva",
+      bulkStock: "Stock masivo",
+      addStock: "Agregar stock",
+      adjustStock: "Ajustar stock",
+      editProduct: "Editar producto",
+      archiveProduct: "Archivar",
+      viewAllMovements: "Ver todos los movimientos",
+    },
+    dialogs: {
+      detailTitle: "Detalle del producto",
+      createTitle: "Nuevo producto",
+      editTitle: "Editar producto",
+      stockTitle: "Movimiento de stock",
+      bulkProductsTitle: "Carga masiva de productos",
+      bulkStockTitle: "Carga masiva de stock",
+    },
+    bulk: {
+      productsPasteHint:
+        "Pegá filas con este orden: `name, sku, categoryId, price, cost, initialStock, minStock, imageUrl`.",
+      productsPlaceholder:
+        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,drink,2500,1200,18,6,https://...\nAlfajor,GOL-010,snack,1500,700,24,8,",
+      stockPasteHint:
+        "Pegá filas con este orden: `sku, movementType, quantity, unitCost, reason`.",
+      stockPlaceholder:
+        "sku,movementType,quantity,unitCost,reason\nBEB-101,inbound,24,1200,reposicion\nGOL-010,outbound,3,,conteo",
+    },
+    fields: {
+      name: "Nombre visible",
+      sku: "SKU / código",
+      barcode: "Código de barras",
+      category: "Categoría",
+      price: "Precio de venta",
+      cost: "Costo",
+      minStock: "Stock mínimo",
+      minStockShort: "Mín.",
+      currentStock: "Stock actual",
+      currentStockShort: "Stock",
+      quantity: "Cantidad",
+      supplier: "Proveedor / remito",
+      image: "Imagen del producto",
+    },
+    status: {
+      inStock: "En stock",
+      lowStock: "Reposición sugerida",
+      outOfStock: "Sin stock",
+      inactive: "Inactivo",
+    },
+    bulkCards: {
+      products:
+        "Subir CSV o pegar una tabla para crear muchos productos con validación previa.",
+      stock:
+        "Registrar ingresos o ajustes por lote con una sola confirmación y revisión previa.",
+    },
+    detail: {
+      salesPrice: "Precio de venta",
+      averageCost: "Costo promedio",
+      minStock: "Stock mínimo",
+      sku: "SKU",
+      supplier: "Proveedor",
+      lastMovement: "Último movimiento",
+      noMovement: "Sin movimientos",
+      noMovementHistory: "Sin movimientos registrados.",
+    },
+    modals: {
+      wizardSteps: {
+        stepOne: "1. Plantilla",
+        stepTwo: "2. Validación",
+        stepThree: "3. Confirmación",
+      },
+      stockModes: {
+        inbound: "Ingreso",
+        adjustment: "Ajuste",
+        outbound: "Salida",
+      },
+      stockSummaryTitle: "Resumen antes de confirmar",
+    },
+    pagination: {
+      previous: "Anterior",
+      next: "Siguiente",
+      pageLabel: (current: number, total: number): string => `Página ${current} de ${total}`,
+    },
+    errors: {
+      createProduct: "No se pudo crear el producto.",
+      updateProduct: "No se pudo guardar el producto.",
+      archiveProduct: "No se pudo archivar el producto.",
+      stockRegister: "No se pudo registrar el movimiento de stock.",
+      bulkProductsEmpty: "Pegá al menos una fila para la carga masiva.",
+      bulkProducts: "No se pudo procesar la carga masiva.",
+      bulkStockEmpty: "Pegá al menos una fila para el stock masivo.",
+      bulkStock: "No se pudo procesar el stock masivo.",
+    },
+    feedback: {
+      productCreated: (name: string): string => `Producto creado: ${name}.`,
+      productUpdated: (name: string): string => `Producto actualizado: ${name}.`,
+      productArchived: (name: string): string => `Producto archivado: ${name}.`,
+      stockRegistered: (name: string): string => `Movimiento registrado para ${name}.`,
+      archiveConfirm: (name: string): string =>
+        `¿Archivar ${name}? Seguirá disponible en histórico pero no en la lista activa.`,
+      bulkProductsImported: (count: number, invalid: number): string =>
+        invalid > 0
+          ? `Carga masiva completada: ${count} productos creados, ${invalid} filas con error.`
+          : `Carga masiva completada: ${count} productos creados.`,
+      bulkStockImported: (count: number, invalid: number): string =>
+        invalid > 0
+          ? `Stock masivo aplicado: ${count} movimientos correctos, ${invalid} filas con error.`
+          : `Stock masivo aplicado: ${count} movimientos correctos.`,
+    },
+  },
   catalog: {
     onboarding: {
       title: "Alta guiada de productos",
@@ -194,6 +343,8 @@ const spanishMessages = {
       invalidPrice: "El precio debe ser mayor a cero.",
       invalidInitialStock: "El stock inicial debe ser un entero mayor o igual a cero.",
       invalidCost: "El costo debe ser mayor a cero cuando se informa.",
+      costRequiredForInitialStock:
+        "Si cargás stock inicial, también tenés que informar el costo.",
       createError: "No se pudo crear el producto.",
       createSuccess: (productName: string): string => `Producto creado: ${productName}`,
       emptyProducts: "Todavía no hay productos.",

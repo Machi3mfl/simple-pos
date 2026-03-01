@@ -55,7 +55,7 @@ export function ProductOnboardingPanel({
   const [categoryId, setCategoryId] = useState<string>("main");
   const [price, setPrice] = useState<string>("10");
   const [cost, setCost] = useState<string>("");
-  const [initialStock, setInitialStock] = useState<string>("1");
+  const [initialStock, setInitialStock] = useState<string>("0");
   const [imageUrl, setImageUrl] = useState<string>("");
   const [products, setProducts] = useState<readonly ProductListItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -132,6 +132,12 @@ export function ProductOnboardingPanel({
       return;
     }
 
+    if (parsedStock > 0 && parsedCost === undefined) {
+      setIsError(true);
+      setFeedback(messages.catalog.onboarding.costRequiredForInitialStock);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -164,7 +170,7 @@ export function ProductOnboardingPanel({
       setName("");
       setPrice("10");
       setCost("");
-      setInitialStock("1");
+      setInitialStock("0");
       setImageUrl("");
       await loadProducts();
       await onProductCreated?.();

@@ -2,9 +2,8 @@
 
 import {
   BarChart3,
-  Boxes,
   CloudOff,
-  Package,
+  PackagePlus,
   ReceiptText,
   ShoppingCart,
   Wallet,
@@ -18,6 +17,7 @@ import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { ProductOnboardingPanel } from "@/modules/catalog/presentation/components/ProductOnboardingPanel";
 import { StockMovementPanel } from "@/modules/inventory/presentation/components/StockMovementPanel";
+import { ProductsInventoryPanel } from "@/modules/products/presentation/components/ProductsInventoryPanel";
 import { OrdersPanel } from "@/modules/reporting/presentation/components/OrdersPanel";
 import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
 import { OfflineSyncPanel } from "@/modules/sync/presentation/components/OfflineSyncPanel";
@@ -134,16 +134,22 @@ export function PosLayout({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
-  const activeNavItemId = useMemo(
+  const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
+  );
+  const activeNavItemId = useMemo<PosWorkspaceId>(
+    () =>
+      currentWorkspace === "catalog" || currentWorkspace === "inventory"
+        ? "products"
+        : currentWorkspace,
+    [currentWorkspace],
   );
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
       { id: "sales", label: messages.shell.nav.sales, icon: ShoppingCart },
       { id: "orders", label: messages.shell.nav.orders, icon: ReceiptText },
-      { id: "catalog", label: messages.shell.nav.catalog, icon: Package },
-      { id: "inventory", label: messages.shell.nav.inventory, icon: Boxes },
+      { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
       { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
@@ -311,9 +317,9 @@ export function PosLayout({
   }, []);
 
   const renderNonSalesWorkspace = (): JSX.Element => {
-    if (activeNavItemId === "catalog") {
+    if (currentWorkspace === "catalog") {
       return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <div className="grid gap-4 xl:grid-cols-2">
             <ProductOnboardingPanel
               onProductCreated={handleCatalogContentChanged}
@@ -328,40 +334,44 @@ export function PosLayout({
       );
     }
 
-    if (activeNavItemId === "inventory") {
+    if (currentWorkspace === "products") {
+      return <ProductsInventoryPanel />;
+    }
+
+    if (currentWorkspace === "inventory") {
       return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <StockMovementPanel refreshToken={catalogRefreshToken} />
         </section>
       );
     }
 
-    if (activeNavItemId === "receivables") {
+    if (currentWorkspace === "receivables") {
       return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <DebtManagementPanel refreshToken={salesRefreshToken} />
         </section>
       );
     }
 
-    if (activeNavItemId === "reporting") {
+    if (currentWorkspace === "reporting") {
       return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <ReportingPanel />
         </section>
       );
     }
 
-    if (activeNavItemId === "orders") {
+    if (currentWorkspace === "orders") {
       return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <OrdersPanel refreshToken={salesRefreshToken} />
         </section>
       );
     }
 
     return (
-      <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:overflow-y-auto lg:p-6">
+      <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
         <OfflineSyncPanel />
       </section>
     );
@@ -369,7 +379,7 @@ export function PosLayout({
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
-      <div className="grid h-full w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
+      <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
         <LeftNavRail
           items={navItems}
           activeItemId={activeNavItemId}
@@ -380,7 +390,7 @@ export function PosLayout({
           }}
         />
 
-        {activeNavItemId === "sales" ? (
+        {currentWorkspace === "sales" ? (
           <>
             <ProductCatalogPanel
               categories={categories}
@@ -392,7 +402,7 @@ export function PosLayout({
               onCategorySelect={setActiveCategoryId}
               onProductSelect={addProductToCart}
               onOpenCatalogWorkspace={() => {
-                router.push(workspacePathById.catalog);
+                router.push(workspacePathById.products);
               }}
             />
             <CheckoutPanel

@@ -22,7 +22,7 @@ export function LeftNavRail({
   const { messages } = useI18n();
 
   return (
-    <aside className="bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:p-6">
+    <aside className="overflow-y-auto bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:min-h-0 lg:p-6">
       <div className="mt-4 flex items-center gap-3 px-1">
         <div className="flex size-12 items-center justify-center rounded-full bg-[#222b3a] text-sm font-semibold text-slate-200">
           👩🏼
