@@ -11,15 +11,17 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   const productName = `Reporting UI ${marker}`;
   const customerName = `Reporting User ${marker}`;
 
-  await page.goto("/sales");
-
-  await page.getByTestId("nav-item-catalog").click();
-  await page.getByTestId("onboarding-name-input").fill(productName);
-  await page.getByTestId("onboarding-category-select").selectOption("snack");
-  await page.getByTestId("onboarding-price-input").fill("10");
-  await page.getByTestId("onboarding-stock-input").fill("50");
-  await page.getByTestId("onboarding-submit-button").click();
-  await expect(page.getByTestId("onboarding-feedback")).toContainText(
+  await page.goto("/products");
+  await page.getByTestId("products-workspace-open-create-button").click();
+  await page.getByTestId("products-workspace-create-name-input").fill(productName);
+  await page.getByTestId("products-workspace-create-sku-input").fill(`RPT-${marker.slice(-6)}`);
+  await page.getByTestId("products-workspace-create-category-input").fill("snack");
+  await page.getByTestId("products-workspace-create-price-input").fill("10");
+  await page.getByTestId("products-workspace-create-cost-input").fill("4");
+  await page.getByTestId("products-workspace-create-stock-input").fill("50");
+  await page.getByTestId("products-workspace-create-min-stock-input").fill("5");
+  await page.getByTestId("products-workspace-create-submit-button").click();
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     `Producto creado: ${productName}`,
   );
 

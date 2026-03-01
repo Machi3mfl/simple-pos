@@ -5,12 +5,12 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
 }) => {
   const uniqueProductName = `E2E Catalog ${Date.now()}`;
 
-  await page.goto("/sales");
-  await page.getByTestId("nav-item-catalog").click();
+  await page.goto("/catalog");
 
   await page.getByTestId("onboarding-name-input").fill(uniqueProductName);
   await page.getByTestId("onboarding-category-select").selectOption("dessert");
   await page.getByTestId("onboarding-price-input").fill("40");
+  await page.getByTestId("onboarding-cost-input").fill("18");
   await page.getByTestId("onboarding-stock-input").fill("5");
   await page.getByTestId("onboarding-submit-button").click();
 
@@ -40,7 +40,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
     "Lote aplicado: 1 productos actualizados.",
   );
 
-  await page.getByTestId("nav-item-sales").click();
+  await page.goto("/sales");
   await page.getByLabel("Buscar en el menú").fill(uniqueProductName);
 
   const productCard = page

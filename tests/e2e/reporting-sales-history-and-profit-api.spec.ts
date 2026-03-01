@@ -41,6 +41,7 @@ test.describe("reporting api", () => {
         name: `Report Product A ${marker}`,
         categoryId: "snack",
         price: 10,
+        cost: 4,
         initialStock: 30,
       },
     });
@@ -57,6 +58,7 @@ test.describe("reporting api", () => {
         name: `Report Product B ${marker}`,
         categoryId: "drink",
         price: 10,
+        cost: 4,
         initialStock: 20,
       },
     });

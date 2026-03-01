@@ -21,6 +21,8 @@ Mobile-friendly navigation map for the full project workflow.
    - [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md)
    - [CATALOG-001](./features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md)
    - [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md)
+   - [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md)
+   - [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md)
    - [AR-001](./features/AR-001-on-account-debt-and-payments-draft.md)
    - [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md)
    - [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md)

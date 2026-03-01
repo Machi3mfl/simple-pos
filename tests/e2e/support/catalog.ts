@@ -7,6 +7,7 @@ interface CreateCatalogProductInput {
   readonly categoryId?: string;
   readonly price?: number;
   readonly initialStock?: number;
+  readonly cost?: number;
 }
 
 export async function createCatalogProduct(
@@ -18,6 +19,7 @@ export async function createCatalogProduct(
       name: input.name,
       categoryId: input.categoryId ?? "snack",
       price: input.price ?? 10,
+      cost: input.cost ?? 5,
       initialStock: input.initialStock ?? 10,
     },
   });

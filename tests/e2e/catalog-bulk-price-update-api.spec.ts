@@ -30,6 +30,7 @@ async function createProduct(
     readonly categoryId: string;
     readonly price: number;
     readonly initialStock: number;
+    readonly cost?: number;
   },
 ): Promise<void> {
   const response = await request.post("/api/v1/products", { data: input });
@@ -42,6 +43,7 @@ test.describe("catalog bulk price update api", () => {
       name: "Preview Item A",
       categoryId: "snack",
       price: 100,
+      cost: 40,
       initialStock: 10,
     });
 
@@ -49,6 +51,7 @@ test.describe("catalog bulk price update api", () => {
       name: "Preview Item B",
       categoryId: "snack",
       price: 200,
+      cost: 80,
       initialStock: 10,
     });
 
@@ -99,6 +102,7 @@ test.describe("catalog bulk price update api", () => {
       name: "Apply Item A",
       categoryId: "drink",
       price: 50,
+      cost: 20,
       initialStock: 10,
     });
 
@@ -106,6 +110,7 @@ test.describe("catalog bulk price update api", () => {
       name: "Apply Item B",
       categoryId: "drink",
       price: 70,
+      cost: 28,
       initialStock: 10,
     });
 
@@ -157,6 +162,7 @@ test.describe("catalog bulk price update api", () => {
       name: "Conflict Item",
       categoryId: "main",
       price: 10,
+      cost: 4,
       initialStock: 10,
     });
 

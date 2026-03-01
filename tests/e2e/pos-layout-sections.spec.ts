@@ -22,11 +22,13 @@ test("renders core POS layout sections and controls", async ({ page }) => {
   await page.goto("/sales");
 
   await expect(page.getByTestId("nav-item-sales")).toBeVisible();
-  await expect(page.getByTestId("nav-item-catalog")).toBeVisible();
-  await expect(page.getByTestId("nav-item-inventory")).toBeVisible();
+  await expect(page.getByTestId("nav-item-orders")).toBeVisible();
+  await expect(page.getByTestId("nav-item-products")).toBeVisible();
   await expect(page.getByTestId("nav-item-receivables")).toBeVisible();
   await expect(page.getByTestId("nav-item-reporting")).toBeVisible();
   await expect(page.getByTestId("nav-item-sync")).toBeVisible();
+  await expect(page.getByTestId("nav-item-catalog")).toHaveCount(0);
+  await expect(page.getByTestId("nav-item-inventory")).toHaveCount(0);
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByLabel("Buscar en el menú")).toBeVisible();

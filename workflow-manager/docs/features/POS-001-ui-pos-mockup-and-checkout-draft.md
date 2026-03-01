@@ -86,7 +86,8 @@ curl -X POST /api/v1/sales \
 
 ## Current Output
 
-- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/orders`, `/catalog`, `/inventory`, `/receivables`, `/reporting`, `/sync`)
+- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/orders`, `/products`, `/receivables`, `/reporting`, `/sync`)
+- Legacy admin fallback routes kept outside the main rail: `/catalog`, `/inventory`
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
@@ -95,11 +96,13 @@ curl -X POST /api/v1/sales \
 - Integrated side-rail workspaces in `PosLayout`:
   - `Sales`: POS catalog + cart + checkout
   - `Orders`: all recorded sales shown as a list snapshot
-  - `Catalog`: onboarding + bulk price update UI
-  - `Inventory`: stock movement UI
+  - `Products`: unified real workspace for products and inventory operations
   - `Receivables`: debt management UI
   - `Reporting`: reporting/history UI
   - `Sync`: offline queue/sync UI
+- Legacy direct routes outside the rail:
+  - `Catalog`: onboarding + bulk price update UI
+  - `Inventory`: stock movement UI
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/sales`
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
@@ -108,7 +111,7 @@ curl -X POST /api/v1/sales \
   - Cart quantity controls (`+` / `-`) update totals in real time
   - Checkout uses real product IDs from catalog data
   - Sales starts with an empty order list; no demo cart items are preloaded.
-  - Sales no longer auto-seeds demo catalog products; empty catalog state routes operator to Catalog.
+  - Sales no longer auto-seeds demo catalog products; empty catalog state routes operator to Products.
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation

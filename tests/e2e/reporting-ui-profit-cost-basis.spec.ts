@@ -25,37 +25,46 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   const beforeCost = parseMoney(beforeCostText);
   const beforeProfit = parseMoney(beforeProfitText);
 
-  await page.getByTestId("nav-item-catalog").click();
-  await page.getByTestId("onboarding-name-input").fill(productName);
-  await page.getByTestId("onboarding-category-select").selectOption("snack");
-  await page.getByTestId("onboarding-price-input").fill("25");
-  await page.getByTestId("onboarding-cost-input").fill("7");
-  await page.getByTestId("onboarding-stock-input").fill("0");
-  await page.getByTestId("onboarding-submit-button").click();
-  await expect(page.getByTestId("onboarding-feedback")).toContainText(
+  await page.getByTestId("nav-item-products").click();
+  await page.getByTestId("products-workspace-open-create-button").click();
+  await page.getByTestId("products-workspace-create-name-input").fill(productName);
+  await page.getByTestId("products-workspace-create-sku-input").fill(`PFT-${marker.slice(-6)}`);
+  await page.getByTestId("products-workspace-create-category-input").fill("snack");
+  await page.getByTestId("products-workspace-create-price-input").fill("25");
+  await page.getByTestId("products-workspace-create-cost-input").fill("7");
+  await page.getByTestId("products-workspace-create-stock-input").fill("0");
+  await page.getByTestId("products-workspace-create-min-stock-input").fill("2");
+  await page.getByTestId("products-workspace-create-submit-button").click();
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     `Producto creado: ${productName}`,
   );
 
-  await page.getByTestId("nav-item-inventory").click();
-  await page.getByTestId("inventory-product-select").selectOption({ label: productName });
+  const productCard = page
+    .locator('[data-testid^="products-workspace-card-"]')
+    .filter({ hasText: productName })
+    .first();
+  await expect(productCard).toBeVisible();
+  await productCard.click();
 
-  await page.getByTestId("inventory-movement-type-select").selectOption("inbound");
-  await page.getByTestId("inventory-quantity-input").fill("5");
-  await page.getByTestId("inventory-unit-cost-input").fill("7");
-  await page.getByTestId("inventory-reason-input").fill("profit_cost_basis_inbound");
-  await page.getByTestId("inventory-submit-button").click();
-  await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Movimiento de stock registrado: ingreso.",
+  await page.getByTestId("products-workspace-open-add-stock-button").click();
+  await page.getByTestId("products-workspace-stock-quantity-input").fill("5");
+  await page.getByTestId("products-workspace-stock-unit-cost-input").fill("7");
+  await page.getByTestId("products-workspace-stock-reason-input").fill("profit_cost_basis_inbound");
+  await page.getByTestId("products-workspace-stock-submit-button").click();
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    `Movimiento registrado para ${productName}.`,
   );
 
-  await page.getByTestId("inventory-movement-type-select").selectOption("outbound");
-  await page.getByTestId("inventory-quantity-input").fill("2");
-  await page.getByTestId("inventory-reason-input").fill("profit_cost_basis_outbound");
-  await page.getByTestId("inventory-submit-button").click();
-  await expect(page.getByTestId("inventory-feedback")).toContainText(
-    "Movimiento de stock registrado: salida.",
+  await page.getByTestId("products-workspace-open-adjust-stock-button").click();
+  await page.getByTestId("products-workspace-stock-mode-outbound").click();
+  await page.getByTestId("products-workspace-stock-quantity-input").fill("2");
+  await page.getByTestId("products-workspace-stock-reason-input").fill("profit_cost_basis_outbound");
+  await page.getByTestId("products-workspace-stock-submit-button").click();
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    `Movimiento registrado para ${productName}.`,
   );
 
+  await page.getByTestId("products-workspace-dialog-close").click();
   await page.getByTestId("nav-item-reporting").click();
   await page.getByLabel("Hasta").fill(tomorrow);
   await page.getByTestId("reporting-apply-filters-button").click();

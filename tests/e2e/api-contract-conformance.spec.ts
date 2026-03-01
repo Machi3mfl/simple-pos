@@ -209,6 +209,7 @@ test.describe("API contract conformance", () => {
       name: "Product Example",
       categoryId: "snack",
       price: 10,
+      cost: 4,
       initialStock: 3,
     });
     expect(validCreateProduct.success).toBe(true);

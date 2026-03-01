@@ -32,6 +32,7 @@ test.describe("catalog onboarding api", () => {
         name: "Yerba Mate",
         categoryId: "drink",
         price: 12.5,
+        cost: 5,
         initialStock: 15,
       },
     });
@@ -56,6 +57,7 @@ test.describe("catalog onboarding api", () => {
         name: "Soda Limon",
         categoryId: "drink",
         price: 10,
+        cost: 4,
         initialStock: 8,
       },
     });
@@ -80,6 +82,7 @@ test.describe("catalog onboarding api", () => {
         name: "Alfajor Premium",
         categoryId: "snack",
         price: 4.25,
+        cost: 2,
         initialStock: 30,
         imageUrl: customImageUrl,
       },

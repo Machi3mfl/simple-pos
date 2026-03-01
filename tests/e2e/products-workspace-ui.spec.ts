@@ -1,0 +1,92 @@
+import { expect, test } from "@playwright/test";
+
+function uniqueMarker(): string {
+  return `products-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
+}
+
+test("creates, edits, stocks and bulk imports products from the Products workspace", async ({
+  page,
+}) => {
+  const marker = uniqueMarker();
+  const singleProductName = `Workspace UI ${marker}`;
+  const singleProductSku = `WUI-${marker.slice(-6)}`;
+  const bulkProductName = `Bulk UI ${marker}`;
+  const bulkProductSku = `BUI-${marker.slice(-6)}`;
+
+  await page.goto("/sales");
+  await page.getByTestId("nav-item-products").click();
+
+  await page.getByTestId("products-workspace-open-create-button").click();
+  await page.getByTestId("products-workspace-create-name-input").fill(singleProductName);
+  await page.getByTestId("products-workspace-create-sku-input").fill(singleProductSku);
+  await page.getByTestId("products-workspace-create-category-input").fill("snack");
+  await page.getByTestId("products-workspace-create-price-input").fill("80");
+  await page.getByTestId("products-workspace-create-cost-input").fill("30");
+  await page.getByTestId("products-workspace-create-stock-input").fill("4");
+  await page.getByTestId("products-workspace-create-min-stock-input").fill("2");
+  await page.getByTestId("products-workspace-create-submit-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    `Producto creado: ${singleProductName}.`,
+  );
+
+  const singleCard = page
+    .locator('[data-testid^="products-workspace-card-"]')
+    .filter({ hasText: singleProductName })
+    .first();
+  await expect(singleCard).toBeVisible();
+
+  await singleCard.click();
+  await page.getByTestId("products-workspace-open-edit-button").click();
+  await page.getByTestId("products-workspace-edit-price-input").fill("95");
+  await page.getByTestId("products-workspace-edit-min-stock-input").fill("3");
+  await page.getByTestId("products-workspace-edit-submit-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    `Producto actualizado: ${singleProductName}.`,
+  );
+  await expect(singleCard).toContainText("$95.00");
+
+  await singleCard.click();
+  await page.getByTestId("products-workspace-open-add-stock-button").click();
+  await page.getByTestId("products-workspace-stock-quantity-input").fill("3");
+  await page.getByTestId("products-workspace-stock-unit-cost-input").fill("35");
+  await page.getByTestId("products-workspace-stock-reason-input").fill("reposicion");
+  await page.getByTestId("products-workspace-stock-submit-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    `Movimiento registrado para ${singleProductName}.`,
+  );
+  await expect(page.getByText("Ingreso").first()).toBeVisible();
+  await page.getByTestId("products-workspace-dialog-close").click();
+
+  await page.getByTestId("products-workspace-open-bulk-products-button").click();
+  await page.getByTestId("products-workspace-bulk-products-input").fill(
+    `name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\n${bulkProductName},${bulkProductSku},drink,60,20,5,2,`,
+  );
+  await page.getByTestId("products-workspace-bulk-products-submit-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    "Carga masiva completada: 1 productos creados.",
+  );
+
+  await page.getByTestId("products-workspace-search-input").fill(bulkProductSku);
+  const bulkCard = page
+    .locator('[data-testid^="products-workspace-card-"]')
+    .filter({ hasText: bulkProductName })
+    .first();
+  await expect(bulkCard).toBeVisible();
+
+  await page.getByTestId("products-workspace-open-bulk-stock-button").click();
+  await page.getByTestId("products-workspace-bulk-stock-input").fill(
+    `sku,movementType,quantity,unitCost,reason\n${bulkProductSku},inbound,2,20,reposicion`,
+  );
+  await page.getByTestId("products-workspace-bulk-stock-submit-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    "Stock masivo aplicado: 1 movimientos correctos.",
+  );
+
+  await bulkCard.click();
+  await expect(page.getByText("7").first()).toBeVisible();
+});

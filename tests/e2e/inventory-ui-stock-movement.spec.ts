@@ -3,19 +3,19 @@ import { expect, test } from "@playwright/test";
 test("registers inventory movement from UI and shows validation feedback", async ({ page }) => {
   const uniqueProductName = `Inventory Seed ${Date.now()}`;
 
-  await page.goto("/sales");
-  await page.getByTestId("nav-item-catalog").click();
+  await page.goto("/catalog");
 
   await page.getByTestId("onboarding-name-input").fill(uniqueProductName);
   await page.getByTestId("onboarding-category-select").selectOption("main");
   await page.getByTestId("onboarding-price-input").fill("10");
+  await page.getByTestId("onboarding-cost-input").fill("4");
   await page.getByTestId("onboarding-stock-input").fill("5");
   await page.getByTestId("onboarding-submit-button").click();
   await expect(page.getByTestId("onboarding-feedback")).toContainText(
     `Producto creado: ${uniqueProductName}`,
   );
 
-  await page.getByTestId("nav-item-inventory").click();
+  await page.goto("/inventory");
 
   await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
   await expect(page.getByTestId("inventory-product-select")).toBeVisible();
@@ -60,7 +60,7 @@ test("registers inventory movement from UI and shows validation feedback", async
     page.getByRole("heading", { name: "Historial y analítica de ventas" }),
   ).toBeVisible();
 
-  await page.getByTestId("nav-item-inventory").click();
+  await page.goto("/inventory");
   await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
   await page.getByRole("button", { name: "Actualizar" }).click();
 
