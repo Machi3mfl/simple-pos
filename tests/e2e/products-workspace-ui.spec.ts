@@ -19,7 +19,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(singleProductName);
   await page.getByTestId("products-workspace-create-sku-input").fill(singleProductSku);
-  await page.getByTestId("products-workspace-create-category-input").fill("snack");
+  await page.getByTestId("products-workspace-create-category-input").selectOption("snack");
   await page.getByTestId("products-workspace-create-price-input").fill("80");
   await page.getByTestId("products-workspace-create-cost-input").fill("30");
   await page.getByTestId("products-workspace-create-stock-input").fill("4");
@@ -34,6 +34,18 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     .locator('[data-testid^="products-workspace-card-"]')
     .filter({ hasText: singleProductName })
     .first();
+  await expect(singleCard).toBeVisible();
+
+  await page.getByTestId("nav-item-sales").click();
+  await page.getByLabel("Buscar en el menú").fill(singleProductName);
+  const salesCard = page
+    .locator('[data-testid^="product-card-"]')
+    .filter({ hasText: singleProductName })
+    .first();
+  await expect(salesCard).toBeVisible();
+
+  await page.getByTestId("nav-item-products").click();
+  await page.getByTestId("products-workspace-search-input").fill(singleProductSku);
   await expect(singleCard).toBeVisible();
 
   await singleCard.click();
@@ -87,6 +99,40 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     "Stock masivo aplicado: 1 movimientos correctos.",
   );
 
-  await bulkCard.click();
-  await expect(page.getByText("7").first()).toBeVisible();
+  await page.getByTestId("products-workspace-open-bulk-prices-button").click();
+  await page.getByTestId("bulk-scope-select").selectOption("selection");
+  await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
+  await page.getByTestId("bulk-value-input").fill("5");
+
+  const bulkPriceSelectionItem = page
+    .locator('[data-testid^="bulk-selection-item-"]')
+    .filter({ hasText: bulkProductName })
+    .first();
+
+  await expect(bulkPriceSelectionItem).toBeVisible();
+  await bulkPriceSelectionItem.locator('input[type="checkbox"]').check();
+
+  await page.getByTestId("bulk-preview-button").click();
+  await expect(page.getByTestId("bulk-feedback")).toContainText(
+    "Previsualización lista: 1 filas.",
+  );
+
+  await page.getByTestId("bulk-apply-button").click();
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    "Lote aplicado: 1 productos actualizados.",
+  );
+  await expect(bulkCard).toContainText("$65.00");
+
+  await page.getByTestId("nav-item-sales").click();
+  await page.getByLabel("Buscar en el menú").fill(bulkProductName);
+  const bulkSalesCard = page
+    .locator('[data-testid^="product-card-"]')
+    .filter({ hasText: bulkProductName })
+    .first();
+  await expect(bulkSalesCard).toBeVisible();
+  await expect(bulkSalesCard).toContainText("$65");
+
+  await page.getByTestId("nav-item-products").click();
+  await page.getByTestId("products-workspace-search-input").fill(bulkProductSku);
+  await expect(bulkCard).toContainText("$65.00");
 });

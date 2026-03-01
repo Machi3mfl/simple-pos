@@ -1,23 +1,26 @@
 import { expect, test } from "@playwright/test";
 
-test("creates product and reprices it from Catalog UI, then verifies Sales integration", async ({
+test("creates product and reprices it from Products UI, then verifies Sales integration", async ({
   page,
 }) => {
   const uniqueProductName = `E2E Catalog ${Date.now()}`;
 
-  await page.goto("/catalog");
+  await page.goto("/products");
+  await expect(page.getByRole("heading", { name: "Productos e inventario" })).toBeVisible();
 
-  await page.getByTestId("onboarding-name-input").fill(uniqueProductName);
-  await page.getByTestId("onboarding-category-select").selectOption("dessert");
-  await page.getByTestId("onboarding-price-input").fill("40");
-  await page.getByTestId("onboarding-cost-input").fill("18");
-  await page.getByTestId("onboarding-stock-input").fill("5");
-  await page.getByTestId("onboarding-submit-button").click();
+  await page.getByTestId("products-workspace-open-create-button").click();
+  await page.getByTestId("products-workspace-create-name-input").fill(uniqueProductName);
+  await page.getByTestId("products-workspace-create-category-input").selectOption("dessert");
+  await page.getByTestId("products-workspace-create-price-input").fill("40");
+  await page.getByTestId("products-workspace-create-cost-input").fill("18");
+  await page.getByTestId("products-workspace-create-stock-input").fill("5");
+  await page.getByTestId("products-workspace-create-submit-button").click();
 
-  await expect(page.getByTestId("onboarding-feedback")).toContainText(
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     `Producto creado: ${uniqueProductName}`,
   );
 
+  await page.getByTestId("products-workspace-open-bulk-prices-button").click();
   await page.getByTestId("bulk-scope-select").selectOption("selection");
   await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
   await page.getByTestId("bulk-value-input").fill("10");
@@ -36,7 +39,7 @@ test("creates product and reprices it from Catalog UI, then verifies Sales integ
   );
 
   await page.getByTestId("bulk-apply-button").click();
-  await expect(page.getByTestId("bulk-feedback")).toContainText(
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     "Lote aplicado: 1 productos actualizados.",
   );
 

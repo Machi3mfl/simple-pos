@@ -12,15 +12,6 @@ test("navigates all vertical slice UIs from side rail", async ({ page }) => {
   await expect(page).toHaveURL(/\/products$/);
   await expect(page.getByRole("heading", { name: "Productos e inventario" })).toBeVisible();
 
-  await page.goto("/catalog");
-  await expect(page.getByRole("heading", { name: "Alta guiada de productos" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Actualización masiva de precios" }),
-  ).toBeVisible();
-
-  await page.goto("/inventory");
-  await expect(page.getByRole("heading", { name: "Movimientos de stock" })).toBeVisible();
-
   await page.getByTestId("nav-item-receivables").click();
   await expect(page).toHaveURL(/\/receivables$/);
   await expect(

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   type FormEvent,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -23,6 +24,8 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
+import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
 
 type StockFilter = "all" | "with_stock" | "low_stock" | "out_of_stock" | "inactive";
 type SortMode = "stock" | "name" | "recent" | "price";
@@ -32,6 +35,7 @@ type DialogId =
   | "create"
   | "edit"
   | "stock"
+  | "bulkPrices"
   | "bulkProducts"
   | "bulkStock"
   | null;
@@ -139,17 +143,6 @@ interface FeedbackState {
   readonly message: string;
 }
 
-interface ProductFormState {
-  readonly name: string;
-  readonly sku: string;
-  readonly categoryId: string;
-  readonly price: string;
-  readonly cost: string;
-  readonly initialStock: string;
-  readonly minStock: string;
-  readonly imageUrl: string;
-}
-
 interface EditProductFormState {
   readonly name: string;
   readonly sku: string;
@@ -168,16 +161,12 @@ interface StockFormState {
   readonly reason: string;
 }
 
-const defaultCreateFormState: ProductFormState = {
-  name: "",
-  sku: "",
-  categoryId: "other",
-  price: "",
-  cost: "",
-  initialStock: "0",
-  minStock: "0",
-  imageUrl: "",
-};
+interface WorkspaceLoadOverrides {
+  readonly categoryFilter?: string;
+  readonly page?: number;
+  readonly searchTerm?: string;
+  readonly stockFilter?: StockFilter;
+}
 
 const defaultEditFormState: EditProductFormState = {
   name: "",
@@ -309,12 +298,41 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [movementHistory, setMovementHistory] = useState<readonly StockMovementItem[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(false);
-  const [createForm, setCreateForm] = useState<ProductFormState>(defaultCreateFormState);
   const [editForm, setEditForm] = useState<EditProductFormState>(defaultEditFormState);
   const [stockForm, setStockForm] = useState<StockFormState>(defaultStockFormState("inbound"));
   const [bulkProductsInput, setBulkProductsInput] = useState<string>("");
   const [bulkStockInput, setBulkStockInput] = useState<string>("");
   const [refreshToken, setRefreshToken] = useState<number>(0);
+  const {
+    categories: onboardingCategories,
+    feedback: onboardingFeedback,
+    form: onboardingForm,
+    isSubmitting: isSubmittingCreate,
+    resetForm: resetProductOnboarding,
+    setForm: setOnboardingForm,
+    submit: submitProductOnboarding,
+  } = useProductOnboarding({
+    onProductCreated: async (createdProduct) => {
+      const searchValue = createdProduct.sku || createdProduct.name;
+      setCategoryFilter("all");
+      setStockFilter("all");
+      setPage(1);
+      setSearchTerm(searchValue);
+      setSelectedProductId(createdProduct.id);
+      setOpenDialog(null);
+      await refreshWorkspace({
+        categoryFilter: "all",
+        page: 1,
+        searchTerm: searchValue,
+        stockFilter: "all",
+      });
+      setFeedback({
+        type: "success",
+        message: messages.productsWorkspace.feedback.productCreated(createdProduct.name),
+      });
+    },
+    refreshToken,
+  });
 
   const selectedProduct =
     workspace?.items.find((item) => item.id === selectedProductId) ?? workspace?.items[0] ?? null;
@@ -332,59 +350,62 @@ export function ProductsInventoryPanel(): JSX.Element {
     setPage(1);
   }, [categoryFilter, stockFilter, activeOnly, sortMode, deferredSearchTerm]);
 
-  useEffect(() => {
-    async function loadWorkspace(): Promise<void> {
-      setIsLoadingWorkspace(true);
-      const params = new URLSearchParams();
-      if (deferredSearchTerm.trim().length > 0) {
-        params.set("q", deferredSearchTerm.trim());
-      }
-      if (categoryFilter !== "all") {
-        params.set("categoryId", categoryFilter);
-      }
-      if (stockFilter !== "all") {
-        params.set("stockState", stockFilter);
-      }
-      params.set("activeOnly", String(activeOnly));
-      params.set("sort", sortMode);
-      params.set("page", String(page));
-      params.set("pageSize", "20");
+  const loadWorkspace = useCallback(async (overrides?: WorkspaceLoadOverrides): Promise<void> => {
+    setIsLoadingWorkspace(true);
+    const effectiveSearchTerm = overrides?.searchTerm ?? deferredSearchTerm;
+    const effectiveCategoryFilter = overrides?.categoryFilter ?? categoryFilter;
+    const effectiveStockFilter = overrides?.stockFilter ?? stockFilter;
+    const effectivePage = overrides?.page ?? page;
+    const params = new URLSearchParams();
+    if (effectiveSearchTerm.trim().length > 0) {
+      params.set("q", effectiveSearchTerm.trim());
+    }
+    if (effectiveCategoryFilter !== "all") {
+      params.set("categoryId", effectiveCategoryFilter);
+    }
+    if (effectiveStockFilter !== "all") {
+      params.set("stockState", effectiveStockFilter);
+    }
+    params.set("activeOnly", String(activeOnly));
+    params.set("sort", sortMode);
+    params.set("page", String(effectivePage));
+    params.set("pageSize", "20");
 
-      try {
-        const { response, data } = await fetchJsonNoStore<WorkspaceProductsResponse>(
-          `/api/v1/products/workspace?${params.toString()}`,
-        );
+    try {
+      const { response, data } = await fetchJsonNoStore<WorkspaceProductsResponse>(
+        `/api/v1/products/workspace?${params.toString()}`,
+      );
 
-        if (!response.ok || !data) {
-          setFeedback({
-            type: "error",
-            message: messages.productsWorkspace.loadError,
-          });
-          return;
-        }
-
-        setWorkspace(data);
-      } catch {
+      if (!response.ok || !data) {
         setFeedback({
           type: "error",
           message: messages.productsWorkspace.loadError,
         });
-      } finally {
-        setIsLoadingWorkspace(false);
+        return;
       }
-    }
 
-    void loadWorkspace();
+      setWorkspace(data);
+    } catch {
+      setFeedback({
+        type: "error",
+        message: messages.productsWorkspace.loadError,
+      });
+    } finally {
+      setIsLoadingWorkspace(false);
+    }
   }, [
     activeOnly,
     categoryFilter,
     deferredSearchTerm,
     messages.productsWorkspace.loadError,
     page,
-    refreshToken,
     sortMode,
     stockFilter,
   ]);
+
+  useEffect(() => {
+    void loadWorkspace();
+  }, [loadWorkspace]);
 
   useEffect(() => {
     if (!workspace?.items.length) {
@@ -455,58 +476,9 @@ export function ProductsInventoryPanel(): JSX.Element {
     selectedProduct,
   ]);
 
-  async function refreshWorkspace(): Promise<void> {
+  async function refreshWorkspace(overrides?: WorkspaceLoadOverrides): Promise<void> {
     setRefreshToken((current) => current + 1);
-  }
-
-  async function handleCreateProduct(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/v1/products", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          sku: createForm.sku.trim() || undefined,
-          name: createForm.name.trim(),
-          categoryId: createForm.categoryId.trim(),
-          price: Number(createForm.price),
-          cost: createForm.cost.trim().length > 0 ? Number(createForm.cost) : undefined,
-          initialStock: Number(createForm.initialStock),
-          minStock: Number(createForm.minStock),
-          imageUrl: createForm.imageUrl.trim() || undefined,
-        }),
-      });
-
-      const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
-      if (!response.ok) {
-        setFeedback({
-          type: "error",
-          message: resolveApiMessage(payload, messages.productsWorkspace.errors.createProduct),
-        });
-        return;
-      }
-
-      setFeedback({
-        type: "success",
-        message: messages.productsWorkspace.feedback.productCreated(
-          (payload as ProductResponse).item.name,
-        ),
-      });
-      setCreateForm(defaultCreateFormState);
-      setOpenDialog(null);
-      await refreshWorkspace();
-    } catch {
-      setFeedback({
-        type: "error",
-        message: messages.productsWorkspace.errors.createProduct,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await loadWorkspace(overrides);
   }
 
   async function handleEditProduct(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -614,6 +586,28 @@ export function ProductsInventoryPanel(): JSX.Element {
       return;
     }
 
+    const parsedQuantity = Number(stockForm.quantity);
+    const parsedUnitCost = Number(stockForm.unitCost);
+
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      setFeedback({
+        type: "error",
+        message: messages.inventory.invalidQuantity,
+      });
+      return;
+    }
+
+    if (
+      stockForm.movementType === "inbound" &&
+      (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
+    ) {
+      setFeedback({
+        type: "error",
+        message: messages.inventory.invalidInboundCost,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/v1/stock-movements", {
@@ -624,10 +618,10 @@ export function ProductsInventoryPanel(): JSX.Element {
         body: JSON.stringify({
           productId: selectedProduct.id,
           movementType: stockForm.movementType,
-          quantity: Number(stockForm.quantity),
+          quantity: parsedQuantity,
           unitCost:
             stockForm.movementType === "inbound" && stockForm.unitCost.trim().length > 0
-              ? Number(stockForm.unitCost)
+              ? parsedUnitCost
               : undefined,
           reason: stockForm.reason.trim() || undefined,
         }),
@@ -827,15 +821,27 @@ export function ProductsInventoryPanel(): JSX.Element {
                 </h1>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-3 xl:w-[36rem]">
+              <div className="grid gap-2 sm:grid-cols-2 xl:w-[48rem] xl:grid-cols-4">
                 <button
                   type="button"
-                  onClick={() => setOpenDialog("create")}
+                  onClick={() => {
+                    resetProductOnboarding();
+                    setOpenDialog("create");
+                  }}
                   data-testid="products-workspace-open-create-button"
                   className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-base font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
                 >
                   <Plus size={20} />
                   {messages.productsWorkspace.actions.newProduct}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenDialog("bulkPrices")}
+                  data-testid="products-workspace-open-bulk-prices-button"
+                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                >
+                  <ArrowUpDown size={20} />
+                  {messages.productsWorkspace.actions.bulkPrices}
                 </button>
                 <button
                   type="button"
@@ -1309,7 +1315,7 @@ export function ProductsInventoryPanel(): JSX.Element {
 
       {openDialog === "create" ? (
         <Dialog title={messages.productsWorkspace.dialogs.createTitle} onClose={() => setOpenDialog(null)}>
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleCreateProduct}>
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={submitProductOnboarding}>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.name}
@@ -1317,9 +1323,10 @@ export function ProductsInventoryPanel(): JSX.Element {
               <input
                 data-testid="products-workspace-create-name-input"
                 required
-                value={createForm.name}
+                minLength={2}
+                value={onboardingForm.name}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, name: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, name: event.target.value }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1330,9 +1337,9 @@ export function ProductsInventoryPanel(): JSX.Element {
               </span>
               <input
                 data-testid="products-workspace-create-sku-input"
-                value={createForm.sku}
+                value={onboardingForm.sku}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, sku: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, sku: event.target.value }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1341,15 +1348,23 @@ export function ProductsInventoryPanel(): JSX.Element {
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.category}
               </span>
-              <input
+              <select
                 data-testid="products-workspace-create-category-input"
-                required
-                value={createForm.categoryId}
+                value={onboardingForm.categoryId}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, categoryId: event.target.value }))
+                  setOnboardingForm((current) => ({
+                    ...current,
+                    categoryId: event.target.value,
+                  }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
+              >
+                {onboardingCategories.map((option) => (
+                  <option key={option} value={option}>
+                    {labelForCategory(option)}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
@@ -1361,9 +1376,9 @@ export function ProductsInventoryPanel(): JSX.Element {
                 type="number"
                 step="0.01"
                 min="0.01"
-                value={createForm.price}
+                value={onboardingForm.price}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, price: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, price: event.target.value }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1377,9 +1392,9 @@ export function ProductsInventoryPanel(): JSX.Element {
                 type="number"
                 step="0.01"
                 min="0.01"
-                value={createForm.cost}
+                value={onboardingForm.cost}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, cost: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, cost: event.target.value }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1394,9 +1409,12 @@ export function ProductsInventoryPanel(): JSX.Element {
                 type="number"
                 min="0"
                 step="1"
-                value={createForm.initialStock}
+                value={onboardingForm.initialStock}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, initialStock: event.target.value }))
+                  setOnboardingForm((current) => ({
+                    ...current,
+                    initialStock: event.target.value,
+                  }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1411,9 +1429,9 @@ export function ProductsInventoryPanel(): JSX.Element {
                 type="number"
                 min="0"
                 step="1"
-                value={createForm.minStock}
+                value={onboardingForm.minStock}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, minStock: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, minStock: event.target.value }))
                 }
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
@@ -1424,14 +1442,26 @@ export function ProductsInventoryPanel(): JSX.Element {
               </span>
               <input
                 data-testid="products-workspace-create-image-input"
-                value={createForm.imageUrl}
+                value={onboardingForm.imageUrl}
                 onChange={(event) =>
-                  setCreateForm((current) => ({ ...current, imageUrl: event.target.value }))
+                  setOnboardingForm((current) => ({ ...current, imageUrl: event.target.value }))
                 }
                 placeholder={messages.common.placeholders.imageUrl}
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
+            {onboardingFeedback ? (
+              <p
+                className={[
+                  "md:col-span-2 rounded-2xl px-4 py-3 text-sm font-medium",
+                  onboardingFeedback.type === "error"
+                    ? "bg-rose-50 text-rose-700"
+                    : "bg-emerald-50 text-emerald-700",
+                ].join(" ")}
+              >
+                {onboardingFeedback.message}
+              </p>
+            ) : null}
             <div className="md:col-span-2 flex justify-end gap-3">
               <button
                 type="button"
@@ -1442,14 +1472,36 @@ export function ProductsInventoryPanel(): JSX.Element {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmittingCreate}
                 data-testid="products-workspace-create-submit-button"
                 className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
               >
-                {isSubmitting ? messages.common.states.creating : messages.common.actions.createProduct}
+                {isSubmittingCreate
+                  ? messages.common.states.creating
+                  : messages.common.actions.createProduct}
               </button>
             </div>
           </form>
+        </Dialog>
+      ) : null}
+
+      {openDialog === "bulkPrices" ? (
+        <Dialog
+          title={messages.productsWorkspace.actions.bulkPrices}
+          onClose={() => setOpenDialog(null)}
+        >
+          <BulkPriceUpdatePanel
+            variant="dialog"
+            refreshToken={refreshToken}
+            onPricesUpdated={async (result) => {
+              setOpenDialog(null);
+              await refreshWorkspace();
+              setFeedback({
+                type: "success",
+                message: messages.catalog.bulkPriceUpdate.applied(result.updatedCount),
+              });
+            }}
+          />
         </Dialog>
       ) : null}
 
@@ -1594,7 +1646,11 @@ export function ProductsInventoryPanel(): JSX.Element {
 
       {openDialog === "stock" && selectedProduct ? (
         <Dialog title={messages.productsWorkspace.dialogs.stockTitle} onClose={() => setOpenDialog("detail")}>
-          <form className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]" onSubmit={handleStockMovement}>
+          <form
+            noValidate
+            className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
+            onSubmit={handleStockMovement}
+          >
             <div className="space-y-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-sm font-semibold text-slate-700">
@@ -1734,6 +1790,13 @@ export function ProductsInventoryPanel(): JSX.Element {
             <p className="text-sm text-slate-500">
               {messages.productsWorkspace.bulk.productsPasteHint}
             </p>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold">{messages.productsWorkspace.bulk.directApplyTitle}</p>
+              <p className="mt-1">{messages.productsWorkspace.bulk.directApplyBody}</p>
+              <p className="mt-1 text-amber-700">
+                {messages.productsWorkspace.bulk.advancedFlow}
+              </p>
+            </div>
             <textarea
               data-testid="products-workspace-bulk-products-input"
               value={bulkProductsInput}
@@ -1768,6 +1831,13 @@ export function ProductsInventoryPanel(): JSX.Element {
             <p className="text-sm text-slate-500">
               {messages.productsWorkspace.bulk.stockPasteHint}
             </p>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold">{messages.productsWorkspace.bulk.directApplyTitle}</p>
+              <p className="mt-1">{messages.productsWorkspace.bulk.directApplyBody}</p>
+              <p className="mt-1 text-amber-700">
+                {messages.productsWorkspace.bulk.advancedFlow}
+              </p>
+            </div>
             <textarea
               data-testid="products-workspace-bulk-stock-input"
               value={bulkStockInput}

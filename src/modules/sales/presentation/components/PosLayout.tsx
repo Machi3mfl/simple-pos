@@ -14,9 +14,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/components/DebtManagementPanel";
-import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
-import { ProductOnboardingPanel } from "@/modules/catalog/presentation/components/ProductOnboardingPanel";
-import { StockMovementPanel } from "@/modules/inventory/presentation/components/StockMovementPanel";
 import { ProductsInventoryPanel } from "@/modules/products/presentation/components/ProductsInventoryPanel";
 import { OrdersPanel } from "@/modules/reporting/presentation/components/OrdersPanel";
 import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
@@ -127,7 +124,6 @@ export function PosLayout({
   const { messages, labelForCategory } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
-  const [catalogRefreshToken, setCatalogRefreshToken] = useState<number>(0);
   const [salesRefreshToken, setSalesRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
@@ -137,13 +133,6 @@ export function PosLayout({
   const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
-  );
-  const activeNavItemId = useMemo<PosWorkspaceId>(
-    () =>
-      currentWorkspace === "catalog" || currentWorkspace === "inventory"
-        ? "products"
-        : currentWorkspace,
-    [currentWorkspace],
   );
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
@@ -302,48 +291,14 @@ export function PosLayout({
     [cartItems],
   );
 
-  const triggerCatalogWorkspaceRefresh = useCallback((): void => {
-    setCatalogRefreshToken((current) => current + 1);
-  }, []);
-
-  const handleCatalogContentChanged = useCallback(async (): Promise<void> => {
-    await refreshCatalog();
-    triggerCatalogWorkspaceRefresh();
-  }, [refreshCatalog, triggerCatalogWorkspaceRefresh]);
-
   const handleCheckoutSuccess = useCallback((): void => {
     setCartItems([]);
     setSalesRefreshToken((current) => current + 1);
   }, []);
 
   const renderNonSalesWorkspace = (): JSX.Element => {
-    if (currentWorkspace === "catalog") {
-      return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
-          <div className="grid gap-4 xl:grid-cols-2">
-            <ProductOnboardingPanel
-              onProductCreated={handleCatalogContentChanged}
-              refreshToken={catalogRefreshToken}
-            />
-            <BulkPriceUpdatePanel
-              onPricesUpdated={handleCatalogContentChanged}
-              refreshToken={catalogRefreshToken}
-            />
-          </div>
-        </section>
-      );
-    }
-
     if (currentWorkspace === "products") {
       return <ProductsInventoryPanel />;
-    }
-
-    if (currentWorkspace === "inventory") {
-      return (
-        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
-          <StockMovementPanel refreshToken={catalogRefreshToken} />
-        </section>
-      );
     }
 
     if (currentWorkspace === "receivables") {
@@ -382,7 +337,7 @@ export function PosLayout({
       <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
         <LeftNavRail
           items={navItems}
-          activeItemId={activeNavItemId}
+          activeItemId={currentWorkspace}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
               router.push(workspacePathById[itemId]);

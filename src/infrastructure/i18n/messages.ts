@@ -220,6 +220,7 @@ const spanishMessages = {
     },
     actions: {
       newProduct: "Nuevo producto",
+      bulkPrices: "Actualizar precios",
       bulkProducts: "Carga masiva",
       bulkStock: "Stock masivo",
       addStock: "Agregar stock",
@@ -245,6 +246,11 @@ const spanishMessages = {
         "Pegá filas con este orden: `sku, movementType, quantity, unitCost, reason`.",
       stockPlaceholder:
         "sku,movementType,quantity,unitCost,reason\nBEB-101,inbound,24,1200,reposicion\nGOL-010,outbound,3,,conteo",
+      directApplyTitle: "Aplicación directa",
+      directApplyBody:
+        "No hay previsualización separada. Al confirmar, se guardan enseguida las filas válidas.",
+      advancedFlow:
+        "Usalo solo con tablas ya revisadas; las filas inválidas se reportan después de aplicar.",
     },
     fields: {
       name: "Nombre visible",
@@ -342,6 +348,7 @@ const spanishMessages = {
       loadError: "No se pudieron cargar los productos para el alta.",
       invalidPrice: "El precio debe ser mayor a cero.",
       invalidInitialStock: "El stock inicial debe ser un entero mayor o igual a cero.",
+      invalidMinStock: "El stock mínimo debe ser un entero mayor o igual a cero.",
       invalidCost: "El costo debe ser mayor a cero cuando se informa.",
       costRequiredForInitialStock:
         "Si cargás stock inicial, también tenés que informar el costo.",
@@ -367,10 +374,21 @@ const spanishMessages = {
       emptyScopeSelection:
         "No se encontraron productos para el alcance seleccionado. Crealos o seleccioná otros primero.",
       requestError: "La actualización masiva de precios falló.",
+      previewRequiredBeforeApply:
+        "Primero generá una previsualización vigente antes de aplicar el lote.",
+      previewHasErrors:
+        "La previsualización tiene errores. Corregí el alcance o el valor antes de aplicar.",
       previewReady: (count: number): string => `Previsualización lista: ${count} filas.`,
       applied: (count: number): string => `Lote aplicado: ${count} productos actualizados.`,
       noUpdatedItems: "No hay ítems actualizados en este resultado.",
       noInvalidItems: "No hay ítems inválidos.",
+      auditSummary: {
+        status: "Estado",
+        actor: "Responsable",
+        timestamp: "Fecha",
+        preview: "Previsualización",
+        applied: "Aplicado",
+      },
       scopes: {
         all: "Todos los productos",
         category: "Por categoría",
