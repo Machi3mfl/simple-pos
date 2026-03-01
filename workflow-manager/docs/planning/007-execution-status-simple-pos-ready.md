@@ -101,6 +101,7 @@ Open planning item:
     - opt-in live provider smoke remains available through `npm run probe:product-sourcing:carrefour` guarded by `PRODUCT_SOURCING_LIVE_SMOKE=1`
     - learned category mappings can be reviewed, corrected, and deleted from the sourcing workspace itself
     - recent imports can be reviewed from the sourcing workspace with internal product name, SKU, category, and import timestamp
+    - sourcing UI now has explicit tablet/mobile validation coverage for search, selection summary placement, and import CTA visibility
     - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
     - contract/use-case/provider/UI tests with deterministic fixtures, including fixture-backed real-backend sourcing runs
     - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification and persisted category mapping reuse
@@ -123,3 +124,4 @@ Open planning item:
 - Sourcing import history verification: `tests/e2e/product-sourcing-import-ui.spec.ts` and `tests/e2e/product-sourcing-import-history-use-case.spec.ts` prove that recent imports remain queryable from persisted trace data with internal product name and SKU.
 - Category canonicalization verification: `tests/e2e/catalog-onboarding-api.spec.ts`, `tests/e2e/products-workspace-ui.spec.ts`, and `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` prove that operator-facing category labels remain readable while stored ids are normalized to canonical slug codes.
 - Provider hardening verification: `tests/e2e/product-sourcing-provider-hardening.spec.ts` proves throttled provider calls plus structured success/failure health events for the Carrefour adapter wrapper.
+- Responsive sourcing verification: `tests/e2e/product-sourcing-responsive-ui.spec.ts` proves the sourcing flow remains usable on tablet and mobile widths without losing the selected-items summary or the import action.

@@ -857,7 +857,10 @@ export function ProductSourcingScreen({
               </div>
             ) : null}
 
-            <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50 px-4 py-4 lg:px-5 lg:py-5">
+            <section
+              data-testid="product-sourcing-selection-panel"
+              className="rounded-[1.75rem] border border-slate-200 bg-slate-50 px-4 py-4 lg:px-5 lg:py-5"
+            >
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="grid gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -1092,7 +1095,10 @@ export function ProductSourcingScreen({
           </div>
         </article>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <section
+          data-testid="product-sourcing-results-grid"
+          className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+        >
           {results.map((item) => {
             const isSelected = selectedIds.includes(item.sourceProductId);
 

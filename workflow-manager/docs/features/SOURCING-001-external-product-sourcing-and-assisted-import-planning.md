@@ -64,7 +64,7 @@ The current gap is not internal product persistence. The gap is **external disco
 What is still missing after the current vertical slice:
 
 - no retry-management UI yet,
-- and no mobile/tablet-specific validation pass for larger assisted-import batches yet.
+- and no retry/resume UX for partial failed import batches yet.
 
 ---
 
@@ -600,6 +600,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Real-backend UI proof:
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
   - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active.
+  - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the selected-items summary staying above results and the import CTA remaining visible.
   - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
   - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
   - `tests/e2e/product-sourcing-import-history-use-case.spec.ts` + `tests/e2e/product-sourcing-import-ui.spec.ts` verify that recent imports remain visible after persistence with internal product name and SKU.
@@ -656,6 +657,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - real-backend UI validation for learned mapping management (`list/update/delete`),
 - persisted recent import history projection linked back to internal product names and SKUs,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
+- responsive UI validation for tablet/mobile sourcing interaction,
 - real product visibility after batch import in `/products` and `/sales`,
 - optional live provider smoke checks behind an explicit env flag, not in the stable CI gate.
 
