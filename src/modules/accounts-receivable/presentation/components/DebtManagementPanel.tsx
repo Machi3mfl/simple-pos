@@ -48,6 +48,7 @@ interface DebtManagementPanelProps {
 interface CustomerCandidate {
   readonly customerId: string;
   readonly customerName?: string;
+  readonly outstandingBalance?: number;
 }
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
@@ -126,8 +127,38 @@ export function DebtManagementPanel({
       }
 
       const customers = Array.from(candidateById.values());
-      const ids = customers.map((customer) => customer.customerId);
-      setCandidateCustomers(customers);
+      const customersWithDebt = (
+        await Promise.all(
+          customers.map(async (customer) => {
+            const { response: debtResponse, data: debtData } = await fetchJsonNoStore<
+              CustomerDebtSummary | ApiErrorPayload
+            >(`/api/v1/customers/${encodeURIComponent(customer.customerId)}/debt`);
+
+            if (!debtResponse.ok || !debtData) {
+              return null;
+            }
+
+            const summary = debtData as CustomerDebtSummary;
+            return {
+              customerId: summary.customerId,
+              customerName: summary.customerName || customer.customerName,
+              outstandingBalance: summary.outstandingBalance,
+            } satisfies CustomerCandidate;
+          }),
+        )
+      )
+        .filter((candidate) => candidate !== null)
+        .filter(
+          (candidate) =>
+            typeof candidate.outstandingBalance === "number" &&
+            candidate.outstandingBalance > 0,
+        )
+        .sort(
+          (left, right) => (right.outstandingBalance ?? 0) - (left.outstandingBalance ?? 0),
+        );
+
+      const ids = customersWithDebt.map((customer) => customer.customerId);
+      setCandidateCustomers(customersWithDebt);
       setSelectedCustomerId((current) => {
         if (current && ids.includes(current)) {
           return current;
@@ -271,6 +302,7 @@ export function DebtManagementPanel({
       setPaymentNotes("");
       refreshPendingSyncCount();
       await loadSummary(targetCustomerId, { clearFeedback: false });
+      await loadCustomerCandidates();
     } catch {
       enqueueOfflineSyncEvent({
         eventType: "debt_payment_registered",
@@ -314,6 +346,9 @@ export function DebtManagementPanel({
             {candidateCustomers.map((customer) => (
               <option key={customer.customerId} value={customer.customerId}>
                 {customer.customerName ?? "Unnamed customer"}
+                {typeof customer.outstandingBalance === "number"
+                  ? ` • ${formatMoney(customer.outstandingBalance)}`
+                  : ""}
               </option>
             ))}
           </select>
