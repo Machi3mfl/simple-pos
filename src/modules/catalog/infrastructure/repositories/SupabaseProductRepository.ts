@@ -137,4 +137,27 @@ export class SupabaseProductRepository implements ProductRepository {
 
     return mapRowToProduct(data as ProductRow);
   }
+
+  async getBySku(sku: string): Promise<Product | null> {
+    const normalizedSku = sku.trim().toUpperCase();
+    if (normalizedSku.length === 0) {
+      return null;
+    }
+
+    const { data, error } = await this.client
+      .from("products")
+      .select("*")
+      .eq("sku", normalizedSku)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to read product by sku from Supabase: ${error.message}`);
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return mapRowToProduct(data as ProductRow);
+  }
 }

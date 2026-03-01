@@ -42,7 +42,7 @@
 | PRODUCTS-001 | done |
 | PRODUCTS-002 | done |
 | PRODUCTS-003 | done |
-| SOURCING-001 | planning |
+| SOURCING-001 | in_progress |
 | AR-001 | done |
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
@@ -81,9 +81,19 @@
 Open planning item:
 
 - `SOURCING-001` external product sourcing and assisted import:
-  - status: `planning`
+  - status: `in_progress`
   - PoC status: `completed`
-  - implementation status: not started
+  - implementation status: `Phase 1 / Search Slice` completed + `Phase 2/3` UI-first assisted import slice running
+  - current output:
+    - `GET /api/v1/product-sourcing/search`
+    - `POST /api/v1/product-sourcing/import`
+    - dedicated `/products/sourcing` screen reachable from `/products`
+    - `product-sourcing` module runtime wired to real catalog creation through `CatalogProductWriter`
+    - selected external images are persisted into the managed storage bucket `product-sourcing-images`
+    - traceability rows are persisted in `imported_product_sources`
+    - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
+    - contract/use-case/provider/UI tests with deterministic fixtures
+    - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification
   - main artifact: `workflow-manager/docs/features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md`
 
 ---
@@ -96,3 +106,5 @@ Open planning item:
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.
 - Converged `/products` coverage: `tests/e2e/ui-vertical-slices-smoke.spec.ts`, `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`, `tests/e2e/inventory-ui-stock-movement.spec.ts`.
+- Sourcing UI coverage: `tests/e2e/product-sourcing-ui.spec.ts`, `tests/e2e/product-sourcing-import-ui.spec.ts`, `tests/e2e/product-sourcing-import-use-case.spec.ts`.
+- Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.

@@ -37,6 +37,7 @@ npx playwright test --workers=1 "$@" \
   tests/e2e/ui-vertical-slices-smoke.spec.ts \
   tests/e2e/orders-ui-sales-snapshot.spec.ts \
   tests/e2e/products-workspace-ui.spec.ts \
+  tests/e2e/product-sourcing-import-ui.spec.ts \
   tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts \
   tests/e2e/inventory-ui-stock-movement.spec.ts \
   tests/e2e/sales-ui-checkout-history-and-debt.spec.ts \

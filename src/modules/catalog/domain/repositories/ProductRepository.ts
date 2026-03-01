@@ -12,4 +12,5 @@ export interface ProductRepository {
   saveMany(products: readonly Product[]): Promise<void>;
   list(filters?: ListProductsFilters): Promise<readonly Product[]>;
   getById(productId: string): Promise<Product | null>;
+  getBySku(sku: string): Promise<Product | null>;
 }

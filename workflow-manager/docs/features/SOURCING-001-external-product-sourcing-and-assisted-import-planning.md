@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `SOURCING-001`  
-**Status**: `planning`  
+**Status**: `in_progress`  
 **GitHub Issue**: #32  
 **Priority**: `high`  
 **Linked FR/NFR**: `FR-003`, `FR-008`, `FR-009`, `NFR-002`, `NFR-004`, `NFR-005`  
@@ -59,15 +59,14 @@ The first explicit product decision for this feature is now locked:
 - **why**: the images are more normalized, visually consistent, and easier to identify quickly
 - **fixed source URL**: `https://www.carrefour.com.ar/`
 
-The current gap is not internal product persistence. The gap is **external discovery and image ingestion**.
+The current gap is not internal product persistence. The gap is **external discovery, assisted import orchestration, and image ownership**.
 
-What is missing today:
+What is still missing after the current vertical slice:
 
-- no external catalog search endpoint,
-- no provider abstraction for supermarket sources,
-- no normalization layer for titles, images, barcodes, category paths, and reference prices,
-- no import orchestration that downloads and stores the selected product image,
-- no source-trace record linking an internal product to the original retailer candidate.
+- no provider health/rate-limit hardening yet,
+- no import-history or retry-management UI yet,
+- no mobile/tablet-specific validation pass for larger assisted-import batches yet,
+- and no persisted category-mapping rules yet.
 
 ---
 
@@ -494,12 +493,63 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Expose `GET /api/v1/product-sourcing/search`.
 - Add contract and adapter integration tests.
 
+### Phase 1 - Current Output
+
+- `src/modules/product-sourcing/domain/value-objects/SearchQuery.ts`
+- `src/modules/product-sourcing/domain/entities/ExternalCatalogCandidate.ts`
+- `src/modules/product-sourcing/application/ports/RetailerCatalogProvider.ts`
+- `src/modules/product-sourcing/application/use-cases/SearchExternalProductsUseCase.ts`
+- `src/modules/product-sourcing/infrastructure/providers/vtex/VtexCatalogProvider.ts`
+- `src/modules/product-sourcing/infrastructure/providers/carrefour/CarrefourCatalogProvider.ts`
+- `src/modules/product-sourcing/infrastructure/runtime/productSourcingRuntime.ts`
+- `src/modules/product-sourcing/presentation/dtos/product-sourcing-search.dto.ts`
+- `src/modules/product-sourcing/presentation/handlers/searchExternalProductsHandler.ts`
+- `src/app/api/v1/product-sourcing/search/route.ts`
+- `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/search`
+- Deterministic fixtures and tests:
+  - `tests/fixtures/product-sourcing/carrefour-search-response.json`
+  - `tests/e2e/product-sourcing-search-use-case.spec.ts`
+  - `tests/e2e/product-sourcing-carrefour-provider.spec.ts`
+  - `tests/e2e/product-sourcing-search-handler.spec.ts`
+- UI search surface:
+  - `src/modules/product-sourcing/presentation/components/ProductSourcingScreen.tsx`
+  - `src/app/products/sourcing/page.tsx`
+  - `tests/e2e/product-sourcing-ui.spec.ts`
+
 ### Phase 2 - Assisted Import Slice
 
 - Implement image asset storage adapter.
 - Implement source trace persistence.
 - Expose `POST /api/v1/product-sourcing/import` with batch payload support.
 - Adapt to `CreateProductUseCase` through `CatalogProductWriter`.
+
+### Phase 2 - Current Output
+
+- `src/modules/product-sourcing/application/ports/CatalogProductWriter.ts`
+- `src/modules/product-sourcing/application/ports/ProductImageAssetStore.ts`
+- `src/modules/product-sourcing/application/ports/ImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/application/use-cases/ImportExternalProductsUseCase.ts`
+- `src/modules/product-sourcing/infrastructure/adapters/CatalogCreateProductWriter.ts`
+- `src/modules/product-sourcing/infrastructure/storage/SupabaseProductImageAssetStore.ts`
+- `src/modules/product-sourcing/infrastructure/repositories/SupabaseImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/domain/entities/ImportedProductSource.ts`
+- `src/modules/product-sourcing/domain/services/ResolveImportedProductImageObjectKey.ts`
+- `src/modules/product-sourcing/domain/services/ResolveImportedProductSku.ts`
+- `src/modules/product-sourcing/presentation/dtos/import-external-products.dto.ts`
+- `src/modules/product-sourcing/presentation/handlers/importExternalProductsHandler.ts`
+- `src/app/api/v1/product-sourcing/import/route.ts`
+- `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/import`
+- `supabase/migrations/20260301130000_product_sourcing_trace.sql`
+- Current duplicate-protection rule:
+  - deterministic SKU generation (`CRF-<sourceProductId>`) remains as a secondary guardrail,
+  - primary duplicate detection now comes from persisted `imported_product_sources` uniqueness (`provider_id + source_product_id`).
+- Image/trace behavior now implemented:
+  - selected images are persisted into the public Supabase bucket `product-sourcing-images`,
+  - the imported catalog product receives the managed storage URL instead of the external retailer hotlink,
+  - and each successful import writes a trace record with provider, source ids, stored asset metadata, and linked internal product id.
+- Deterministic coverage:
+  - `tests/e2e/product-sourcing-import-use-case.spec.ts`
+  - `tests/e2e/product-sourcing-import-ui.spec.ts`
 
 ### Phase 3 - `/products` UI Integration
 
@@ -508,6 +558,19 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Add multi-select result cards and batch confirmation summary.
 - Implement debounced search and image-loading rules for above-the-fold thumbnails.
 - Validate the operator flow on tablet and mobile widths.
+
+### Phase 3 - Current Output
+
+- `/products` now links to `/products/sourcing` through the converged workspace CTA in `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`.
+- `/products/sourcing` now supports:
+  - debounced Carrefour search,
+  - multi-select result cards,
+  - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
+  - assisted batch import execution against the real catalog runtime,
+  - managed image persistence plus source trace recording during each successful import,
+  - and navigation back to `/products` to verify imported products in the live workspace.
+- Real-backend UI proof:
+  - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
 
 ### Phase 4 - Hardening
 

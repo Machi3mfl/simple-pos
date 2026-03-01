@@ -13,6 +13,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import {
   type FormEvent,
   useCallback,
@@ -821,7 +822,7 @@ export function ProductsInventoryPanel(): JSX.Element {
                 </h1>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 xl:w-[48rem] xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:w-[60rem] xl:grid-cols-5">
                 <button
                   type="button"
                   onClick={() => {
@@ -861,6 +862,14 @@ export function ProductsInventoryPanel(): JSX.Element {
                   <PackagePlus size={20} />
                   {messages.productsWorkspace.actions.bulkStock}
                 </button>
+                <Link
+                  href="/products/sourcing"
+                  data-testid="products-workspace-open-sourcing-link"
+                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                >
+                  <Search size={20} />
+                  Buscar afuera
+                </Link>
               </div>
             </div>
 
