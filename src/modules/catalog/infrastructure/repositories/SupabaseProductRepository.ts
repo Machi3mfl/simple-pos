@@ -8,11 +8,13 @@ import type {
 
 interface ProductRow {
   id: string;
+  sku: string;
   name: string;
   category_id: string;
   price: number;
   cost: number | null;
   stock: number;
+  min_stock: number;
   image_url: string;
   is_active: boolean;
 }
@@ -35,11 +37,13 @@ function toNumber(value: unknown): number {
 function mapRowToProduct(row: ProductRow): Product {
   return Product.rehydrate({
     id: row.id,
+    sku: row.sku,
     name: row.name,
     categoryId: row.category_id,
     price: toNumber(row.price),
     cost: row.cost === null ? undefined : toNumber(row.cost),
-    stock: Math.trunc(toNumber(row.stock)),
+    stock: toNumber(row.stock),
+    minStock: Math.trunc(toNumber(row.min_stock)),
     imageUrl: row.image_url,
     isActive: row.is_active,
   });
@@ -49,11 +53,13 @@ function mapProductToRow(product: Product): ProductRow {
   const primitives = product.toPrimitives();
   return {
     id: primitives.id,
+    sku: primitives.sku,
     name: primitives.name,
     category_id: primitives.categoryId,
     price: primitives.price,
     cost: primitives.cost ?? null,
     stock: primitives.stock,
+    min_stock: primitives.minStock,
     image_url: primitives.imageUrl,
     is_active: primitives.isActive,
   };
@@ -64,9 +70,7 @@ export class SupabaseProductRepository implements ProductRepository {
 
   async save(product: Product): Promise<void> {
     const row = mapProductToRow(product);
-    const { error } = await this.client
-      .from("products")
-      .upsert(row, { onConflict: "id" });
+    const { error } = await this.client.from("products").upsert(row, { onConflict: "id" });
 
     if (error) {
       throw new Error(`Failed to save product in Supabase: ${error.message}`);
@@ -79,9 +83,7 @@ export class SupabaseProductRepository implements ProductRepository {
     }
 
     const rows = products.map(mapProductToRow);
-    const { error } = await this.client
-      .from("products")
-      .upsert(rows, { onConflict: "id" });
+    const { error } = await this.client.from("products").upsert(rows, { onConflict: "id" });
 
     if (error) {
       throw new Error(`Failed to save products in Supabase: ${error.message}`);
@@ -99,11 +101,40 @@ export class SupabaseProductRepository implements ProductRepository {
       query = query.eq("is_active", true);
     }
 
+    if (filters?.q) {
+      const normalizedQuery = filters.q.trim();
+      if (normalizedQuery.length > 0) {
+        query = query.or(`name.ilike.%${normalizedQuery}%,sku.ilike.%${normalizedQuery}%`);
+      }
+    }
+
+    if (filters?.ids && filters.ids.length > 0) {
+      query = query.in("id", [...filters.ids]);
+    }
+
     const { data, error } = await query.order("created_at", { ascending: true });
     if (error) {
       throw new Error(`Failed to list products from Supabase: ${error.message}`);
     }
 
     return (data ?? []).map((row) => mapRowToProduct(row as ProductRow));
+  }
+
+  async getById(productId: string): Promise<Product | null> {
+    const { data, error } = await this.client
+      .from("products")
+      .select("*")
+      .eq("id", productId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to read product from Supabase: ${error.message}`);
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return mapRowToProduct(data as ProductRow);
   }
 }

@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { ProductNotFoundError } from "@/modules/catalog/domain/errors/ProductDomainError";
 import { InventoryDomainError } from "@/modules/inventory/domain/errors/InventoryDomainError";
 import { createInventoryRuntime } from "@/modules/inventory/infrastructure/runtime/inventoryRuntime";
 import { createStockMovementDTOSchema } from "@/modules/inventory/presentation/dtos/create-stock-movement.dto";
@@ -138,6 +139,13 @@ export async function POST(request: Request): Promise<Response> {
 
     return NextResponse.json(parsedResponse.data, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof ProductNotFoundError) {
+      return errorResponse(404, {
+        code: "product_not_found",
+        message: error.message,
+      });
+    }
+
     if (error instanceof InventoryDomainError) {
       return errorResponse(400, {
         code: "stock_rule_error",

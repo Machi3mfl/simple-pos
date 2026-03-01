@@ -4,6 +4,7 @@ import { InventoryItem } from "../../domain/entities/InventoryItem";
 import { StockMovement } from "../../domain/entities/StockMovement";
 import type {
   InventoryRepository,
+  InventorySnapshotItem,
   StockMovementFilters,
 } from "../../domain/repositories/InventoryRepository";
 
@@ -24,6 +25,12 @@ interface StockMovementRow {
   weighted_average_unit_cost_after: number;
   inventory_value_after: number;
   reason: string | null;
+}
+
+interface StockMovementSnapshotRow {
+  product_id: string;
+  movement_type: "inbound" | "outbound" | "adjustment";
+  occurred_at: string;
 }
 
 function toNumber(value: unknown): number {
@@ -108,6 +115,54 @@ export class SupabaseInventoryRepository implements InventoryRepository {
     }
 
     return mapInventoryRowToDomain(data as InventoryItemRow);
+  }
+
+  async listInventorySnapshot(productIds?: readonly string[]): Promise<readonly InventorySnapshotItem[]> {
+    let inventoryQuery = this.client.from("inventory_items").select("*");
+    let movementsQuery = this.client
+      .from("stock_movements")
+      .select("product_id,movement_type,occurred_at")
+      .order("occurred_at", { ascending: false });
+
+    if (productIds && productIds.length > 0) {
+      inventoryQuery = inventoryQuery.in("product_id", [...productIds]);
+      movementsQuery = movementsQuery.in("product_id", [...productIds]);
+    }
+
+    const [
+      { data: inventoryRows, error: inventoryError },
+      { data: movementRows, error: movementError },
+    ] = await Promise.all([inventoryQuery, movementsQuery]);
+
+    if (inventoryError) {
+      throw new Error(
+        `Failed to list inventory snapshot from Supabase: ${inventoryError.message}`,
+      );
+    }
+
+    if (movementError) {
+      throw new Error(
+        `Failed to read latest stock movements from Supabase: ${movementError.message}`,
+      );
+    }
+
+    const latestMovementByProduct = new Map<string, StockMovementSnapshotRow>();
+    for (const row of (movementRows ?? []) as StockMovementSnapshotRow[]) {
+      if (!latestMovementByProduct.has(row.product_id)) {
+        latestMovementByProduct.set(row.product_id, row);
+      }
+    }
+
+    return ((inventoryRows ?? []) as InventoryItemRow[]).map((row) => {
+      const latestMovement = latestMovementByProduct.get(row.product_id);
+      return {
+        productId: row.product_id,
+        stockOnHand: toNumber(row.stock_on_hand),
+        weightedAverageUnitCost: toNumber(row.weighted_average_unit_cost),
+        lastMovementAt: latestMovement?.occurred_at,
+        lastMovementType: latestMovement?.movement_type,
+      };
+    });
   }
 
   async saveInventoryItem(item: InventoryItem): Promise<void> {

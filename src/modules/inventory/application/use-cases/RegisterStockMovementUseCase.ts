@@ -2,6 +2,8 @@ import type { InventoryMovementType } from "../../domain/entities/InventoryItem"
 import { InventoryItem } from "../../domain/entities/InventoryItem";
 import { StockMovement } from "../../domain/entities/StockMovement";
 import type { InventoryRepository } from "../../domain/repositories/InventoryRepository";
+import { ProductNotFoundError } from "@/modules/catalog/domain/errors/ProductDomainError";
+import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
 
 export interface RegisterStockMovementUseCaseInput {
   readonly productId: string;
@@ -25,11 +27,19 @@ export interface RegisterStockMovementUseCaseOutput {
 }
 
 export class RegisterStockMovementUseCase {
-  constructor(private readonly inventoryRepository: InventoryRepository) {}
+  constructor(
+    private readonly inventoryRepository: InventoryRepository,
+    private readonly productRepository: ProductRepository,
+  ) {}
 
   async execute(
     input: RegisterStockMovementUseCaseInput,
   ): Promise<RegisterStockMovementUseCaseOutput> {
+    const product = await this.productRepository.getById(input.productId);
+    if (!product) {
+      throw new ProductNotFoundError(input.productId);
+    }
+
     const currentItem =
       (await this.inventoryRepository.getInventoryItem(input.productId)) ??
       InventoryItem.initialize(input.productId);
@@ -57,6 +67,12 @@ export class RegisterStockMovementUseCase {
 
     await this.inventoryRepository.saveInventoryItem(evolvedItem);
     await this.inventoryRepository.appendStockMovement(movement);
+    await this.productRepository.save(
+      product.withInventorySnapshot(
+        effect.stockOnHandAfter,
+        effect.weightedAverageUnitCostAfter,
+      ),
+    );
 
     return movement.toPrimitives();
   }

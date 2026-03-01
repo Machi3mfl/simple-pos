@@ -40,6 +40,34 @@ export class InvalidUnitCostError extends ProductDomainError {
   }
 }
 
+export class MissingInitialStockCostError extends ProductDomainError {
+  constructor() {
+    super("Se requiere costo cuando el producto se crea con stock inicial mayor a 0.");
+    this.name = "MissingInitialStockCostError";
+  }
+}
+
+export class InvalidProductSkuError extends ProductDomainError {
+  constructor() {
+    super("El SKU debe contener solo letras, números, espacios, guiones o guión bajo.");
+    this.name = "InvalidProductSkuError";
+  }
+}
+
+export class InvalidProductMinStockError extends ProductDomainError {
+  constructor() {
+    super("El stock mínimo debe ser un entero mayor o igual a 0.");
+    this.name = "InvalidProductMinStockError";
+  }
+}
+
+export class ProductNotFoundError extends ProductDomainError {
+  constructor(productId: string) {
+    super(`No se encontró el producto ${productId}.`);
+    this.name = "ProductNotFoundError";
+  }
+}
+
 export class InvalidBulkPriceUpdateValueError extends ProductDomainError {
   constructor() {
     super("El valor del ajuste masivo debe ser un número finito.");

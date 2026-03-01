@@ -3,13 +3,14 @@ import { z } from "zod";
 export const productDTOSchema = z
   .object({
     id: z.string().min(1),
-    sku: z.string().min(1).optional(),
+    sku: z.string().min(1),
     name: z.string().min(1),
     categoryId: z.string().min(1),
     price: z.number().positive(),
     cost: z.number().positive().optional(),
-    stock: z.number().min(0).optional(),
-    imageUrl: z.string().min(1).optional(),
+    stock: z.number().min(0),
+    minStock: z.number().int().min(0),
+    imageUrl: z.string().min(1),
     isActive: z.boolean(),
   })
   .strict();

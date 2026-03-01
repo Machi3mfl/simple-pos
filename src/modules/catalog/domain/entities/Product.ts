@@ -1,51 +1,91 @@
 import {
   InvalidCategoryIdError,
   InvalidInitialStockError,
+  InvalidProductMinStockError,
   InvalidProductNameError,
   InvalidProductPriceError,
+  InvalidProductSkuError,
   InvalidUnitCostError,
+  MissingInitialStockCostError,
 } from "../errors/ProductDomainError";
+import { resolveProductSku } from "../services/ResolveProductSku";
 
 interface CreateProductProps {
   readonly id: string;
+  readonly sku: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
   readonly cost?: number;
   readonly stock: number;
+  readonly minStock: number;
   readonly imageUrl: string;
   readonly isActive: boolean;
 }
 
 interface CreateNewProductProps {
   readonly id: string;
+  readonly sku?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
   readonly initialStock: number;
   readonly cost?: number;
+  readonly minStock?: number;
   readonly imageUrl: string;
+}
+
+interface UpdateProductDetailsProps {
+  readonly sku?: string;
+  readonly name?: string;
+  readonly categoryId?: string;
+  readonly price?: number;
+  readonly cost?: number;
+  readonly minStock?: number;
+  readonly imageUrl?: string;
+  readonly isActive?: boolean;
 }
 
 export type BulkPriceUpdateMode = "percentage" | "fixed_amount";
 
+function validateSku(value: string): string {
+  const normalizedSku = value.trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9 _-]{0,39}$/.test(normalizedSku)) {
+    throw new InvalidProductSkuError();
+  }
+
+  return normalizedSku;
+}
+
+function validateMinStock(value: number): number {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new InvalidProductMinStockError();
+  }
+
+  return value;
+}
+
 export class Product {
   private readonly id: string;
+  private readonly sku: string;
   private readonly name: string;
   private readonly categoryId: string;
   private readonly price: number;
   private readonly cost?: number;
   private readonly stock: number;
+  private readonly minStock: number;
   private readonly imageUrl: string;
   private readonly isActive: boolean;
 
   private constructor(props: CreateProductProps) {
     this.id = props.id;
+    this.sku = props.sku;
     this.name = props.name;
     this.categoryId = props.categoryId;
     this.price = props.price;
     this.cost = props.cost;
     this.stock = props.stock;
+    this.minStock = props.minStock;
     this.imageUrl = props.imageUrl;
     this.isActive = props.isActive;
   }
@@ -73,13 +113,22 @@ export class Product {
       throw new InvalidUnitCostError();
     }
 
+    if (props.initialStock > 0 && props.cost === undefined) {
+      throw new MissingInitialStockCostError();
+    }
+
+    const sku = validateSku(resolveProductSku(categoryId, props.id, props.sku));
+    const minStock = validateMinStock(props.minStock ?? 0);
+
     return new Product({
       id: props.id,
+      sku,
       name,
       categoryId,
-      price: props.price,
-      cost: props.cost,
+      price: Number(props.price.toFixed(2)),
+      cost: props.cost === undefined ? undefined : Number(props.cost.toFixed(4)),
       stock: props.initialStock,
+      minStock,
       imageUrl: props.imageUrl,
       isActive: true,
     });
@@ -97,11 +146,13 @@ export class Product {
 
     return new Product({
       id: this.id,
+      sku: this.sku,
       name: this.name,
       categoryId: this.categoryId,
       price: Number(nextPrice.toFixed(2)),
       cost: this.cost,
       stock: this.stock,
+      minStock: this.minStock,
       imageUrl: this.imageUrl,
       isActive: this.isActive,
     });
@@ -119,6 +170,10 @@ export class Product {
     return this.id;
   }
 
+  getSku(): string {
+    return this.sku;
+  }
+
   getCategoryId(): string {
     return this.categoryId;
   }
@@ -127,23 +182,111 @@ export class Product {
     return this.isActive;
   }
 
-  toPrimitives(): {
-    readonly id: string;
-    readonly name: string;
-    readonly categoryId: string;
-    readonly price: number;
-    readonly cost?: number;
-    readonly stock: number;
-    readonly imageUrl: string;
-    readonly isActive: boolean;
-  } {
-    return {
+  withInventorySnapshot(stock: number, weightedAverageUnitCost?: number): Product {
+    if (!Number.isFinite(stock) || stock < 0) {
+      throw new InvalidInitialStockError();
+    }
+
+    if (
+      weightedAverageUnitCost !== undefined &&
+      (!Number.isFinite(weightedAverageUnitCost) || weightedAverageUnitCost < 0)
+    ) {
+      throw new InvalidUnitCostError();
+    }
+
+    return new Product({
       id: this.id,
+      sku: this.sku,
+      name: this.name,
+      categoryId: this.categoryId,
+      price: this.price,
+      cost:
+        weightedAverageUnitCost === undefined
+          ? this.cost
+          : Number(weightedAverageUnitCost.toFixed(4)),
+      stock: Number(stock.toFixed(4)),
+      minStock: this.minStock,
+      imageUrl: this.imageUrl,
+      isActive: this.isActive,
+    });
+  }
+
+  updateDetails(props: UpdateProductDetailsProps): Product {
+    const nextName = props.name !== undefined ? props.name.trim() : this.name;
+    if (nextName.length < 2) {
+      throw new InvalidProductNameError();
+    }
+
+    const nextCategoryId =
+      props.categoryId !== undefined ? props.categoryId.trim() : this.categoryId;
+    if (nextCategoryId.length === 0) {
+      throw new InvalidCategoryIdError();
+    }
+
+    const nextPrice = props.price ?? this.price;
+    if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+      throw new InvalidProductPriceError();
+    }
+
+    const nextCost = props.cost ?? this.cost;
+    if (nextCost !== undefined && (!Number.isFinite(nextCost) || nextCost <= 0)) {
+      throw new InvalidUnitCostError();
+    }
+
+    const nextMinStock = validateMinStock(props.minStock ?? this.minStock);
+    const nextSku = validateSku(resolveProductSku(nextCategoryId, this.id, props.sku ?? this.sku));
+    const nextImageUrl = props.imageUrl?.trim() || this.imageUrl;
+
+    return new Product({
+      id: this.id,
+      sku: nextSku,
+      name: nextName,
+      categoryId: nextCategoryId,
+      price: Number(nextPrice.toFixed(2)),
+      cost: nextCost === undefined ? undefined : Number(nextCost.toFixed(4)),
+      stock: this.stock,
+      minStock: nextMinStock,
+      imageUrl: nextImageUrl,
+      isActive: props.isActive ?? this.isActive,
+    });
+  }
+
+  archive(): Product {
+    return new Product({
+      id: this.id,
+      sku: this.sku,
       name: this.name,
       categoryId: this.categoryId,
       price: this.price,
       cost: this.cost,
       stock: this.stock,
+      minStock: this.minStock,
+      imageUrl: this.imageUrl,
+      isActive: false,
+    });
+  }
+
+  toPrimitives(): {
+    readonly id: string;
+    readonly sku: string;
+    readonly name: string;
+    readonly categoryId: string;
+    readonly price: number;
+    readonly cost?: number;
+    readonly stock: number;
+    readonly minStock: number;
+    readonly imageUrl: string;
+    readonly isActive: boolean;
+  } {
+    return {
+      id: this.id,
+      sku: this.sku,
+      name: this.name,
+      categoryId: this.categoryId,
+      price: this.price,
+      cost: this.cost,
+      stock: this.stock,
+      minStock: this.minStock,
       imageUrl: this.imageUrl,
       isActive: this.isActive,
     };

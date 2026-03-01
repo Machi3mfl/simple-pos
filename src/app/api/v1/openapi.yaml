@@ -75,6 +75,105 @@ paths:
         '400':
           $ref: '#/components/responses/ErrorResponse'
 
+  /products/workspace:
+    get:
+      tags: [Catalog]
+      operationId: listProductsWorkspace
+      summary: List products for unified products/inventory workspace
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: categoryId
+          schema:
+            type: string
+        - in: query
+          name: stockState
+          schema:
+            type: string
+            enum: [all, with_stock, low_stock, out_of_stock, inactive]
+        - in: query
+          name: activeOnly
+          schema:
+            type: boolean
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [stock, name, recent, price]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Unified products workspace page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductsWorkspaceResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /products/{id}:
+    patch:
+      tags: [Catalog]
+      operationId: updateProduct
+      summary: Update or archive a product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /products/import:
+    post:
+      tags: [Catalog]
+      operationId: importProductsBatch
+      summary: Create products in batch with partial row validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCreateProductsRequest'
+      responses:
+        '200':
+          description: Batch import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCreateProductsResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
   /products/price-batches:
     post:
       tags: [Catalog]
@@ -155,6 +254,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockMovementHistoryResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /stock-movements/import:
+    post:
+      tags: [Inventory]
+      operationId: importStockMovementsBatch
+      summary: Register stock movements in batch with partial row validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkStockMovementsRequest'
+      responses:
+        '200':
+          description: Batch stock result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkStockMovementsResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse'
     post:
@@ -385,7 +507,7 @@ components:
   schemas:
     Product:
       type: object
-      required: [id, name, categoryId, price, isActive]
+      required: [id, sku, name, categoryId, price, stock, minStock, imageUrl, isActive]
       properties:
         id:
           type: string
@@ -403,6 +525,9 @@ components:
           exclusiveMinimum: 0
         stock:
           type: number
+        minStock:
+          type: integer
+          minimum: 0
         imageUrl:
           type: string
         isActive:
@@ -428,6 +553,8 @@ components:
       type: object
       required: [name, categoryId, price, initialStock]
       properties:
+        sku:
+          type: string
         name:
           type: string
         categoryId:
@@ -441,8 +568,149 @@ components:
         initialStock:
           type: number
           minimum: 0
+        minStock:
+          type: integer
+          minimum: 0
         imageUrl:
           type: string
+      description: Cost is required when initialStock is greater than 0.
+
+    UpdateProductRequest:
+      type: object
+      minProperties: 1
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: number
+          exclusiveMinimum: 0
+        cost:
+          type: number
+          exclusiveMinimum: 0
+        minStock:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+
+    ProductsWorkspaceItem:
+      type: object
+      required:
+        [id, sku, name, categoryId, price, averageCost, stock, minStock, imageUrl, isActive, stockState]
+      properties:
+        id:
+          type: string
+        sku:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: number
+        averageCost:
+          type: number
+        stock:
+          type: number
+        minStock:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+        stockState:
+          type: string
+          enum: [with_stock, low_stock, out_of_stock, inactive]
+        lastMovementAt:
+          type: string
+        lastMovementType:
+          type: string
+          enum: [inbound, outbound, adjustment]
+
+    ProductsWorkspaceSummary:
+      type: object
+      required: [withStock, lowStock, outOfStock, stockValue]
+      properties:
+        withStock:
+          type: integer
+          minimum: 0
+        lowStock:
+          type: integer
+          minimum: 0
+        outOfStock:
+          type: integer
+          minimum: 0
+        stockValue:
+          type: number
+          minimum: 0
+
+    ProductsWorkspaceResponse:
+      type: object
+      required: [items, page, pageSize, totalItems, totalPages, summary]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductsWorkspaceItem'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 1
+        summary:
+          $ref: '#/components/schemas/ProductsWorkspaceSummary'
+
+    BulkCreateProductsInvalidItem:
+      type: object
+      required: [row, reason]
+      properties:
+        row:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        reason:
+          type: string
+
+    BulkCreateProductsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateProductRequest'
+
+    BulkCreateProductsResponse:
+      type: object
+      required: [importedCount, items, invalidItems]
+      properties:
+        importedCount:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        invalidItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkCreateProductsInvalidItem'
 
     BulkPriceUpdateScope:
       type: object
@@ -631,6 +899,28 @@ components:
         - $ref: '#/components/schemas/CreateInboundStockMovementRequest'
         - $ref: '#/components/schemas/CreateNonInboundStockMovementRequest'
 
+    BulkStockMovementInvalidItem:
+      type: object
+      required: [row, productId, reason]
+      properties:
+        row:
+          type: integer
+          minimum: 1
+        productId:
+          type: string
+        reason:
+          type: string
+
+    BulkStockMovementsRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateStockMovementRequest'
+
     StockMovementResponse:
       type: object
       required: [movementId, productId, movementType, quantity, unitCost, occurredAt, stockOnHandAfter, weightedAverageUnitCostAfter, inventoryValueAfter]
@@ -666,6 +956,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StockMovementResponse'
+
+    BulkStockMovementsResponse:
+      type: object
+      required: [appliedCount, items, invalidItems]
+      properties:
+        appliedCount:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockMovementResponse'
+        invalidItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkStockMovementInvalidItem'
 
     TopProductItem:
       type: object
