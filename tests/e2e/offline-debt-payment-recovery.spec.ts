@@ -7,28 +7,11 @@ function parseMoneyValue(raw: string): number {
 }
 
 test.describe("offline debt payment recovery", () => {
-  test("queues debt payment during outage and syncs it after manual retry", async ({
-    page,
-    request,
-  }) => {
+  test("queues debt payment during outage and syncs it after manual retry", async ({ page }) => {
     const storageKey = getOfflineSyncQueueStorageKey();
     let failNextDebtPaymentRequest = true;
     let syncRequests = 0;
-
-    const seedSaleResponse = await request.post("/api/v1/sales", {
-      data: {
-        items: [{ productId: "prod-offline-debt-001", quantity: 3 }],
-        paymentMethod: "on_account",
-        customerName: `Offline Debt ${Date.now()}`,
-      },
-    });
-
-    expect(seedSaleResponse.status()).toBe(201);
-    const seedSaleBody = (await seedSaleResponse.json()) as {
-      readonly customerId?: string;
-    };
-    const customerId = seedSaleBody.customerId;
-    expect(customerId).toBeTruthy();
+    const customerName = `Offline Debt ${Date.now()}`;
 
     await page.route("**/api/v1/debt-payments", async (route) => {
       if (route.request().method() !== "POST") {
@@ -53,9 +36,25 @@ test.describe("offline debt payment recovery", () => {
     });
 
     await page.goto("/pos");
-    await page.getByTestId("nav-item-receivables").click();
+    await page.getByTestId("checkout-open-payment-button").click();
+    await page.getByTestId("checkout-payment-on-account-button").click();
+    await page.getByTestId("checkout-customer-name-input").fill(customerName);
+    await page.getByTestId("checkout-confirm-payment-button").click();
+    await expect(page.getByTestId("checkout-feedback")).toContainText(
+      "Checkout completed successfully.",
+    );
 
-    await page.getByTestId("debt-manual-customer-id-input").fill(customerId ?? "");
+    await page.getByTestId("nav-item-receivables").click();
+    await page.getByTestId("debt-refresh-candidates-button").click();
+
+    const customerOption = page
+      .locator('[data-testid="debt-customer-candidates-select"] option')
+      .filter({ hasText: customerName })
+      .first();
+    await expect(customerOption).toHaveCount(1);
+    const customerId = await customerOption.getAttribute("value");
+    expect(customerId).toBeTruthy();
+    await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
     await page.getByTestId("debt-load-summary-button").click();
 
     const outstandingBeforeRaw =

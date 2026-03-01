@@ -4,54 +4,49 @@ function uniqueMarker(): string {
   return `report-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }
 
-test("loads reporting UI data and applies payment method filter", async ({ page, request }) => {
+test("loads reporting UI data and applies payment method filter", async ({ page }) => {
   const marker = uniqueMarker();
+  const productName = `Reporting UI ${marker}`;
   const customerName = `Reporting User ${marker}`;
 
-  const productAResponse = await request.post("/api/v1/products", {
-    data: {
-      name: `Reporting UI A ${marker}`,
-      categoryId: "snack",
-      price: 10,
-      initialStock: 50,
-    },
-  });
-  expect(productAResponse.status()).toBe(201);
-  const productABody = (await productAResponse.json()) as {
-    readonly item: { readonly id: string };
-  };
-
-  const productBResponse = await request.post("/api/v1/products", {
-    data: {
-      name: `Reporting UI B ${marker}`,
-      categoryId: "drink",
-      price: 10,
-      initialStock: 50,
-    },
-  });
-  expect(productBResponse.status()).toBe(201);
-  const productBBody = (await productBResponse.json()) as {
-    readonly item: { readonly id: string };
-  };
-
-  const cashSaleResponse = await request.post("/api/v1/sales", {
-    data: {
-      items: [{ productId: productABody.item.id, quantity: 2 }],
-      paymentMethod: "cash",
-    },
-  });
-  expect(cashSaleResponse.status()).toBe(201);
-
-  const onAccountSaleResponse = await request.post("/api/v1/sales", {
-    data: {
-      items: [{ productId: productBBody.item.id, quantity: 1 }],
-      paymentMethod: "on_account",
-      customerName,
-    },
-  });
-  expect(onAccountSaleResponse.status()).toBe(201);
-
   await page.goto("/pos");
+
+  await page.getByTestId("nav-item-catalog").click();
+  await page.getByTestId("onboarding-name-input").fill(productName);
+  await page.getByTestId("onboarding-category-select").selectOption("snack");
+  await page.getByTestId("onboarding-price-input").fill("10");
+  await page.getByTestId("onboarding-stock-input").fill("50");
+  await page.getByTestId("onboarding-submit-button").click();
+  await expect(page.getByTestId("onboarding-feedback")).toContainText(
+    `Product created: ${productName}`,
+  );
+
+  await page.getByTestId("nav-item-sales").click();
+  await page.getByLabel("Search menu").fill(productName);
+  const productCard = page
+    .locator('[data-testid^="product-card-"]')
+    .filter({ hasText: productName })
+    .first();
+  await expect(productCard).toBeVisible();
+  await productCard.click();
+  await page.getByTestId("checkout-open-payment-button").click();
+  await page.getByTestId("checkout-payment-cash-button").click();
+  await page.getByTestId("checkout-confirm-payment-button").click();
+  await expect(page.getByTestId("checkout-feedback")).toContainText(
+    "Checkout completed successfully.",
+  );
+
+  await page.getByLabel("Search menu").fill(productName);
+  await expect(productCard).toBeVisible();
+  await productCard.click();
+  await page.getByTestId("checkout-open-payment-button").click();
+  await page.getByTestId("checkout-payment-on-account-button").click();
+  await page.getByTestId("checkout-customer-name-input").fill(customerName);
+  await page.getByTestId("checkout-confirm-payment-button").click();
+  await expect(page.getByTestId("checkout-feedback")).toContainText(
+    "Checkout completed successfully.",
+  );
+
   await page.getByTestId("nav-item-reporting").click();
 
   const tomorrow = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 10);
@@ -82,7 +77,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page,
   await expect(
     page
       .locator('[data-testid^="reporting-top-product-item-"]')
-      .filter({ hasText: marker })
+      .filter({ hasText: productName })
       .first(),
   ).toBeVisible();
 });
