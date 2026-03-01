@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { addProductToCart, createCatalogProduct } from "./support/catalog";
+
 function uniqueMarker(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }
@@ -11,18 +13,20 @@ test.describe("sales UI checkout reflection across history and debt", () => {
   );
 
   test("registers cash and on-account sales via UI and exposes both in reporting/debt", async ({
+    request,
     page,
   }) => {
     const marker = uniqueMarker();
+    const productName = `UI Flow Product ${marker}`;
     const customerName = `UI Flow ${marker}`;
+    await createCatalogProduct(request, { name: productName });
 
     await page.goto("/sales");
     await expect(page).toHaveURL(/\/sales$/);
     await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-    await expect(page.getByTestId("checkout-open-payment-button")).toBeEnabled({
-      timeout: 15_000,
-    });
+    await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
 
+    await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-cash-button").click();
     await page.getByTestId("checkout-confirm-payment-button").click();
@@ -30,10 +34,7 @@ test.describe("sales UI checkout reflection across history and debt", () => {
       "Checkout completed successfully.",
     );
 
-    const firstProductCard = page.locator('[data-testid^="product-card-"]').first();
-    await firstProductCard.click();
-    await expect(page.locator('[data-testid^="order-item-"]').first()).toBeVisible();
-
+    await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();
     await page.getByTestId("checkout-customer-name-input").fill(customerName);

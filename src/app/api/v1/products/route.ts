@@ -1,12 +1,16 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { ProductDomainError } from "@/modules/catalog/domain/errors/ProductDomainError";
-import { catalogMockRuntime } from "@/modules/catalog/infrastructure/runtime/catalogMockRuntime";
+import { createCatalogRuntime } from "@/modules/catalog/infrastructure/runtime/catalogRuntime";
 import { createProductDTOSchema } from "@/modules/catalog/presentation/dtos/create-product.dto";
 import {
   productListResponseDTOSchema,
   productResponseDTOSchema,
 } from "@/modules/catalog/presentation/dtos/product-response.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -18,8 +22,6 @@ interface ApiErrorResponse {
   readonly message: string;
   readonly details?: ApiErrorDetail[];
 }
-
-const { createProductUseCase, listProductsUseCase } = catalogMockRuntime;
 
 function errorResponse(
   status: number,
@@ -45,6 +47,8 @@ function parseActiveOnlyParam(value: string | null): boolean | undefined {
 }
 
 export async function GET(request: Request): Promise<Response> {
+  noStore();
+  const { listProductsUseCase } = createCatalogRuntime();
   const url = new URL(request.url);
   const categoryIdRaw = url.searchParams.get("categoryId");
   const activeOnlyRaw = url.searchParams.get("activeOnly");
@@ -73,8 +77,8 @@ export async function GET(request: Request): Promise<Response> {
   const parsedResponse = productListResponseDTOSchema.safeParse(responseBody);
   if (!parsedResponse.success) {
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates product list contract.",
+      code: "response_contract_error",
+      message: "Response violates product list contract.",
     });
   }
 
@@ -82,6 +86,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { createProductUseCase } = createCatalogRuntime();
   let payload: unknown;
 
   try {
@@ -114,8 +119,8 @@ export async function POST(request: Request): Promise<Response> {
 
     if (!parsedResponse.success) {
       return errorResponse(500, {
-        code: "mock_contract_error",
-        message: "Mock response violates product response contract.",
+        code: "response_contract_error",
+        message: "Response violates product response contract.",
       });
     }
 

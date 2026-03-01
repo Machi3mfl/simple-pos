@@ -1,8 +1,12 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
-import { reportingMockRuntime } from "@/modules/reporting/infrastructure/runtime/reportingMockRuntime";
+import { createReportingRuntime } from "@/modules/reporting/infrastructure/runtime/reportingRuntime";
 import { profitSummaryResponseDTOSchema } from "@/modules/reporting/presentation/dtos/profit-summary-response.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface ApiErrorResponse {
   readonly code: string;
@@ -17,6 +21,8 @@ function errorResponse(
 }
 
 export async function GET(request: Request): Promise<Response> {
+  noStore();
+  const { getProfitSummaryReportUseCase } = createReportingRuntime();
   const url = new URL(request.url);
   const periodStart = parseDateQueryParam(
     url.searchParams.get("periodStart"),
@@ -38,7 +44,7 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
-  const summary = await reportingMockRuntime.getProfitSummaryReportUseCase.execute({
+  const summary = await getProfitSummaryReportUseCase.execute({
     periodStart: periodStart ?? undefined,
     periodEnd: periodEnd ?? undefined,
   });
@@ -46,8 +52,8 @@ export async function GET(request: Request): Promise<Response> {
   const parsedResponse = profitSummaryResponseDTOSchema.safeParse(summary);
   if (!parsedResponse.success) {
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates profit summary contract.",
+      code: "response_contract_error",
+      message: "Response violates profit summary contract.",
     });
   }
 

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getBackendMode } from "@/infrastructure/config/runtimeMode";
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import {
   CustomerNotFoundForDebtError,
@@ -8,14 +7,14 @@ import {
   AccountsReceivableDomainError,
 } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
-import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { createDebtPaymentDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
 import { debtPaymentResponseDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
 import { RegisterDebtPaymentUseCase } from "@/modules/accounts-receivable/application/use-cases/RegisterDebtPaymentUseCase";
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
-import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
+
+export const dynamic = "force-dynamic";
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -28,18 +27,24 @@ interface ApiErrorResponse {
   readonly details?: ApiErrorDetail[];
 }
 
-const customerRepository: CustomerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseCustomerRepository(getSupabaseServerClient())
-    : new InMemoryCustomerRepository();
-const debtLedgerRepository: DebtLedgerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseDebtLedgerRepository(getSupabaseServerClient())
-    : new InMemoryDebtLedgerRepository();
-const registerDebtPaymentUseCase = new RegisterDebtPaymentUseCase(
-  debtLedgerRepository,
-  customerRepository,
-);
+function createDebtPaymentsRuntime(): {
+  registerDebtPaymentUseCase: RegisterDebtPaymentUseCase;
+} {
+  const supabaseClient = getSupabaseServerClient();
+  const customerRepository: CustomerRepository = new SupabaseCustomerRepository(
+    supabaseClient,
+  );
+  const debtLedgerRepository: DebtLedgerRepository = new SupabaseDebtLedgerRepository(
+    supabaseClient,
+  );
+
+  return {
+    registerDebtPaymentUseCase: new RegisterDebtPaymentUseCase(
+      debtLedgerRepository,
+      customerRepository,
+    ),
+  };
+}
 
 function errorResponse(
   status: number,
@@ -49,6 +54,7 @@ function errorResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { registerDebtPaymentUseCase } = createDebtPaymentsRuntime();
   let payload: unknown;
 
   try {
@@ -79,8 +85,8 @@ export async function POST(request: Request): Promise<Response> {
     const parsedResponse = debtPaymentResponseDTOSchema.safeParse(result);
     if (!parsedResponse.success) {
       return errorResponse(500, {
-        code: "mock_contract_error",
-        message: "Mock response violates debt payment contract.",
+        code: "response_contract_error",
+        message: "Response violates debt payment contract.",
       });
     }
 

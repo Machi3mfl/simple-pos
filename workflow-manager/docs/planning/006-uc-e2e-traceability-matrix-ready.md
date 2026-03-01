@@ -10,7 +10,7 @@ Whenever a use case scope, endpoint contract, or E2E scenario changes, this file
 
 ### UI E2E Definition
 
-In this matrix, `UI E2E coverage` means the scenario is executed through user interactions in the interface (`page` actions) and does not seed business data through direct `request.post` setup.
+In this matrix, `UI E2E coverage` means the scenario is executed through user interactions in the interface (`page` actions). Some real-backend UI specs may pre-seed catalog records through `request.post` setup so the sales screen can start empty without demo data.
 
 ## Matrix
 
@@ -33,3 +33,5 @@ The baseline run that validates UI vertical slices against Supabase is:
 - [tests/scripts/run-e2e-ui-real-modules.sh](../../../tests/scripts/run-e2e-ui-real-modules.sh)
 
 This suite resets DB state before execution and intentionally keeps generated data after completion for manual verification.
+
+Since `2026-03-01`, this suite explicitly creates products per scenario because the app no longer auto-seeds catalog data or preloads order-list items.

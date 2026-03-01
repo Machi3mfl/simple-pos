@@ -1,14 +1,18 @@
 import { expect, test } from "@playwright/test";
 
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
+import { addProductToCart, createCatalogProduct } from "./support/catalog";
 
 test.describe("offline sync recovery", () => {
   test("queues checkout event during outage and syncs it after reconnect", async ({
+    request,
     page,
   }) => {
     const storageKey = getOfflineSyncQueueStorageKey();
     let failNextSaleRequest = true;
     let syncRequests = 0;
+    const productName = `Offline Sync Product ${Date.now()}`;
+    await createCatalogProduct(request, { name: productName });
 
     await page.route("**/api/v1/sales", async (route) => {
       if (route.request().method() !== "POST") {
@@ -33,6 +37,7 @@ test.describe("offline sync recovery", () => {
     });
 
     await page.goto("/sales");
+    await addProductToCart(page, productName);
 
     await page.getByRole("button", { name: "Process to Payment" }).click();
     await page.getByRole("button", { name: "Confirm Payment" }).click();

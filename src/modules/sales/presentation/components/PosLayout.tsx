@@ -45,13 +45,6 @@ interface ProductListApiResponse {
   readonly items: readonly ProductListApiItem[];
 }
 
-interface SeedProductInput {
-  readonly name: string;
-  readonly categoryId: string;
-  readonly price: number;
-  readonly initialStock: number;
-}
-
 const navItems: readonly PosNavItem[] = [
   { id: "sales", label: "Sales", icon: ShoppingCart },
   { id: "catalog", label: "Catalog", icon: Package },
@@ -67,15 +60,6 @@ const baseCategories: readonly CatalogCategory[] = [
   { id: "drink", label: "Drink", emoji: "🥤" },
   { id: "snack", label: "Snack", emoji: "🍔" },
   { id: "dessert", label: "Dessert", emoji: "🍬" },
-];
-
-const demoCatalogSeed: readonly SeedProductInput[] = [
-  { name: "Reguler Noodles", categoryId: "main", price: 10, initialStock: 30 },
-  { name: "Chicken Noodles", categoryId: "main", price: 15, initialStock: 30 },
-  { name: "Chicken Curry", categoryId: "main", price: 25, initialStock: 25 },
-  { name: "Ebi Curry", categoryId: "main", price: 12, initialStock: 20 },
-  { name: "Javanes Noodles", categoryId: "main", price: 20, initialStock: 15 },
-  { name: "Iced Tea", categoryId: "drink", price: 6, initialStock: 30 },
 ];
 
 const categoryEmojiById: Record<string, string> = {
@@ -134,40 +118,6 @@ function toCatalogProduct(item: ProductListApiItem): CatalogProduct {
   };
 }
 
-function buildInitialCartSeed(
-  products: readonly CatalogProduct[],
-): ReadonlyArray<{ readonly product: CatalogProduct; readonly quantity: number }> {
-  const preferredNames = [
-    { name: "Reguler Noodles", quantity: 2 },
-    { name: "Chicken Noodles", quantity: 1 },
-    { name: "Chicken Curry", quantity: 1 },
-    { name: "Ebi Curry", quantity: 1 },
-  ];
-
-  const seeded = preferredNames
-    .map((entry) => ({
-      product: products.find((product) => product.name === entry.name),
-      quantity: entry.quantity,
-    }))
-    .filter(
-      (
-        entry,
-      ): entry is { readonly product: CatalogProduct; readonly quantity: number } =>
-        Boolean(entry.product),
-    );
-
-  if (seeded.length > 0) {
-    return seeded;
-  }
-
-  return products
-    .slice(0, 3)
-    .map((product) => ({
-      product,
-      quantity: 1,
-    }));
-}
-
 function resolveWorkspaceFromPathname(pathname: string | null): PosWorkspaceId | null {
   if (!pathname) {
     return null;
@@ -197,7 +147,6 @@ export function PosLayout({
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
-  const [hasSeededCart, setHasSeededCart] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
   const activeNavItemId = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
@@ -237,67 +186,19 @@ export function PosLayout({
     return data.items.map(toCatalogProduct);
   }, []);
 
-  const seedDemoCatalog = useCallback(async (): Promise<void> => {
+  const refreshCatalog = useCallback(async (): Promise<void> => {
     setIsLoadingProducts(true);
     try {
-      await Promise.all(
-        demoCatalogSeed.map((product) =>
-          fetch("/api/v1/products", {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-            },
-            body: JSON.stringify(product),
-          }),
-        ),
-      );
-
-      const seededProducts = await loadCatalogProducts();
-      setCatalogProducts(seededProducts);
+      const products = await loadCatalogProducts();
+      setCatalogProducts(products);
     } finally {
       setIsLoadingProducts(false);
     }
   }, [loadCatalogProducts]);
 
-  const refreshCatalog = useCallback(async (): Promise<void> => {
-    setIsLoadingProducts(true);
-    try {
-      const products = await loadCatalogProducts();
-      if (products.length === 0) {
-        await seedDemoCatalog();
-        return;
-      }
-
-      setCatalogProducts(products);
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  }, [loadCatalogProducts, seedDemoCatalog]);
-
   useEffect(() => {
     void refreshCatalog();
   }, [refreshCatalog]);
-
-  useEffect(() => {
-    if (hasSeededCart || catalogProducts.length === 0) {
-      return;
-    }
-
-    const bootstrappedItems = buildInitialCartSeed(catalogProducts).map(
-      ({ product, quantity }) => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity,
-        emoji: product.emoji,
-      }),
-    );
-
-    if (bootstrappedItems.length > 0) {
-      setCartItems(bootstrappedItems);
-      setHasSeededCart(true);
-    }
-  }, [catalogProducts, hasSeededCart]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -396,7 +297,6 @@ export function PosLayout({
 
   const handleCheckoutSuccess = useCallback((): void => {
     setCartItems([]);
-    setHasSeededCart(true);
     setSalesRefreshToken((current) => current + 1);
   }, []);
 
@@ -473,7 +373,9 @@ export function PosLayout({
               onSearchTermChange={setSearchTerm}
               onCategorySelect={setActiveCategoryId}
               onProductSelect={addProductToCart}
-              onSeedDemoCatalog={seedDemoCatalog}
+              onOpenCatalogWorkspace={() => {
+                router.push(workspacePathById.catalog);
+              }}
             />
             <CheckoutPanel
               items={cartItems}

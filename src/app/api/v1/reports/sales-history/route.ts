@@ -1,9 +1,13 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
 import type { SalePaymentMethod } from "@/modules/sales/domain/entities/Sale";
-import { reportingMockRuntime } from "@/modules/reporting/infrastructure/runtime/reportingMockRuntime";
+import { createReportingRuntime } from "@/modules/reporting/infrastructure/runtime/reportingRuntime";
 import { salesHistoryResponseDTOSchema } from "@/modules/reporting/presentation/dtos/sales-history-response.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -38,6 +42,8 @@ function parsePaymentMethodQueryParam(
 }
 
 export async function GET(request: Request): Promise<Response> {
+  noStore();
+  const { getSalesHistoryReportUseCase } = createReportingRuntime();
   const url = new URL(request.url);
   const periodStart = parseDateQueryParam(
     url.searchParams.get("periodStart"),
@@ -75,7 +81,7 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
-  const items = await reportingMockRuntime.getSalesHistoryReportUseCase.execute({
+  const items = await getSalesHistoryReportUseCase.execute({
     periodStart: periodStart ?? undefined,
     periodEnd: periodEnd ?? undefined,
     paymentMethod: paymentMethod ?? undefined,
@@ -84,8 +90,8 @@ export async function GET(request: Request): Promise<Response> {
   const parsedResponse = salesHistoryResponseDTOSchema.safeParse({ items });
   if (!parsedResponse.success) {
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates sales history report contract.",
+      code: "response_contract_error",
+      message: "Response violates sales history report contract.",
     });
   }
 

@@ -37,6 +37,8 @@ export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 export SUPABASE_SERVICE_ROLE_KEY="<local-service-role-key>"
 ```
 
+`POS_BACKEND_MODE` is only used to gate real-backend test suites; application routes now always use Supabase persistence.
+
 4. Run real-backend release-gate tests:
 
 ```bash
@@ -60,9 +62,10 @@ This command resets the local Supabase DB before executing tests and intentional
 ## Expected Result
 
 - `tests/e2e/release-gate-real-backend.spec.ts` passes.
-- No contract/build/lint regressions from mock mode baseline.
+- `tests/e2e/sync-idempotency-and-retry-api.spec.ts` passes.
+- No contract/build/lint regressions from the real-backend baseline.
 
 ## Notes
 
-- Default mode remains `mock` when `POS_BACKEND_MODE` is not set.
-- Existing `npm run test:e2e` still validates the full mock-first suite.
+- Sales opens with an empty order list unless the operator explicitly adds products.
+- Real-module UI specs create their own products because no demo catalog is auto-seeded anymore.

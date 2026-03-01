@@ -104,6 +104,8 @@ curl -X POST /api/v1/sales \
   - Product card click adds/increments cart lines
   - Cart quantity controls (`+` / `-`) update totals in real time
   - Checkout uses real product IDs from catalog data
+  - Sales starts with an empty order list; no demo cart items are preloaded.
+  - Sales no longer auto-seeds demo catalog products; empty catalog state routes operator to Catalog.
 - Checkout rule integration:
   - only `cash` and `on_account`
   - `on_account` requires customer name in UI and API validation

@@ -5,6 +5,7 @@ import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/pres
 import { salesHistoryResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/sales-history-response.dto";
 import { topProductsResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/top-products-response.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
+import { syncEventsResultResponseDTOSchema } from "../../src/modules/sync/presentation/dtos/sync-events-result.dto";
 
 function uniqueMarker(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -16,7 +17,7 @@ test.describe("release gate real backend", () => {
     "Real-backend gate runs only when POS_BACKEND_MODE=supabase.",
   );
 
-  test("persists catalog, stock, and sale flows with reporting visibility", async ({
+  test("persists catalog, stock, sale, and sync flows with reporting visibility", async ({
     request,
   }) => {
     const marker = uniqueMarker("real-gate");
@@ -114,5 +115,62 @@ test.describe("release gate real backend", () => {
     expect(
       topProductsParsed.data.items.some((item) => item.productId === productId),
     ).toBe(true);
+
+    const syncKey = uniqueMarker("real-sync");
+
+    const firstSyncResponse = await request.post("/api/v1/sync/events", {
+      data: {
+        events: [
+          {
+            eventId: `evt-${syncKey}-1`,
+            eventType: "sale_created",
+            occurredAt: new Date().toISOString(),
+            payload: { saleId: saleParsed.data.saleId },
+            idempotencyKey: syncKey,
+          },
+        ],
+      },
+    });
+    expect(firstSyncResponse.status()).toBe(200);
+    const firstSyncBody = await firstSyncResponse.json();
+    const firstSyncParsed = syncEventsResultResponseDTOSchema.safeParse(firstSyncBody);
+    expect(firstSyncParsed.success).toBe(true);
+    if (!firstSyncParsed.success) {
+      throw new Error("Expected valid first sync response.");
+    }
+    expect(firstSyncParsed.data.results).toEqual([
+      {
+        eventId: `evt-${syncKey}-1`,
+        status: "synced",
+      },
+    ]);
+
+    const replaySyncResponse = await request.post("/api/v1/sync/events", {
+      data: {
+        events: [
+          {
+            eventId: `evt-${syncKey}-2`,
+            eventType: "sale_created",
+            occurredAt: new Date().toISOString(),
+            payload: { saleId: saleParsed.data.saleId },
+            idempotencyKey: syncKey,
+          },
+        ],
+      },
+    });
+    expect(replaySyncResponse.status()).toBe(200);
+    const replaySyncBody = await replaySyncResponse.json();
+    const replaySyncParsed = syncEventsResultResponseDTOSchema.safeParse(replaySyncBody);
+    expect(replaySyncParsed.success).toBe(true);
+    if (!replaySyncParsed.success) {
+      throw new Error("Expected valid replay sync response.");
+    }
+    expect(replaySyncParsed.data.results).toEqual([
+      {
+        eventId: `evt-${syncKey}-2`,
+        status: "synced",
+        reason: "idempotent_replay",
+      },
+    ]);
   });
 });

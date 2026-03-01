@@ -2,6 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 const defaultBaseUrl = "http://127.0.0.1:3010";
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
+const shouldReuseExistingServer =
+  !process.env.CI && process.env.POS_BACKEND_MODE !== "supabase";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -24,7 +26,7 @@ export default defineConfig({
     : {
         command: "npm run build && npm run start -- --port 3010",
         url: `${defaultBaseUrl}/sales`,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: shouldReuseExistingServer,
         timeout: 180_000,
       },
 });

@@ -1,10 +1,14 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { InventoryDomainError } from "@/modules/inventory/domain/errors/InventoryDomainError";
-import { inventoryMockRuntime } from "@/modules/inventory/infrastructure/runtime/inventoryMockRuntime";
+import { createInventoryRuntime } from "@/modules/inventory/infrastructure/runtime/inventoryRuntime";
 import { createStockMovementDTOSchema } from "@/modules/inventory/presentation/dtos/create-stock-movement.dto";
 import { listStockMovementsResponseDTOSchema } from "@/modules/inventory/presentation/dtos/list-stock-movements-response.dto";
 import { stockMovementResponseDTOSchema } from "@/modules/inventory/presentation/dtos/stock-movement-response.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -16,8 +20,6 @@ interface ApiErrorResponse {
   readonly message: string;
   readonly details?: ApiErrorDetail[];
 }
-
-const { registerStockMovementUseCase, listStockMovementsUseCase } = inventoryMockRuntime;
 
 function errorResponse(
   status: number,
@@ -40,6 +42,8 @@ function parseDateQueryParam(value: string | null): Date | null | "invalid" {
 }
 
 export async function GET(request: Request): Promise<Response> {
+  noStore();
+  const { listStockMovementsUseCase } = createInventoryRuntime();
   const url = new URL(request.url);
   const productId = url.searchParams.get("productId")?.trim() || undefined;
   const movementTypeRaw = url.searchParams.get("movementType");
@@ -86,8 +90,8 @@ export async function GET(request: Request): Promise<Response> {
   const parsedResponse = listStockMovementsResponseDTOSchema.safeParse({ items });
   if (!parsedResponse.success) {
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates stock movement history contract.",
+      code: "response_contract_error",
+      message: "Response violates stock movement history contract.",
     });
   }
 
@@ -95,6 +99,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { registerStockMovementUseCase } = createInventoryRuntime();
   let payload: unknown;
 
   try {
@@ -126,8 +131,8 @@ export async function POST(request: Request): Promise<Response> {
 
     if (!parsedResponse.success) {
       return errorResponse(500, {
-        code: "mock_contract_error",
-        message: "Mock response violates stock movement contract.",
+        code: "response_contract_error",
+        message: "Response violates stock movement contract.",
       });
     }
 

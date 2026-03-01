@@ -24,7 +24,7 @@ interface ProductCatalogPanelProps {
   readonly onSearchTermChange: (value: string) => void;
   readonly onCategorySelect: (categoryId: string) => void;
   readonly onProductSelect: (productId: string) => void;
-  readonly onSeedDemoCatalog: () => Promise<void>;
+  readonly onOpenCatalogWorkspace: () => void;
 }
 
 export function ProductCatalogPanel({
@@ -36,7 +36,7 @@ export function ProductCatalogPanel({
   onSearchTermChange,
   onCategorySelect,
   onProductSelect,
-  onSeedDemoCatalog,
+  onOpenCatalogWorkspace,
 }: ProductCatalogPanelProps): JSX.Element {
   return (
     <section className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8">
@@ -93,12 +93,12 @@ export function ProductCatalogPanel({
           <button
             type="button"
             onClick={() => {
-              void onSeedDemoCatalog();
+              onOpenCatalogWorkspace();
             }}
             disabled={isLoading}
             className="mt-4 min-h-12 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white"
           >
-            {isLoading ? "Loading..." : "Open onboarding"}
+            {isLoading ? "Loading..." : "Open catalog"}
           </button>
         </div>
       ) : (

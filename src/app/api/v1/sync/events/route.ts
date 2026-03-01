@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { syncMockRuntime } from "@/modules/sync/infrastructure/runtime/syncMockRuntime";
+import { createSyncRuntime } from "@/modules/sync/infrastructure/runtime/syncRuntime";
 import { syncEventsBatchDTOSchema } from "@/modules/sync/presentation/dtos/sync-events-batch.dto";
 import { syncEventsResultResponseDTOSchema } from "@/modules/sync/presentation/dtos/sync-events-result.dto";
+
+export const dynamic = "force-dynamic";
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -14,8 +16,6 @@ interface ApiErrorResponse {
   readonly message: string;
   readonly details?: ApiErrorDetail[];
 }
-const { processSyncEventsBatchUseCase } = syncMockRuntime;
-
 function errorResponse(
   status: number,
   body: ApiErrorResponse,
@@ -24,6 +24,7 @@ function errorResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { processSyncEventsBatchUseCase } = createSyncRuntime();
   let payload: unknown;
 
   try {
@@ -55,8 +56,8 @@ export async function POST(request: Request): Promise<Response> {
   const parsedResponse = syncEventsResultResponseDTOSchema.safeParse(responseBody);
   if (!parsedResponse.success) {
     return errorResponse(500, {
-      code: "mock_contract_error",
-      message: "Mock response violates sync result contract.",
+      code: "response_contract_error",
+      message: "Response violates sync result contract.",
     });
   }
 

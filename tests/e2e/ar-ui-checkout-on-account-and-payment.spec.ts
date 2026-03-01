@@ -1,18 +1,26 @@
 import { expect, test } from "@playwright/test";
 
+import { addProductToCart, createCatalogProduct } from "./support/catalog";
+
 function parseMoneyValue(raw: string): number {
   return Number(raw.replace(/[^0-9.-]/g, ""));
 }
 
 test("runs on-account checkout and settles customer debt from Receivables UI", async ({
+  request,
   page,
 }) => {
-  const customerName = `UI AR ${Date.now()}`;
+  const marker = Date.now();
+  const productName = `UI AR Product ${marker}`;
+  const customerName = `UI AR ${marker}`;
+  await createCatalogProduct(request, { name: productName });
 
   await page.goto("/sales");
 
   await expect(page.getByRole("heading", { name: "Choose Categories" })).toBeVisible();
-  await expect(page.getByTestId("checkout-open-payment-button")).toBeEnabled();
+  await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
+
+  await addProductToCart(page, productName);
 
   await page.getByTestId("checkout-open-payment-button").click();
   await page.getByTestId("checkout-payment-on-account-button").click();
@@ -54,10 +62,10 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   await expect(page.locator('[data-testid^="debt-ledger-entry-"]').first()).toContainText("Debt");
 
-  await page.getByTestId("debt-payment-amount-input").fill("10");
+  await page.getByTestId("debt-payment-amount-input").fill("5");
   await page.getByTestId("debt-register-payment-button").click();
 
-  await expect(page.getByTestId("debt-feedback")).toContainText("Payment registered:");
+  await expect(page.getByTestId("debt-feedback")).toContainText("Payment registered: $5.00.");
 
   const afterOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const afterOutstanding = parseMoneyValue(afterOutstandingRaw);

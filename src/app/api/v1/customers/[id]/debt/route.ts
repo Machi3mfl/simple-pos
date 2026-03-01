@@ -1,35 +1,42 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { getBackendMode } from "@/infrastructure/config/runtimeMode";
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
 import { GetCustomerDebtSummaryUseCase } from "@/modules/accounts-receivable/application/use-cases/GetCustomerDebtSummaryUseCase";
 import { CustomerNotFoundForDebtError } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
-import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
-import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 import { customerDebtSummaryResponseDTOSchema } from "@/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface ApiErrorResponse {
   readonly code: string;
   readonly message: string;
 }
 
-const customerRepository: CustomerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseCustomerRepository(getSupabaseServerClient())
-    : new InMemoryCustomerRepository();
-const debtLedgerRepository: DebtLedgerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseDebtLedgerRepository(getSupabaseServerClient())
-    : new InMemoryDebtLedgerRepository();
-const getCustomerDebtSummaryUseCase = new GetCustomerDebtSummaryUseCase(
-  debtLedgerRepository,
-  customerRepository,
-);
+function createCustomerDebtRuntime(): {
+  getCustomerDebtSummaryUseCase: GetCustomerDebtSummaryUseCase;
+} {
+  const supabaseClient = getSupabaseServerClient();
+  const customerRepository: CustomerRepository = new SupabaseCustomerRepository(
+    supabaseClient,
+  );
+  const debtLedgerRepository: DebtLedgerRepository = new SupabaseDebtLedgerRepository(
+    supabaseClient,
+  );
+
+  return {
+    getCustomerDebtSummaryUseCase: new GetCustomerDebtSummaryUseCase(
+      debtLedgerRepository,
+      customerRepository,
+    ),
+  };
+}
 
 function errorResponse(
   status: number,
@@ -42,6 +49,8 @@ export async function GET(
   request: Request,
   context: { params: { id: string } },
 ): Promise<Response> {
+  noStore();
+  const { getCustomerDebtSummaryUseCase } = createCustomerDebtRuntime();
   const customerId = context.params.id;
   const url = new URL(request.url);
   const periodStart = parseDateQueryParam(
@@ -74,8 +83,8 @@ export async function GET(
     const parsedResponse = customerDebtSummaryResponseDTOSchema.safeParse(result);
     if (!parsedResponse.success) {
       return errorResponse(500, {
-        code: "mock_contract_error",
-        message: "Mock response violates customer debt summary contract.",
+        code: "response_contract_error",
+        message: "Response violates customer debt summary contract.",
       });
     }
 

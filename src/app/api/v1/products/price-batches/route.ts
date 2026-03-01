@@ -5,11 +5,13 @@ import {
   BulkPriceUpdateConflictError,
   ProductDomainError,
 } from "@/modules/catalog/domain/errors/ProductDomainError";
-import { catalogMockRuntime } from "@/modules/catalog/infrastructure/runtime/catalogMockRuntime";
+import { createCatalogRuntime } from "@/modules/catalog/infrastructure/runtime/catalogRuntime";
 import {
   bulkPriceUpdateDTOSchema,
   bulkPriceUpdateResponseDTOSchema,
 } from "@/modules/catalog/presentation/dtos/bulk-price-update.dto";
+
+export const dynamic = "force-dynamic";
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -21,8 +23,6 @@ interface ApiErrorResponse {
   readonly message: string;
   readonly details?: ApiErrorDetail[];
 }
-
-const { applyBulkPriceUpdateUseCase } = catalogMockRuntime;
 
 function errorResponse(
   status: number,
@@ -50,6 +50,7 @@ function resolveScope(input: ReturnType<typeof bulkPriceUpdateDTOSchema.parse>):
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { applyBulkPriceUpdateUseCase } = createCatalogRuntime();
   let payload: unknown;
 
   try {
@@ -75,7 +76,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const actorId = request.headers.get("x-actor-id")?.trim() || "mock-user";
+  const actorId = request.headers.get("x-actor-id")?.trim() || "system";
 
   try {
     const result = await applyBulkPriceUpdateUseCase.execute({
@@ -89,8 +90,8 @@ export async function POST(request: Request): Promise<Response> {
     const parsedResponse = bulkPriceUpdateResponseDTOSchema.safeParse(result);
     if (!parsedResponse.success) {
       return errorResponse(500, {
-        code: "mock_contract_error",
-        message: "Mock response violates bulk price update contract.",
+        code: "response_contract_error",
+        message: "Response violates bulk price update contract.",
       });
     }
 

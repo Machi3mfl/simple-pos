@@ -56,7 +56,7 @@ export interface SaleFilters {
 ## Current Output
 
 - Reporting runtime added:
-  - `src/modules/reporting/infrastructure/runtime/reportingMockRuntime.ts`
+  - `src/modules/reporting/infrastructure/runtime/reportingRuntime.ts`
 - Reporting UI surface integrated:
   - `src/modules/reporting/presentation/components/ReportingPanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Reporting`)
@@ -70,14 +70,16 @@ export interface SaleFilters {
   - `GetSalesHistoryReportUseCase`
 - Sales repository now supports filtered listing for reporting:
   - `src/modules/sales/domain/repositories/SaleRepository.ts`
-  - `src/modules/sales/infrastructure/repositories/InMemorySaleRepository.ts`
-- Real-backend runtime switch for critical flows:
-  - `POS_BACKEND_MODE=mock|supabase`
+  - `src/modules/sales/infrastructure/repositories/SupabaseSaleRepository.ts`
+- Real-backend persistence baseline for critical flows:
   - Supabase server client: `src/infrastructure/config/supabaseServer.ts`
   - Supabase repositories:
     - `src/modules/catalog/infrastructure/repositories/SupabaseProductRepository.ts`
     - `src/modules/inventory/infrastructure/repositories/SupabaseInventoryRepository.ts`
     - `src/modules/sales/infrastructure/repositories/SupabaseSaleRepository.ts`
+    - `src/modules/customers/infrastructure/repositories/SupabaseCustomerRepository.ts`
+    - `src/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository.ts`
+    - `src/modules/sync/infrastructure/repositories/SupabaseSyncEventRepository.ts`
 - Contract updates:
   - `src/app/api/v1/openapi.yaml` (`/reports/sales-history`, `SalesHistoryResponse`)
   - reporting DTOs now use Zod schemas.
@@ -91,8 +93,11 @@ export interface SaleFilters {
   - `tests/e2e/api-contract-conformance.spec.ts`
   - `tests/e2e/ui-vertical-slices-smoke.spec.ts`
   - `tests/e2e/release-gate-real-backend.spec.ts` (gated by `POS_BACKEND_MODE=supabase`)
+  - `tests/e2e/sync-idempotency-and-retry-api.spec.ts`
   - Full suite result (`2026-02-28`): `30 passed`, `1 skipped` (Playwright mock mode).
   - Real-backend gate result (`2026-02-28`): `1 passed` (Playwright with local Supabase).
 - Real-backend gate runbook and schema:
   - `workflow-manager/docs/runbooks/002-runbook-release-gate-real-backend-ready.md`
   - `supabase/migrations/20260228000000_simple_pos_core.sql`
+  - `supabase/migrations/20260301000000_customers_and_debt_ledger.sql`
+  - `supabase/migrations/20260301010000_sync_events.sql`

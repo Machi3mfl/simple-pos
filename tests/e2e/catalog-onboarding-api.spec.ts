@@ -45,7 +45,9 @@ test.describe("catalog onboarding api", () => {
       throw new Error("Expected valid product response for first creation");
     }
 
-    expect(firstParsed.data.item.imageUrl.startsWith("data:image/svg+xml,")).toBe(true);
+    const firstImageUrl = firstParsed.data.item.imageUrl;
+    expect(firstImageUrl).toBeTruthy();
+    expect(firstImageUrl?.startsWith("data:image/svg+xml,")).toBe(true);
     expect(firstParsed.data.item.isActive).toBe(true);
     expect(firstParsed.data.item.stock).toBe(15);
 
@@ -67,7 +69,7 @@ test.describe("catalog onboarding api", () => {
       throw new Error("Expected valid product response for second creation");
     }
 
-    expect(secondParsed.data.item.imageUrl).toBe(firstParsed.data.item.imageUrl);
+    expect(secondParsed.data.item.imageUrl).toBe(firstImageUrl);
   });
 
   test("respects explicit imageUrl and supports list filters", async ({ request }) => {

@@ -1,17 +1,24 @@
 import { expect, test } from "@playwright/test";
 
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
+import { addProductToCart, createCatalogProduct } from "./support/catalog";
 
 function parseMoneyValue(raw: string): number {
   return Number(raw.replace(/[^0-9.-]/g, ""));
 }
 
 test.describe("offline debt payment recovery", () => {
-  test("queues debt payment during outage and syncs it after manual retry", async ({ page }) => {
+  test("queues debt payment during outage and syncs it after manual retry", async ({
+    request,
+    page,
+  }) => {
     const storageKey = getOfflineSyncQueueStorageKey();
     let failNextDebtPaymentRequest = true;
     let syncRequests = 0;
-    const customerName = `Offline Debt ${Date.now()}`;
+    const marker = Date.now();
+    const customerName = `Offline Debt ${marker}`;
+    const productName = `Offline Debt Product ${marker}`;
+    await createCatalogProduct(request, { name: productName });
 
     await page.route("**/api/v1/debt-payments", async (route) => {
       if (route.request().method() !== "POST") {
@@ -36,6 +43,7 @@ test.describe("offline debt payment recovery", () => {
     });
 
     await page.goto("/sales");
+    await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();
     await page.getByTestId("checkout-customer-name-input").fill(customerName);

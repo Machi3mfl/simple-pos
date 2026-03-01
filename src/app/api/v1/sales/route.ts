@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-import { getBackendMode } from "@/infrastructure/config/runtimeMode";
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/application/services/OnAccountDebtRecorderAdapter";
 import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
-import { InMemoryDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/InMemoryDebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
-import { InMemoryCustomerRepository } from "@/modules/customers/infrastructure/repositories/InMemoryCustomerRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 import { CreateSaleUseCase } from "@/modules/sales/application/use-cases/CreateSaleUseCase";
 import { SaleDomainError } from "@/modules/sales/domain/errors/SaleDomainError";
 import type { SaleRepository } from "@/modules/sales/domain/repositories/SaleRepository";
-import { InMemorySaleRepository } from "@/modules/sales/infrastructure/repositories/InMemorySaleRepository";
 import { SupabaseSaleRepository } from "@/modules/sales/infrastructure/repositories/SupabaseSaleRepository";
 import { createSaleDTOSchema } from "@/modules/sales/presentation/dtos/create-sale.dto";
+
+export const dynamic = "force-dynamic";
 
 interface ApiErrorDetail {
   readonly field: string;
@@ -30,28 +28,31 @@ interface ApiErrorResponse {
   readonly details?: ApiErrorDetail[];
 }
 
-const customerRepository: CustomerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseCustomerRepository(getSupabaseServerClient())
-    : new InMemoryCustomerRepository();
-const saleRepository: SaleRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseSaleRepository(getSupabaseServerClient())
-    : new InMemorySaleRepository();
-const debtLedgerRepository: DebtLedgerRepository =
-  getBackendMode() === "supabase"
-    ? new SupabaseDebtLedgerRepository(getSupabaseServerClient())
-    : new InMemoryDebtLedgerRepository();
-const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
-const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);
-const onAccountDebtRecorder = new OnAccountDebtRecorderAdapter(
-  recordOnAccountDebtUseCase,
-);
-const createSaleUseCase = new CreateSaleUseCase(
-  saleRepository,
-  findOrCreateCustomerUseCase,
-  onAccountDebtRecorder,
-);
+function createSaleRuntime(): {
+  createSaleUseCase: CreateSaleUseCase;
+} {
+  const supabaseClient = getSupabaseServerClient();
+  const customerRepository: CustomerRepository = new SupabaseCustomerRepository(
+    supabaseClient,
+  );
+  const saleRepository: SaleRepository = new SupabaseSaleRepository(supabaseClient);
+  const debtLedgerRepository: DebtLedgerRepository = new SupabaseDebtLedgerRepository(
+    supabaseClient,
+  );
+  const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
+  const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);
+  const onAccountDebtRecorder = new OnAccountDebtRecorderAdapter(
+    recordOnAccountDebtUseCase,
+  );
+
+  return {
+    createSaleUseCase: new CreateSaleUseCase(
+      saleRepository,
+      findOrCreateCustomerUseCase,
+      onAccountDebtRecorder,
+    ),
+  };
+}
 
 function errorResponse(
   status: number,
@@ -61,6 +62,7 @@ function errorResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const { createSaleUseCase } = createSaleRuntime();
   let payload: unknown;
 
   try {
