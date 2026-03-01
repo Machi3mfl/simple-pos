@@ -1,14 +1,17 @@
+import { CategoryMappingRule } from "../../domain/entities/CategoryMappingRule";
 import { ImportedProductSource } from "../../domain/entities/ImportedProductSource";
 import type { ExternalCatalogProviderId } from "../../domain/entities/ExternalCatalogCandidate";
 import {
   ExternalSourceAlreadyImportedError,
   MissingExternalImageUrlError,
 } from "../../domain/errors/ProductSourcingDomainError";
+import { resolveExternalCategoryPath } from "../../domain/services/ResolveExternalCategoryPath";
 import { resolveImportedProductImageObjectKey } from "../../domain/services/ResolveImportedProductImageObjectKey";
 import type {
   CatalogProductRecord,
   CatalogProductWriter,
 } from "../ports/CatalogProductWriter";
+import type { ExternalCategoryMappingRepository } from "../ports/ExternalCategoryMappingRepository";
 import type { ImportedProductSourceRepository } from "../ports/ImportedProductSourceRepository";
 import type { ProductImageAssetStore } from "../ports/ProductImageAssetStore";
 
@@ -57,6 +60,7 @@ export class ImportExternalProductsUseCase {
     private readonly catalogProductWriter: CatalogProductWriter,
     private readonly productImageAssetStore: ProductImageAssetStore,
     private readonly importedProductSourceRepository: ImportedProductSourceRepository,
+    private readonly externalCategoryMappingRepository: ExternalCategoryMappingRepository,
   ) {}
 
   async execute(
@@ -142,6 +146,7 @@ export class ImportExternalProductsUseCase {
         });
 
         await this.importedProductSourceRepository.save(importedSource);
+        await this.persistCategoryMapping(item);
 
         importedItems.push({
           row,
@@ -167,5 +172,37 @@ export class ImportExternalProductsUseCase {
       items: importedItems,
       invalidItems,
     };
+  }
+
+  private async persistCategoryMapping(item: ImportExternalProductsUseCaseItemInput): Promise<void> {
+    const externalCategoryPath = resolveExternalCategoryPath(item.categoryTrail);
+    if (!externalCategoryPath) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const rule = this.createCategoryMappingRule(
+      item.providerId,
+      externalCategoryPath,
+      item.categoryId,
+      now,
+    );
+    await this.externalCategoryMappingRepository.save(rule);
+  }
+
+  private createCategoryMappingRule(
+    providerId: ExternalCatalogProviderId,
+    externalCategoryPath: string,
+    internalCategoryId: string,
+    timestamp: string,
+  ): CategoryMappingRule {
+    return CategoryMappingRule.create({
+      id: `${providerId}:${externalCategoryPath}`,
+      providerId,
+      externalCategoryPath,
+      internalCategoryId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
   }
 }

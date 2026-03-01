@@ -111,4 +111,11 @@ export class ExternalCatalogCandidate {
       categoryTrail: [...this.props.categoryTrail],
     };
   }
+
+  withSuggestedCategoryId(suggestedCategoryId: string | null): ExternalCatalogCandidate {
+    return new ExternalCatalogCandidate({
+      ...this.props,
+      suggestedCategoryId,
+    });
+  }
 }

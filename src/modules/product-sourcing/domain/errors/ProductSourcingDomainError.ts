@@ -71,3 +71,10 @@ export class InvalidImportedProductSourceError extends ProductSourcingDomainErro
     this.name = "InvalidImportedProductSourceError";
   }
 }
+
+export class InvalidCategoryMappingRuleError extends ProductSourcingDomainError {
+  constructor(reason: string) {
+    super(`La regla de mapeo de categoria es invalida: ${reason}`);
+    this.name = "InvalidCategoryMappingRuleError";
+  }
+}

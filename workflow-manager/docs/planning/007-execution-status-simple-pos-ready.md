@@ -83,7 +83,7 @@ Open planning item:
 - `SOURCING-001` external product sourcing and assisted import:
   - status: `in_progress`
   - PoC status: `completed`
-  - implementation status: `Phase 1 / Search Slice` completed + `Phase 2/3` UI-first assisted import slice running
+  - implementation status: `Phase 1 / Search Slice` completed + `Phase 2/3` UI-first assisted import slice running with persisted category mapping reuse
   - current output:
     - `GET /api/v1/product-sourcing/search`
     - `POST /api/v1/product-sourcing/import`
@@ -91,9 +91,11 @@ Open planning item:
     - `product-sourcing` module runtime wired to real catalog creation through `CatalogProductWriter`
     - selected external images are persisted into the managed storage bucket `product-sourcing-images`
     - traceability rows are persisted in `imported_product_sources`
+    - confirmed external category paths are persisted in `external_category_mappings`
+    - later searches now reuse the confirmed internal category automatically when the external category path matches
     - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
-    - contract/use-case/provider/UI tests with deterministic fixtures
-    - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification
+    - contract/use-case/provider/UI tests with deterministic fixtures, including fixture-backed real-backend sourcing runs
+    - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification and persisted category mapping reuse
   - main artifact: `workflow-manager/docs/features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md`
 
 ---
@@ -108,3 +110,4 @@ Open planning item:
 - Converged `/products` coverage: `tests/e2e/ui-vertical-slices-smoke.spec.ts`, `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`, `tests/e2e/inventory-ui-stock-movement.spec.ts`.
 - Sourcing UI coverage: `tests/e2e/product-sourcing-ui.spec.ts`, `tests/e2e/product-sourcing-import-ui.spec.ts`, `tests/e2e/product-sourcing-import-use-case.spec.ts`.
 - Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.
+- Sourcing category mapping verification: `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` proves that a category confirmed in one import is auto-reused on a later result sharing the same external path.

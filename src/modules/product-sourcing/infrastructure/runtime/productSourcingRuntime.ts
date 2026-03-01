@@ -7,6 +7,7 @@ import { ImportExternalProductsUseCase } from "../../application/use-cases/Impor
 import { SearchExternalProductsUseCase } from "../../application/use-cases/SearchExternalProductsUseCase";
 import { CatalogCreateProductWriter } from "../adapters/CatalogCreateProductWriter";
 import { CarrefourCatalogProvider } from "../providers/carrefour/CarrefourCatalogProvider";
+import { SupabaseExternalCategoryMappingRepository } from "../repositories/SupabaseExternalCategoryMappingRepository";
 import { SupabaseImportedProductSourceRepository } from "../repositories/SupabaseImportedProductSourceRepository";
 import { SupabaseProductImageAssetStore } from "../storage/SupabaseProductImageAssetStore";
 
@@ -25,15 +26,18 @@ export function createProductSourcingRuntime(): {
   );
   const productImageAssetStore = new SupabaseProductImageAssetStore(client);
   const importedProductSourceRepository = new SupabaseImportedProductSourceRepository(client);
+  const externalCategoryMappingRepository = new SupabaseExternalCategoryMappingRepository(client);
 
   return {
     searchExternalProductsUseCase: new SearchExternalProductsUseCase(
       retailerCatalogProvider,
+      externalCategoryMappingRepository,
     ),
     importExternalProductsUseCase: new ImportExternalProductsUseCase(
       catalogProductWriter,
       productImageAssetStore,
       importedProductSourceRepository,
+      externalCategoryMappingRepository,
     ),
   };
 }

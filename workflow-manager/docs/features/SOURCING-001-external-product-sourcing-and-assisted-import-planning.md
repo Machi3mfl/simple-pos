@@ -66,7 +66,7 @@ What is still missing after the current vertical slice:
 - no provider health/rate-limit hardening yet,
 - no import-history or retry-management UI yet,
 - no mobile/tablet-specific validation pass for larger assisted-import batches yet,
-- and no persisted category-mapping rules yet.
+- and no operator-facing category-mapping management UI yet.
 
 ---
 
@@ -324,6 +324,13 @@ Introduce an infrastructure table such as `external_category_mappings`:
 
 This avoids hardcoding retailer taxonomy logic inside UI components.
 
+Current implementation status:
+
+- persisted in `public.external_category_mappings`,
+- keyed by `provider_id + external_category_path`,
+- written during successful import confirmation,
+- and reused on later searches so the next candidate defaults to the already-confirmed internal category.
+
 ---
 
 ## Image Storage Strategy
@@ -472,6 +479,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - [ ] The system stores the selected external image for each successful item in managed storage and creates the product through the internal catalog command path.
 - [ ] The imported products are visible in `/products` and usable from the sales workspace after refresh.
 - [ ] Source metadata (provider, source product id, source URL, image URL, category path, EAN if present) is persisted for traceability.
+- [ ] A category confirmed for one imported external path is reused automatically in later search results that share the same external category path.
 - [ ] Batch import feedback shows per-item success and failure states without hiding partial results.
 - [ ] The architecture keeps retailer-specific logic outside `catalog` and `products`.
 
@@ -508,6 +516,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/search`
 - Deterministic fixtures and tests:
   - `tests/fixtures/product-sourcing/carrefour-search-response.json`
+  - `tests/fixtures/product-sourcing/carrefour-search-response-local-fixture.json`
   - `tests/e2e/product-sourcing-search-use-case.spec.ts`
   - `tests/e2e/product-sourcing-carrefour-provider.spec.ts`
   - `tests/e2e/product-sourcing-search-handler.spec.ts`
@@ -528,11 +537,15 @@ Multi-provider search is a valid later extension, but it should be added only af
 - `src/modules/product-sourcing/application/ports/CatalogProductWriter.ts`
 - `src/modules/product-sourcing/application/ports/ProductImageAssetStore.ts`
 - `src/modules/product-sourcing/application/ports/ImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository.ts`
 - `src/modules/product-sourcing/application/use-cases/ImportExternalProductsUseCase.ts`
 - `src/modules/product-sourcing/infrastructure/adapters/CatalogCreateProductWriter.ts`
 - `src/modules/product-sourcing/infrastructure/storage/SupabaseProductImageAssetStore.ts`
+- `src/modules/product-sourcing/infrastructure/repositories/SupabaseExternalCategoryMappingRepository.ts`
 - `src/modules/product-sourcing/infrastructure/repositories/SupabaseImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/domain/entities/CategoryMappingRule.ts`
 - `src/modules/product-sourcing/domain/entities/ImportedProductSource.ts`
+- `src/modules/product-sourcing/domain/services/ResolveExternalCategoryPath.ts`
 - `src/modules/product-sourcing/domain/services/ResolveImportedProductImageObjectKey.ts`
 - `src/modules/product-sourcing/domain/services/ResolveImportedProductSku.ts`
 - `src/modules/product-sourcing/presentation/dtos/import-external-products.dto.ts`
@@ -540,6 +553,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - `src/app/api/v1/product-sourcing/import/route.ts`
 - `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/import`
 - `supabase/migrations/20260301130000_product_sourcing_trace.sql`
+- `supabase/migrations/20260301140000_external_category_mappings.sql`
 - Current duplicate-protection rule:
   - deterministic SKU generation (`CRF-<sourceProductId>`) remains as a secondary guardrail,
   - primary duplicate detection now comes from persisted `imported_product_sources` uniqueness (`provider_id + source_product_id`).
@@ -547,9 +561,14 @@ Multi-provider search is a valid later extension, but it should be added only af
   - selected images are persisted into the public Supabase bucket `product-sourcing-images`,
   - the imported catalog product receives the managed storage URL instead of the external retailer hotlink,
   - and each successful import writes a trace record with provider, source ids, stored asset metadata, and linked internal product id.
+- Category mapping behavior now implemented:
+  - each successful import persists `provider_id + external_category_path -> internal_category_id`,
+  - later searches override the raw retailer suggestion with the confirmed internal category,
+  - and the `/products/sourcing` import form now reuses that mapping on subsequent results sharing the same external path.
 - Deterministic coverage:
   - `tests/e2e/product-sourcing-import-use-case.spec.ts`
   - `tests/e2e/product-sourcing-import-ui.spec.ts`
+  - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts`
 
 ### Phase 3 - `/products` UI Integration
 
@@ -567,10 +586,12 @@ Multi-provider search is a valid later extension, but it should be added only af
   - multi-select result cards,
   - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
   - assisted batch import execution against the real catalog runtime,
+  - persisted category mapping reuse across later searches,
   - managed image persistence plus source trace recording during each successful import,
   - and navigation back to `/products` to verify imported products in the live workspace.
 - Real-backend UI proof:
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
+  - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
 
 ### Phase 4 - Hardening
 
@@ -599,6 +620,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 ### E2E
 
 - mocked Carrefour-backed search and batch import flow from `/products`,
+- real-backend UI validation for persisted category mapping reuse,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
 - real product visibility after batch import in `/products` and `/sales`,
 - optional live provider smoke checks behind an explicit env flag, not in the stable CI gate.

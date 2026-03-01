@@ -5,6 +5,7 @@ import type {
   CatalogProductWriter,
   CreateCatalogProductFromExternalCandidateInput,
 } from "../../src/modules/product-sourcing/application/ports/CatalogProductWriter";
+import type { ExternalCategoryMappingRepository } from "../../src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository";
 import type { ImportedProductSourceRepository } from "../../src/modules/product-sourcing/application/ports/ImportedProductSourceRepository";
 import type {
   PersistExternalImageInput,
@@ -12,7 +13,9 @@ import type {
   ProductImageAssetStore,
 } from "../../src/modules/product-sourcing/application/ports/ProductImageAssetStore";
 import { ImportExternalProductsUseCase } from "../../src/modules/product-sourcing/application/use-cases/ImportExternalProductsUseCase";
+import { CategoryMappingRule } from "../../src/modules/product-sourcing/domain/entities/CategoryMappingRule";
 import { ImportedProductSource } from "../../src/modules/product-sourcing/domain/entities/ImportedProductSource";
+import { resolveExternalCategoryPath } from "../../src/modules/product-sourcing/domain/services/ResolveExternalCategoryPath";
 
 class InMemoryCatalogProductWriter implements CatalogProductWriter {
   private readonly products = new Map<string, CatalogProductRecord>();
@@ -72,12 +75,39 @@ class InMemoryImportedProductSourceRepository implements ImportedProductSourceRe
   }
 }
 
+class InMemoryExternalCategoryMappingRepository
+  implements ExternalCategoryMappingRepository
+{
+  private readonly items = new Map<string, CategoryMappingRule>();
+
+  async getByExternalCategoryPath(
+    providerId: "carrefour",
+    externalCategoryPath: string,
+  ): Promise<CategoryMappingRule | null> {
+    return this.items.get(`${providerId}:${externalCategoryPath}`) ?? null;
+  }
+
+  async save(rule: CategoryMappingRule): Promise<void> {
+    const primitives = rule.toPrimitives();
+    this.items.set(
+      `${primitives.providerId}:${primitives.externalCategoryPath}`,
+      rule,
+    );
+  }
+}
+
 test.describe("product sourcing import use case", () => {
-  test("persists image assets and source trace for valid items", async () => {
+  test("persists image assets, source trace, and category mappings for valid items", async () => {
     const writer = new InMemoryCatalogProductWriter();
     const assetStore = new InMemoryProductImageAssetStore();
     const sourceRepository = new InMemoryImportedProductSourceRepository();
-    const useCase = new ImportExternalProductsUseCase(writer, assetStore, sourceRepository);
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const useCase = new ImportExternalProductsUseCase(
+      writer,
+      assetStore,
+      sourceRepository,
+      mappingRepository,
+    );
 
     const result = await useCase.execute({
       items: [
@@ -107,13 +137,26 @@ test.describe("product sourcing import use case", () => {
     const savedSource = await sourceRepository.getBySource("carrefour", "393964");
     expect(savedSource?.toPrimitives().storedImagePublicUrl).toContain("https://storage.local/");
     expect(savedSource?.toPrimitives().productId).toBe("product-393964");
+
+    const externalCategoryPath = resolveExternalCategoryPath(["/Bebidas/Gaseosas/"]);
+    const savedMapping = await mappingRepository.getByExternalCategoryPath(
+      "carrefour",
+      externalCategoryPath ?? "",
+    );
+    expect(savedMapping?.toPrimitives().internalCategoryId).toBe("drink");
   });
 
   test("rejects duplicate source rows already imported in previous runs", async () => {
     const writer = new InMemoryCatalogProductWriter();
     const assetStore = new InMemoryProductImageAssetStore();
     const sourceRepository = new InMemoryImportedProductSourceRepository();
-    const useCase = new ImportExternalProductsUseCase(writer, assetStore, sourceRepository);
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const useCase = new ImportExternalProductsUseCase(
+      writer,
+      assetStore,
+      sourceRepository,
+      mappingRepository,
+    );
 
     await useCase.execute({
       items: [

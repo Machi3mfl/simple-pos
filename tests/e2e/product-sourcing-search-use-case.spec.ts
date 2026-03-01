@@ -1,9 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { ExternalCatalogCandidate } from "../../src/modules/product-sourcing/domain/entities/ExternalCatalogCandidate";
-import { InvalidSearchPaginationError, InvalidSearchQueryError } from "../../src/modules/product-sourcing/domain/errors/ProductSourcingDomainError";
-import { SearchExternalProductsUseCase } from "../../src/modules/product-sourcing/application/use-cases/SearchExternalProductsUseCase";
+import type { ExternalCategoryMappingRepository } from "../../src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository";
 import type { RetailerCatalogProvider } from "../../src/modules/product-sourcing/application/ports/RetailerCatalogProvider";
+import { SearchExternalProductsUseCase } from "../../src/modules/product-sourcing/application/use-cases/SearchExternalProductsUseCase";
+import { CategoryMappingRule } from "../../src/modules/product-sourcing/domain/entities/CategoryMappingRule";
+import { ExternalCatalogCandidate } from "../../src/modules/product-sourcing/domain/entities/ExternalCatalogCandidate";
+import {
+  InvalidSearchPaginationError,
+  InvalidSearchQueryError,
+} from "../../src/modules/product-sourcing/domain/errors/ProductSourcingDomainError";
+import { resolveExternalCategoryPath } from "../../src/modules/product-sourcing/domain/services/ResolveExternalCategoryPath";
 
 class FakeRetailerCatalogProvider implements RetailerCatalogProvider {
   public lastInput:
@@ -39,10 +45,32 @@ class FakeRetailerCatalogProvider implements RetailerCatalogProvider {
   }
 }
 
+class InMemoryExternalCategoryMappingRepository
+  implements ExternalCategoryMappingRepository
+{
+  private readonly items = new Map<string, CategoryMappingRule>();
+
+  async getByExternalCategoryPath(
+    providerId: "carrefour",
+    externalCategoryPath: string,
+  ): Promise<CategoryMappingRule | null> {
+    return this.items.get(`${providerId}:${externalCategoryPath}`) ?? null;
+  }
+
+  async save(rule: CategoryMappingRule): Promise<void> {
+    const primitives = rule.toPrimitives();
+    this.items.set(
+      `${primitives.providerId}:${primitives.externalCategoryPath}`,
+      rule,
+    );
+  }
+}
+
 test.describe("product sourcing search use case", () => {
   test("normalizes query and applies default pagination", async () => {
     const provider = new FakeRetailerCatalogProvider();
-    const useCase = new SearchExternalProductsUseCase(provider);
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const useCase = new SearchExternalProductsUseCase(provider, mappingRepository);
 
     const result = await useCase.execute({
       query: "   coca   cola zero   ",
@@ -57,9 +85,32 @@ test.describe("product sourcing search use case", () => {
     expect(result.items[0]?.suggestedCategoryId).toBe("gaseosas-cola");
   });
 
+  test("reuses a persisted category mapping when the external path was already confirmed", async () => {
+    const provider = new FakeRetailerCatalogProvider();
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const externalCategoryPath = resolveExternalCategoryPath([
+      "/Bebidas/Gaseosas/Gaseosas cola/",
+    ]);
+
+    await mappingRepository.save(
+      CategoryMappingRule.create({
+        id: `carrefour:${externalCategoryPath}`,
+        providerId: "carrefour",
+        externalCategoryPath: externalCategoryPath ?? "",
+        internalCategoryId: "drink",
+      }),
+    );
+
+    const useCase = new SearchExternalProductsUseCase(provider, mappingRepository);
+    const result = await useCase.execute({ query: "coca cola" });
+
+    expect(result.items[0]?.suggestedCategoryId).toBe("drink");
+  });
+
   test("rejects queries with fewer than 3 meaningful characters", async () => {
     const provider = new FakeRetailerCatalogProvider();
-    const useCase = new SearchExternalProductsUseCase(provider);
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const useCase = new SearchExternalProductsUseCase(provider, mappingRepository);
 
     await expect(async () => {
       await useCase.execute({ query: " a " });
@@ -68,7 +119,8 @@ test.describe("product sourcing search use case", () => {
 
   test("rejects invalid page size", async () => {
     const provider = new FakeRetailerCatalogProvider();
-    const useCase = new SearchExternalProductsUseCase(provider);
+    const mappingRepository = new InMemoryExternalCategoryMappingRepository();
+    const useCase = new SearchExternalProductsUseCase(provider, mappingRepository);
 
     await expect(async () => {
       await useCase.execute({ query: "yerba mate", pageSize: 30 });

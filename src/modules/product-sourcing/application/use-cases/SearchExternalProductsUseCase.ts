@@ -1,8 +1,8 @@
 import type { ExternalCatalogCandidatePrimitives } from "../../domain/entities/ExternalCatalogCandidate";
-import {
-  InvalidSearchPaginationError,
-} from "../../domain/errors/ProductSourcingDomainError";
+import { resolveExternalCategoryPath } from "../../domain/services/ResolveExternalCategoryPath";
+import { InvalidSearchPaginationError } from "../../domain/errors/ProductSourcingDomainError";
 import { SearchQuery } from "../../domain/value-objects/SearchQuery";
+import type { ExternalCategoryMappingRepository } from "../ports/ExternalCategoryMappingRepository";
 import type { RetailerCatalogProvider } from "../ports/RetailerCatalogProvider";
 
 export interface SearchExternalProductsUseCaseInput {
@@ -20,7 +20,10 @@ export interface SearchExternalProductsUseCaseOutput {
 }
 
 export class SearchExternalProductsUseCase {
-  constructor(private readonly retailerCatalogProvider: RetailerCatalogProvider) {}
+  constructor(
+    private readonly retailerCatalogProvider: RetailerCatalogProvider,
+    private readonly externalCategoryMappingRepository: ExternalCategoryMappingRepository,
+  ) {}
 
   async execute(
     input: SearchExternalProductsUseCaseInput,
@@ -43,9 +46,30 @@ export class SearchExternalProductsUseCase {
       pageSize,
     });
 
+    const mappedItems = await Promise.all(
+      result.items.map(async (item) => {
+        const primitives = item.toPrimitives();
+        const externalCategoryPath = resolveExternalCategoryPath(primitives.categoryTrail);
+        if (!externalCategoryPath) {
+          return primitives;
+        }
+
+        const mapping = await this.externalCategoryMappingRepository.getByExternalCategoryPath(
+          primitives.providerId,
+          externalCategoryPath,
+        );
+
+        if (!mapping) {
+          return primitives;
+        }
+
+        return item.withSuggestedCategoryId(mapping.toPrimitives().internalCategoryId).toPrimitives();
+      }),
+    );
+
     return {
       providerId: result.providerId,
-      items: result.items.map((item) => item.toPrimitives()),
+      items: mappedItems,
       page: result.page,
       pageSize: result.pageSize,
       hasMore: result.hasMore,
