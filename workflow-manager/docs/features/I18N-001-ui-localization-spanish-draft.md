@@ -4,6 +4,7 @@
 
 **Feature ID**: `I18N-001`
 **Status**: `done`
+**GitHub Issue**: #29
 **Priority**: `high`
 **Linked FR/NFR**: `NFR-002`, `NFR-005`
 **Planning Reference**: `workflow-manager/docs/planning/004-implementation-plan-simple-pos-draft.md`

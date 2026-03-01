@@ -7,12 +7,12 @@
 **Feature**: `PRODUCTS-003`
 **Entity**: `task`
 **Pull Request**: `TBD`
-**Status**: `ready`
+**Status**: `done`
 **GitHub Issue**: #26  
 **Priority**: `medium`
 **Assignee**: `TBD`
 **Estimated Effort**: `6h`
-**Actual Effort**: `0h`
+**Actual Effort**: `1h`
 
 ### Business Logic Description
 
@@ -30,19 +30,19 @@ Decide whether the current paste-and-apply batch import flow in `/products` is s
 
 ### Functional Requirements
 
-- [ ] **Given** the current bulk import flows, **When** the decision review is completed, **Then** the team has a written go or no-go decision for preview and dry-run support
+- [x] **Given** the current bulk import flows, **When** the decision review is completed, **Then** the team has a written go or no-go decision for preview and dry-run support
 - [ ] **Given** preview is approved, **When** the task closes, **Then** the required UX states and API impacts are documented clearly enough for implementation
-- [ ] **Given** preview is deferred, **When** the task closes, **Then** the current paste-and-apply flow is explicitly accepted and tracked as intentional behavior
+- [x] **Given** preview is deferred, **When** the task closes, **Then** the current paste-and-apply flow is explicitly accepted and tracked as intentional behavior
 
 ### Non-Functional Requirements
 
-- [ ] Usability: the decision rationale addresses the older-operator UX target
-- [ ] Maintainability: the documented decision avoids ambiguous future scope
-- [ ] Auditability: the decision is linked from workflow docs
+- [x] Usability: the decision rationale addresses the older-operator UX target
+- [x] Maintainability: the documented decision avoids ambiguous future scope
+- [x] Auditability: the decision is linked from workflow docs
 
 ### Error Handling
 
-- [ ] **Given** the review finds unacceptable operator risk in the current flow, **When** the task closes, **Then** it must produce a follow-up implementation recommendation instead of a vague note
+- [x] **Given** the review finds unacceptable operator risk in the current flow, **When** the task closes, **Then** it must produce a follow-up implementation recommendation instead of a vague note
 
 ---
 
@@ -53,6 +53,8 @@ Decide whether the current paste-and-apply batch import flow in `/products` is s
 - `workflow-manager/docs/features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md`
 - `workflow-manager/docs/features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md`
 - `workflow-manager/docs/planning/007-execution-status-simple-pos-ready.md`
+- `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`
+- `src/infrastructure/i18n/messages.ts`
 
 ### Dependencies
 
@@ -62,8 +64,8 @@ Decide whether the current paste-and-apply batch import flow in `/products` is s
 
 ## Testing Requirements
 
-- [ ] No code-level validation required if the outcome is a documented decision only
-- [ ] If the decision includes a UI prototype, add the corresponding mock or visual checkpoint reference
+- [x] No code-level validation required if the outcome is a documented decision only
+- [x] If the decision includes a UI prototype, add the corresponding mock or visual checkpoint reference
 
 ---
 
@@ -79,6 +81,22 @@ Decide whether the current paste-and-apply batch import flow in `/products` is s
 
 ## Definition of Done
 
-- [ ] A clear decision exists for preview and dry-run support
-- [ ] The decision is linked from the related products docs
-- [ ] Any required follow-up implementation is explicitly identified
+- [x] A clear decision exists for preview and dry-run support
+- [x] The decision is linked from the related products docs
+- [x] Any required follow-up implementation is explicitly identified
+
+## Decision Outcome
+
+Decision: defer a separate preview and dry-run wizard.
+
+Rationale:
+
+- Bulk imports are administrative actions, not a frequent cashier flow.
+- For the approved older-operator target, adding another wizard would increase steps and cognitive load without improving the main daily workflow.
+- The current paste-and-apply flow already returns per-row invalid items, which is an acceptable safety net for this non-routine operation when the UI warns that persistence happens immediately.
+
+Intentional UX rule:
+
+- `/products` keeps direct paste/import modals for bulk product and stock loads.
+- The modals must explicitly warn that valid rows are persisted immediately on confirmation.
+- If operator risk increases in the field, the next follow-up is a dedicated preview wizard rather than silently expanding the current modal.

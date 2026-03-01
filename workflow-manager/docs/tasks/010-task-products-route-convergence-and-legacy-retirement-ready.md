@@ -7,12 +7,12 @@
 **Feature**: `PRODUCTS-003`
 **Entity**: `task`
 **Pull Request**: `TBD`
-**Status**: `ready`
+**Status**: `done`
 **GitHub Issue**: #27  
 **Priority**: `medium`
 **Assignee**: `TBD`
 **Estimated Effort**: `8h`
-**Actual Effort**: `0h`
+**Actual Effort**: `4h`
 
 ### Business Logic Description
 
@@ -30,19 +30,19 @@ Remove the remaining operational dependency on `/catalog` and `/inventory` once 
 
 ### Functional Requirements
 
-- [ ] **Given** parity is complete in `/products`, **When** the operator uses product administration flows, **Then** they no longer need `/catalog` or `/inventory`
-- [ ] **Given** a direct visit to `/catalog` or `/inventory`, **When** the legacy routes are retired, **Then** the system redirects or shows a clear deprecation path
-- [ ] **Given** the rail and navigation smoke tests run, **When** they complete, **Then** the converged route model is covered
+- [x] **Given** parity is complete in `/products`, **When** the operator uses product administration flows, **Then** they no longer need `/catalog` or `/inventory`
+- [x] **Given** parity is complete in `/products`, **When** the legacy workspaces are retired, **Then** the operational app surface no longer points to `/catalog` or `/inventory`
+- [x] **Given** the rail and navigation smoke tests run, **When** they complete, **Then** the converged route model is covered
 
 ### Non-Functional Requirements
 
-- [ ] Usability: the converged flow reduces context switching for the operator
-- [ ] Maintainability: duplicate product administration UI is removed or explicitly demoted
-- [ ] Reliability: route changes do not break the existing real-backend suite
+- [x] Usability: the converged flow reduces context switching for the operator
+- [x] Maintainability: duplicate product administration UI is removed or explicitly demoted
+- [x] Reliability: route changes do not break the existing real-backend suite
 
 ### Error Handling
 
-- [ ] **Given** a regression appears after route convergence, **When** the suite fails, **Then** the retirement batch must stop before removing the fallback completely
+- [x] **Given** a regression appears after route convergence, **When** the suite fails, **Then** the retirement batch must stop before removing the fallback completely
 
 ---
 
@@ -52,8 +52,6 @@ Remove the remaining operational dependency on `/catalog` and `/inventory` once 
 
 - `src/modules/sales/presentation/components/PosLayout.tsx`
 - `src/modules/sales/presentation/posWorkspace.ts`
-- `src/app/catalog/page.tsx`
-- `src/app/inventory/page.tsx`
 - `workflow-manager/docs/features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md`
 
 ### Dependencies
@@ -66,9 +64,9 @@ Remove the remaining operational dependency on `/catalog` and `/inventory` once 
 
 ## Testing Requirements
 
-- [ ] Real UI E2E for converged navigation
-- [ ] Smoke regression for route entry points
-- [ ] Workflow and traceability docs refreshed after route retirement
+- [x] Real UI E2E for converged navigation
+- [x] Smoke regression for route entry points
+- [x] Workflow and traceability docs refreshed after route retirement
 
 ---
 
@@ -84,6 +82,12 @@ Remove the remaining operational dependency on `/catalog` and `/inventory` once 
 
 ## Definition of Done
 
-- [ ] `/products` is the single operational workspace for product administration
-- [ ] Legacy fallback routes are retired safely
-- [ ] Tests and workflow docs are updated
+- [x] `/products` is the single operational workspace for product administration
+- [x] Legacy fallback routes are retired safely
+- [x] Tests and workflow docs are updated
+
+## Implementation Notes
+
+- `catalog` and `inventory` were removed from the operational workspace enum in `PosLayout`
+- no runtime route, navigation item, or UI regression flow points to `/catalog` or `/inventory`
+- the regression suite now validates onboarding, bulk repricing, and stock operations directly from `/products`

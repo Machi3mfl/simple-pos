@@ -4,6 +4,7 @@
 
 **Feature ID**: `PRODUCTS-002`
 **Status**: `done`
+**GitHub Issue**: #31
 **Priority**: `high`
 **Linked FR/NFR**: `FR-003`, `FR-004`, `FR-007`, `FR-008`, `FR-015`, `NFR-002`, `NFR-003`, `NFR-005`
 
@@ -107,11 +108,17 @@ Audit conclusion after implementation review:
 
 - `PRODUCTS-002` is correctly closed as `done`; the real `/products` workspace, persistence, and main circuit tests are in place.
 - No open blocker remains for the current products workspace scope.
-- The remaining gaps are parity follow-ups, not closure blockers, and are now tracked in `PRODUCTS-003`:
-  - guided onboarding wizard still lives in `/catalog`
-  - bulk price update with preview/apply still lives in `/catalog`
-  - bulk imports in `/products` ship as paste/import flows without a preview wizard
-  - `/catalog` and `/inventory` should remain direct administrative fallbacks until the previous parity items are intentionally migrated or retired
+- The later parity work tracked in `PRODUCTS-003` is now also closed:
+  - guided onboarding runs in `/products`
+  - bulk price update preview/apply runs in `/products`
+  - bulk imports in `/products` intentionally remain paste/import flows without a preview wizard
+  - `/catalog` and `/inventory` were removed from the operational route model
+
+Decision update after `TASK-009`:
+
+- the missing preview wizard for bulk imports is now an intentional product decision, not an open ambiguity
+- `/products` keeps paste/import modals with explicit direct-apply warnings
+- `PRODUCTS-003` later closed the remaining route convergence work and removed the legacy route dependency entirely
 
 ---
 
@@ -486,12 +493,12 @@ Goal: harden the feature and define coexistence with `catalog` / `inventory`.
 Options:
 
 - [x] keep `/catalog` and `/inventory` as direct administrative fallbacks outside the main rail
-- [ ] redirect to `/products` once functional parity is fully closed
+- [x] retire the legacy route dependency once functional parity is fully closed
 
-Functional parity still pending before redirect:
+Functional parity that had to close before retiring the legacy routes:
 
-- [ ] guided onboarding wizard inside `/products`
-- [ ] bulk price update preview/apply inside `/products`
+- [x] guided onboarding wizard inside `/products`
+- [x] bulk price update preview/apply inside `/products`
 
 #### `P2-T23` Harden the real release suite
 
@@ -508,7 +515,7 @@ Minimum circuits:
 - [x] The main circuit runs against the real backend
 - [x] The release gate covers `/products`
 - [x] No mocked actions remain in the workspace
-- [x] The main rail converges into `Products`; `/catalog` and `/inventory` remain as direct administrative fallbacks
+- [x] The main rail converges into `Products`; legacy `/catalog` and `/inventory` routes are no longer part of the operational app surface
 
 ---
 

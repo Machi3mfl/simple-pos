@@ -41,6 +41,7 @@
 | INVENTORY-001 | done |
 | PRODUCTS-001 | done |
 | PRODUCTS-002 | done |
+| PRODUCTS-003 | done |
 | AR-001 | done |
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
@@ -58,29 +59,25 @@
 | TASK-004 | done | Added section tests + responsive tablet snapshots |
 | TASK-005 | done | Added unit + integration checks for payment constraints |
 | TASK-006 | done | Mock smoke and visual baseline stable |
+| TASK-007 | done | Guided onboarding now runs inside `/products` using shared create logic |
+| TASK-008 | done | Preview/apply repricing now runs inside `/products` with audit summary preserved |
+| TASK-009 | done | Paste-and-apply bulk import accepted intentionally and made explicit in the UI |
+| TASK-010 | done | Legacy `/catalog` and `/inventory` were removed from the operational route model; converged suite updated |
 
 ---
 
 ## 4. Task Audit Result
 
-- `workflow-manager/docs/tasks/` currently contains six task documents: `TASK-001` through `TASK-006`.
-- All six task documents are marked `done` and their referenced outputs still exist in the repository.
-- No open task document was found during this audit.
-- Recent extension work (`PRODUCTS-001`, `PRODUCTS-002`, `I18N-001`) was tracked at feature level rather than by adding new task files.
+- `workflow-manager/docs/tasks/` currently contains ten task documents: `TASK-001` through `TASK-010`.
+- `TASK-001` through `TASK-010` are marked `done` and their referenced outputs still exist in the repository.
+- `PRODUCTS-003` is now closed after route convergence moved the remaining admin flows fully into `/products`.
+- Recent extension work remains traceable through `PRODUCTS-001`, `PRODUCTS-002`, `PRODUCTS-003`, and `I18N-001`.
 
 ---
 
 ## 5. Current Pending Items
 
-No open execution blockers or open task documents were found in the current workflow scope.
-
-Non-blocking follow-up items still worth tracking:
-
-1. `PRODUCTS-003` closes the remaining `/products` parity work after MVP closure.
-2. `TASK-007` tracks guided onboarding inside `/products`.
-3. `TASK-008` tracks bulk price update preview and apply inside `/products`.
-4. `TASK-009` tracks the batch import preview and dry-run UX decision.
-5. `TASK-010` tracks final route convergence and legacy fallback retirement.
+No open execution items remain in the documented post-MVP convergence batch.
 
 ---
 
@@ -91,3 +88,4 @@ Non-blocking follow-up items still worth tracking:
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.
+- Converged `/products` coverage: `tests/e2e/ui-vertical-slices-smoke.spec.ts`, `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`, `tests/e2e/inventory-ui-stock-movement.spec.ts`.

@@ -4,6 +4,7 @@
 
 **Feature ID**: `PRODUCTS-001`
 **Status**: `done`
+**GitHub Issue**: #30
 **Priority**: `high`
 **Linked FR/NFR**: `FR-003`, `FR-004`, `NFR-002`, `NFR-005`
 

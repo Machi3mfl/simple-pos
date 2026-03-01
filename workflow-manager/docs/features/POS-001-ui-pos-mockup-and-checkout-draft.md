@@ -87,7 +87,7 @@ curl -X POST /api/v1/sales \
 ## Current Output
 
 - Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/orders`, `/products`, `/receivables`, `/reporting`, `/sync`)
-- Legacy admin fallback routes kept outside the main rail: `/catalog`, `/inventory`
+- `Products` is the single operational workspace for product and inventory administration
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
   - `src/modules/sales/presentation/components/LeftNavRail.tsx`
