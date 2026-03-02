@@ -50,7 +50,7 @@ export function ProductDisplayCard({
     ) : null;
 
   const content = (
-    <div className={cn("flex h-full min-h-[26rem] flex-col gap-3 p-3.5", contentClassName)}>
+    <div className={cn("flex h-full min-h-[24.5rem] flex-col gap-4 p-4 md:p-5", contentClassName)}>
       {headerLeft || headerRight ? (
         <div className="flex min-h-[2.5rem] items-start justify-between gap-3">
           <div className="min-w-0">{headerLeft}</div>
@@ -60,24 +60,26 @@ export function ProductDisplayCard({
 
       <div
         className={cn(
-          "flex h-[10.5rem] items-center justify-center overflow-hidden rounded-[1.25rem] bg-slate-100 lg:h-[11.5rem]",
+          "flex h-[9.5rem] items-center justify-center overflow-hidden rounded-[1.35rem] bg-slate-100 p-3 lg:h-[10rem]",
           mediaClassName,
         )}
       >
         {media}
       </div>
 
-      <div className="flex min-h-[6.25rem] flex-col gap-1.5">
+      <div className="flex min-h-[5.75rem] flex-col gap-2">
         <div
           className={cn(
-            "text-[1.05rem] leading-tight font-semibold tracking-tight text-slate-900",
+            "text-[1.02rem] leading-[1.12] font-semibold tracking-tight text-slate-900",
             titleClassName,
           )}
         >
           {title}
         </div>
         {subtitle ? (
-          <div className={cn("text-xs text-slate-500", subtitleClassName)}>{subtitle}</div>
+          <div className={cn("text-sm leading-tight text-slate-500", subtitleClassName)}>
+            {subtitle}
+          </div>
         ) : null}
         {supporting ? <div>{supporting}</div> : null}
       </div>

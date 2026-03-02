@@ -1132,6 +1132,7 @@ export function ProductsInventoryPanel(): JSX.Element {
                         setOpenDialog("detail");
                       }}
                       testId={`products-workspace-card-${product.id}`}
+                      contentClassName="min-h-[24.25rem] gap-4 p-5"
                       headerRight={
                         <span
                           className={[
@@ -1155,10 +1156,11 @@ export function ProductsInventoryPanel(): JSX.Element {
                           <Package size={44} className="text-slate-400" />
                         )
                       }
+                      mediaClassName="h-[8.5rem] rounded-[1.45rem] bg-transparent p-0 lg:h-[9rem]"
                       title={product.name}
                       subtitle={`${labelForCategory(product.categoryId)} • ${product.sku}`}
-                      titleClassName="text-[1.22rem] leading-[1.04]"
-                      subtitleClassName="text-[0.76rem] leading-tight"
+                      titleClassName="text-[1.16rem] leading-[1.08]"
+                      subtitleClassName="text-[0.82rem] leading-tight"
                       details={
                         <div className="grid grid-cols-2 gap-1.5 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-3 py-2.5">
                           <div className="flex items-center justify-between gap-2">

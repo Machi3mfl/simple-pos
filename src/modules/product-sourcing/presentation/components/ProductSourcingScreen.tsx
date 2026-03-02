@@ -1785,6 +1785,7 @@ export function ProductSourcingScreen({
               <ProductDisplayCard
                 key={item.sourceProductId}
                 testId={`product-sourcing-result-${item.sourceProductId}`}
+                contentClassName="min-h-[24.5rem] gap-3.5 p-4"
                 headerLeft={
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-blue-700">
                     Carrefour
@@ -1819,8 +1820,11 @@ export function ProductSourcingScreen({
                     <Store size={28} className="text-slate-400" />
                   )
                 }
+                mediaClassName="h-[8.8rem] rounded-[1.4rem] bg-transparent p-0 lg:h-[9.25rem]"
                 title={item.name}
                 subtitle={item.brand ?? "Marca no informada"}
+                titleClassName="text-[0.98rem] leading-[1.1]"
+                subtitleClassName="text-[0.82rem] leading-tight"
                 supporting={
                   <div className="flex flex-wrap gap-1.5 text-[0.7rem] text-slate-500">
                     {item.categoryTrail.slice(0, 2).map((trail) => (

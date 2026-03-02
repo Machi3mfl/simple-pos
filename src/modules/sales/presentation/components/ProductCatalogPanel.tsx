@@ -149,6 +149,8 @@ export function ProductCatalogPanel({
                 onClick={() => onProductSelect(product.id)}
                 disabled={!product.isAvailable}
                 testId={`product-card-${product.id}`}
+                contentClassName="min-h-[22.5rem] gap-4 p-5"
+                mediaClassName="h-[8.75rem] rounded-[1.55rem] bg-transparent p-0 lg:h-[9.25rem]"
                 media={
                   product.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- Product images can come from managed storage or dynamic external URLs already accepted in the catalog runtime.
@@ -166,13 +168,13 @@ export function ProductCatalogPanel({
                 }
                 title={product.name}
                 subtitle={product.subtitle}
-                titleClassName="text-[1.72rem] leading-[1.05]"
-                subtitleClassName="min-h-12 text-base leading-tight"
+                titleClassName="text-[1.56rem] leading-[1.06]"
+                subtitleClassName="min-h-[2.75rem] text-[0.98rem] leading-tight"
                 footer={
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-end justify-between gap-3 pt-1">
                     <span
                       className={[
-                        "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold",
+                        "inline-flex shrink-0 items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold",
                         product.isAvailable
                           ? "bg-emerald-100 text-emerald-700"
                           : "bg-rose-100 text-rose-700",
@@ -183,7 +185,7 @@ export function ProductCatalogPanel({
                         ? messages.common.availability.available
                         : messages.common.availability.unavailable}
                     </span>
-                    <span className="text-[2.1rem] leading-none font-bold tracking-tight text-slate-900">
+                    <span className="shrink-0 text-[1.95rem] leading-[0.95] font-bold tracking-tight text-slate-900">
                       ${product.price.toFixed(0)}
                     </span>
                   </div>
