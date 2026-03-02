@@ -19,6 +19,8 @@ import {
   dedupeCategoryCodes,
   normalizeCategoryCode,
 } from "@/shared/core/category/categoryNaming";
+import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
+import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 import { resolveImportedProductSku } from "../../domain/services/ResolveImportedProductSku";
 
@@ -78,6 +80,16 @@ interface ProductSourcingImportResponse {
     readonly row: number;
     readonly sourceProductId: string;
     readonly name?: string;
+    readonly code:
+      | "duplicate_in_batch"
+      | "already_imported"
+      | "missing_image"
+      | "invalid_image_source"
+      | "unsupported_image_content_type"
+      | "image_too_large"
+      | "duplicate_imported_sku"
+      | "unexpected_error";
+    readonly retryable: boolean;
     readonly reason: string;
   }[];
 }
@@ -133,8 +145,13 @@ interface FeedbackState {
   readonly message: string;
 }
 
+interface ImportActionOptions {
+  readonly sourceProductIds?: readonly string[];
+}
+
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
+const SEARCH_PAGE_SIZE = 8;
 const CATEGORY_OPTIONS = ["drink", "snack", "dessert", "main", "other"] as const;
 
 function resolveErrorMessage(payload: unknown, fallback: string): string {
@@ -215,6 +232,39 @@ function humanizeExternalCategoryPath(
     .join(" / ");
 }
 
+function invalidItemStatusLabel(
+  invalidItem: ProductSourcingImportResponse["invalidItems"][number],
+): string {
+  return invalidItem.retryable ? "Pendiente de reintento" : "No recuperable";
+}
+
+function invalidItemTone(
+  invalidItem: ProductSourcingImportResponse["invalidItems"][number],
+): string {
+  return invalidItem.retryable
+    ? "border-amber-200 bg-amber-50 text-amber-800"
+    : "border-rose-200 bg-rose-50 text-rose-800";
+}
+
+function mergeSearchResults(
+  currentItems: readonly ExternalCatalogCandidateItem[],
+  incomingItems: readonly ExternalCatalogCandidateItem[],
+): readonly ExternalCatalogCandidateItem[] {
+  const seen = new Set<string>();
+  const merged: ExternalCatalogCandidateItem[] = [];
+
+  for (const item of [...currentItems, ...incomingItems]) {
+    if (seen.has(item.sourceProductId)) {
+      continue;
+    }
+
+    seen.add(item.sourceProductId);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 export function ProductSourcingScreen({
   embedded = false,
 }: {
@@ -231,6 +281,7 @@ export function ProductSourcingScreen({
   const [knownCategoryCodes, setKnownCategoryCodes] = useState<readonly string[]>(CATEGORY_OPTIONS);
   const [importHistory, setImportHistory] = useState<readonly ImportedProductHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [isLoadingMappings, setIsLoadingMappings] = useState<boolean>(false);
   const [isLoadingKnownCategories, setIsLoadingKnownCategories] = useState<boolean>(false);
   const [isLoadingImportHistory, setIsLoadingImportHistory] = useState<boolean>(false);
@@ -242,7 +293,11 @@ export function ProductSourcingScreen({
   const [mappingFeedback, setMappingFeedback] = useState<FeedbackState | null>(null);
   const [importResult, setImportResult] = useState<ProductSourcingImportResponse | null>(null);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+  const [activeSearchQuery, setActiveSearchQuery] = useState<string>("");
+  const [searchPage, setSearchPage] = useState<number>(1);
+  const [hasMoreResults, setHasMoreResults] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const resultsRef = useRef<readonly ExternalCatalogCandidateItem[]>([]);
   const effectiveKnownCategoryCodes = useMemo(
     () =>
       dedupeCategoryCodes([
@@ -252,6 +307,10 @@ export function ProductSourcingScreen({
       ]),
     [categoryMappings, importHistory, knownCategoryCodes],
   );
+
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -374,15 +433,28 @@ export function ProductSourcingScreen({
     }
   }, []);
 
-  const executeSearch = useCallback(async (rawQuery: string): Promise<void> => {
+  const executeSearch = useCallback(async (
+    rawQuery: string,
+    options: {
+      readonly page?: number;
+      readonly append?: boolean;
+    } = {},
+  ): Promise<void> => {
     const normalizedQuery = normalizeQuery(rawQuery);
+    const page = options.page ?? 1;
+    const append = options.append ?? false;
 
     setSearchPerformed(true);
     setFeedback(null);
 
     if (normalizedQuery.replace(/\s/g, "").length < MIN_QUERY_LENGTH) {
+      resultsRef.current = [];
       setResults([]);
       setSelectedIds([]);
+      setSearchPage(1);
+      setHasMoreResults(false);
+      setActiveSearchQuery("");
+      setIsLoadingMore(false);
       setIsLoading(false);
       setFeedback("Escribi al menos 3 caracteres para buscar en Carrefour.");
       return;
@@ -392,11 +464,15 @@ export function ProductSourcingScreen({
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    setIsLoading(true);
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
 
     try {
       const response = await fetch(
-        `/api/v1/product-sourcing/search?q=${encodeURIComponent(normalizedQuery)}&page=1&pageSize=8`,
+        `/api/v1/product-sourcing/search?q=${encodeURIComponent(normalizedQuery)}&page=${page}&pageSize=${SEARCH_PAGE_SIZE}`,
         {
           method: "GET",
           headers: {
@@ -412,8 +488,14 @@ export function ProductSourcingScreen({
         | null;
 
       if (!response.ok) {
-        setResults([]);
-        setSelectedIds([]);
+        if (!append) {
+          resultsRef.current = [];
+          setResults([]);
+          setSelectedIds([]);
+          setSearchPage(1);
+          setHasMoreResults(false);
+          setActiveSearchQuery("");
+        }
         setFeedback(
           resolveErrorMessage(payload, "No se pudo consultar Carrefour en este momento."),
         );
@@ -421,30 +503,51 @@ export function ProductSourcingScreen({
       }
 
       const result = payload as ProductSourcingSearchResponse;
-      setResults(result.items);
-      setSelectedIds((current) =>
-        current.filter((selectedId) => result.items.some((item) => item.sourceProductId === selectedId)),
-      );
-      setImportFeedback(null);
-      setImportResult(null);
+      const nextResults = append
+        ? mergeSearchResults(resultsRef.current, result.items)
+        : result.items;
+
+      resultsRef.current = nextResults;
+      setActiveSearchQuery(normalizedQuery);
+      setSearchPage(page);
+      setHasMoreResults(result.hasMore);
+      setResults(nextResults);
+      if (!append) {
+        setSelectedIds((currentSelectedIds) =>
+          currentSelectedIds.filter((selectedId) =>
+            nextResults.some((item) => item.sourceProductId === selectedId),
+          ),
+        );
+      }
+      if (!append) {
+        setImportFeedback(null);
+        setImportResult(null);
+      }
       setFeedback(
-        result.items.length === 0
+        nextResults.length === 0
           ? "No encontramos resultados para esa busqueda."
-          : `Se encontraron ${result.items.length} resultados en Carrefour.`,
+          : `Mostrando ${nextResults.length} resultados en Carrefour${result.hasMore ? ". Hay más resultados disponibles." : "."}`,
       );
     } catch (error: unknown) {
       if ((error as Error).name === "AbortError") {
         return;
       }
 
-      setResults([]);
-      setSelectedIds([]);
+      if (!append) {
+        resultsRef.current = [];
+        setResults([]);
+        setSelectedIds([]);
+        setSearchPage(1);
+        setHasMoreResults(false);
+        setActiveSearchQuery("");
+      }
       setFeedback("No se pudo consultar Carrefour en este momento.");
     } finally {
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
       }
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, []);
 
@@ -452,15 +555,20 @@ export function ProductSourcingScreen({
     if (debouncedQuery === query) {
       const normalized = normalizeQuery(debouncedQuery);
       if (normalized.length === 0) {
+        resultsRef.current = [];
         setResults([]);
         setSelectedIds([]);
         setFeedback(null);
         setImportFeedback(null);
         setImportResult(null);
         setSearchPerformed(false);
+        setSearchPage(1);
+        setHasMoreResults(false);
+        setActiveSearchQuery("");
         abortControllerRef.current?.abort();
         abortControllerRef.current = null;
         setIsLoading(false);
+        setIsLoadingMore(false);
         return;
       }
 
@@ -487,32 +595,67 @@ export function ProductSourcingScreen({
   }, [loadKnownCategories]);
 
   useEffect(() => {
-    setImportDrafts(
-      Object.fromEntries(
-        results.map((item) => {
-          const suggestedCategoryCode = normalizeCategoryCode(
-            item.suggestedCategoryId ?? "other",
-          );
-          const matchedCategoryCode =
-            effectiveKnownCategoryCodes.find((code) => code === suggestedCategoryCode) ??
-            suggestedCategoryCode;
+    setImportDrafts((current) => {
+      const nextDrafts = { ...current };
 
-          return [
-            item.sourceProductId,
-            {
-              ...createImportDraft(item),
-              categoryId: matchedCategoryCode,
-            },
-          ];
-        }),
-      ),
-    );
+      for (const item of results) {
+        if (nextDrafts[item.sourceProductId]) {
+          continue;
+        }
+
+        const suggestedCategoryCode = normalizeCategoryCode(
+          item.suggestedCategoryId ?? "other",
+        );
+        const matchedCategoryCode =
+          effectiveKnownCategoryCodes.find((code) => code === suggestedCategoryCode) ??
+          suggestedCategoryCode;
+
+        nextDrafts[item.sourceProductId] = {
+          ...createImportDraft(item),
+          categoryId: matchedCategoryCode,
+        };
+      }
+
+      return nextDrafts;
+    });
   }, [effectiveKnownCategoryCodes, results]);
 
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.includes(item.sourceProductId)),
     [results, selectedIds],
   );
+  const {
+    isObserverSupported: isInfiniteScrollObserverSupported,
+    setSentinel: setResultsSentinel,
+  } = useInfiniteScrollTrigger({
+    enabled: searchPerformed && activeSearchQuery.length > 0 && results.length > 0,
+    hasMore: hasMoreResults,
+    isLoading: isLoading || isLoadingMore,
+    onLoadMore: handleShowMore,
+    triggerKey: `${activeSearchQuery}:${searchPage}:${results.length}`,
+  });
+  const invalidItemsBySourceId = useMemo(
+    () =>
+      new Map(
+        (importResult?.invalidItems ?? []).map((item) => [item.sourceProductId, item] as const),
+      ),
+    [importResult],
+  );
+  const retryableInvalidIds = useMemo(
+    () =>
+      (importResult?.invalidItems ?? [])
+        .filter((item) => item.retryable)
+        .map((item) => item.sourceProductId),
+    [importResult],
+  );
+  const terminalInvalidIds = useMemo(
+    () =>
+      (importResult?.invalidItems ?? [])
+        .filter((item) => !item.retryable)
+        .map((item) => item.sourceProductId),
+    [importResult],
+  );
+  const hasPendingInvalidItems = (importResult?.invalidItems.length ?? 0) > 0;
 
   function toggleSelection(sourceProductId: string): void {
     setSelectedIds((current) =>
@@ -543,8 +686,27 @@ export function ProductSourcingScreen({
     await executeSearch(query);
   }
 
-  async function handleImportSelected(): Promise<void> {
-    if (selectedItems.length === 0) {
+  async function handleShowMore(): Promise<void> {
+    if (!hasMoreResults || isLoadingMore || activeSearchQuery.length === 0) {
+      return;
+    }
+
+    await executeSearch(activeSearchQuery, {
+      page: searchPage + 1,
+      append: true,
+    });
+  }
+
+  async function handleImportSelected(options: ImportActionOptions = {}): Promise<void> {
+    const sourceProductIds =
+      options.sourceProductIds && options.sourceProductIds.length > 0
+        ? options.sourceProductIds
+        : selectedIds;
+    const itemsToImport = selectedItems.filter((item) =>
+      sourceProductIds.includes(item.sourceProductId),
+    );
+
+    if (itemsToImport.length === 0) {
       setImportFeedback({
         type: "error",
         message: "Selecciona al menos un producto externo para importarlo.",
@@ -568,7 +730,7 @@ export function ProductSourcingScreen({
       readonly productUrl: string | null;
     }[];
 
-    for (const item of selectedItems) {
+    for (const item of itemsToImport) {
       const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
       const normalizedName = draft.name.trim();
       const normalizedCategoryId = draft.categoryId.trim();
@@ -689,6 +851,29 @@ export function ProductSourcingScreen({
     } finally {
       setIsImporting(false);
     }
+  }
+
+  function keepOnlyInvalidSelection(): void {
+    const pendingIds = (importResult?.invalidItems ?? []).map((item) => item.sourceProductId);
+    setSelectedIds(pendingIds);
+  }
+
+  function dismissTerminalInvalidItems(): void {
+    if (terminalInvalidIds.length === 0) {
+      return;
+    }
+
+    setSelectedIds((current) =>
+      current.filter((sourceProductId) => !terminalInvalidIds.includes(sourceProductId)),
+    );
+    setImportResult((current) =>
+      current
+        ? {
+            ...current,
+            invalidItems: current.invalidItems.filter((item) => item.retryable),
+          }
+        : current,
+    );
   }
 
   function updateCategoryMappingDraft(externalCategoryPath: string, value: string): void {
@@ -921,11 +1106,73 @@ export function ProductSourcingScreen({
                 </div>
               ) : null}
 
+              {hasPendingInvalidItems ? (
+                <div
+                  data-testid="product-sourcing-pending-invalid-panel"
+                  className="mt-4 rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4"
+                >
+                  <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-amber-900">
+                        Quedaron {importResult?.invalidItems.length ?? 0} productos pendientes.
+                      </p>
+                      <p className="text-sm text-amber-800">
+                        Los recuperables se pueden reintentar. Los no recuperables conviene quitarlos de la selección.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        data-testid="product-sourcing-keep-only-invalid-button"
+                        onClick={keepOnlyInvalidSelection}
+                        className="inline-flex min-h-[2.8rem] items-center justify-center rounded-xl border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900"
+                      >
+                        Dejar solo rechazados
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="product-sourcing-retry-invalid-button"
+                        onClick={() =>
+                          void handleImportSelected({
+                            sourceProductIds: retryableInvalidIds,
+                          })
+                        }
+                        disabled={retryableInvalidIds.length === 0 || isImporting}
+                        className={[
+                          "inline-flex min-h-[2.8rem] items-center justify-center rounded-xl px-4 text-sm font-semibold",
+                          retryableInvalidIds.length === 0 || isImporting
+                            ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                            : "bg-amber-500 text-slate-950",
+                        ].join(" ")}
+                      >
+                        Reintentar recuperables
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="product-sourcing-dismiss-terminal-invalid-button"
+                        onClick={dismissTerminalInvalidItems}
+                        disabled={terminalInvalidIds.length === 0}
+                        className={[
+                          "inline-flex min-h-[2.8rem] items-center justify-center rounded-xl px-4 text-sm font-semibold",
+                          terminalInvalidIds.length === 0
+                            ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                            : "bg-slate-900 text-white",
+                        ].join(" ")}
+                      >
+                        Quitar no recuperables
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {selectedItems.length > 0 ? (
                 <div className="mt-5 grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
                   {selectedItems.map((item) => {
                     const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
                     const skuPreview = resolveImportedProductSku(item.providerId, item.sourceProductId);
+                    const invalidItem = invalidItemsBySourceId.get(item.sourceProductId);
 
                     return (
                       <article
@@ -945,6 +1192,21 @@ export function ProductSourcingScreen({
                             Quitar
                           </button>
                         </div>
+
+                        {invalidItem ? (
+                          <div
+                            data-testid={`product-sourcing-invalid-card-${item.sourceProductId}`}
+                            className={[
+                              "mt-3 rounded-xl border px-3 py-3 text-sm",
+                              invalidItemTone(invalidItem),
+                            ].join(" ")}
+                          >
+                            <p className="font-semibold">
+                              {invalidItemStatusLabel(invalidItem)}
+                            </p>
+                            <p className="mt-1 text-xs">{invalidItem.reason}</p>
+                          </div>
+                        ) : null}
 
                         <div className="mt-4 grid gap-3">
                           <label className="grid gap-1 text-sm text-slate-600">
@@ -1081,8 +1343,15 @@ export function ProductSourcingScreen({
                       <p className="text-sm font-semibold text-rose-900">Rechazados</p>
                       <ul className="mt-3 space-y-2 text-sm text-rose-800">
                         {importResult.invalidItems.map((entry) => (
-                          <li key={`${entry.row}-${entry.sourceProductId}`} className="rounded-xl border border-rose-200 bg-white px-3 py-3">
+                          <li
+                            key={`${entry.row}-${entry.sourceProductId}`}
+                            data-testid={`product-sourcing-invalid-result-${entry.sourceProductId}`}
+                            className="rounded-xl border border-rose-200 bg-white px-3 py-3"
+                          >
                             <p className="font-semibold">{entry.name ?? entry.sourceProductId}</p>
+                            <p className="mt-1 text-xs font-semibold">
+                              {invalidItemStatusLabel(entry)}
+                            </p>
                             <p className="mt-1 text-xs">{entry.reason}</p>
                           </li>
                         ))}
@@ -1103,76 +1372,76 @@ export function ProductSourcingScreen({
             const isSelected = selectedIds.includes(item.sourceProductId);
 
             return (
-              <article
+              <ProductDisplayCard
                 key={item.sourceProductId}
-                data-testid={`product-sourcing-result-${item.sourceProductId}`}
-                className="overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white shadow-[0_14px_30px_rgba(15,23,42,0.07)]"
-              >
-                <div className="flex flex-col gap-3 p-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-blue-700">
-                      Carrefour
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleSelection(item.sourceProductId)}
-                      data-testid={`product-sourcing-toggle-${item.sourceProductId}`}
-                      className={[
-                        "inline-flex min-h-[2.45rem] items-center gap-2 rounded-xl px-3 text-sm font-semibold",
-                        isSelected
-                          ? "bg-emerald-600 text-white"
-                          : "border border-slate-200 bg-white text-slate-700",
-                      ].join(" ")}
-                    >
-                      {isSelected ? <CheckSquare size={16} /> : <XSquare size={16} />}
-                      {isSelected ? "Seleccionado" : "Seleccionar"}
-                    </button>
+                testId={`product-sourcing-result-${item.sourceProductId}`}
+                headerLeft={
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-blue-700">
+                    Carrefour
+                  </span>
+                }
+                headerRight={
+                  <button
+                    type="button"
+                    onClick={() => toggleSelection(item.sourceProductId)}
+                    data-testid={`product-sourcing-toggle-${item.sourceProductId}`}
+                    className={[
+                      "inline-flex min-h-[2.45rem] items-center gap-2 rounded-xl px-3 text-sm font-semibold",
+                      isSelected
+                        ? "bg-emerald-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-700",
+                    ].join(" ")}
+                  >
+                    {isSelected ? <CheckSquare size={16} /> : <XSquare size={16} />}
+                    {isSelected ? "Seleccionado" : "Seleccionar"}
+                  </button>
+                }
+                media={
+                  item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- External retailer images are dynamic and validated through the sourcing workflow.
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      loading="eager"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <Store size={28} className="text-slate-400" />
+                  )
+                }
+                title={item.name}
+                subtitle={item.brand ?? "Marca no informada"}
+                supporting={
+                  <div className="flex flex-wrap gap-1.5 text-[0.7rem] text-slate-500">
+                    {item.categoryTrail.slice(0, 2).map((trail) => (
+                      <span key={trail} className="rounded-full bg-slate-100 px-2.5 py-1 font-medium">
+                        {trail
+                          .split("/")
+                          .map((segment) => segment.trim())
+                          .filter(Boolean)
+                          .map((segment) => humanizeIdentifier(segment))
+                          .join(" / ")}
+                      </span>
+                    ))}
                   </div>
-
-                  <div className="flex h-[10.5rem] items-center justify-center overflow-hidden rounded-[1.25rem] bg-slate-100 lg:h-[11.5rem]">
-                    {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- External retailer images are dynamic and validated through the sourcing workflow.
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        loading="eager"
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      <Store size={28} className="text-slate-400" />
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h2 className="text-[1.05rem] leading-tight font-semibold tracking-tight text-slate-900">
-                      {item.name}
-                    </h2>
-                    <p className="text-xs text-slate-500">{item.brand ?? "Marca no informada"}</p>
-                    <div className="flex flex-wrap gap-1.5 text-[0.7rem] text-slate-500">
-                      {item.categoryTrail.slice(0, 2).map((trail) => (
-                        <span key={trail} className="rounded-full bg-slate-100 px-2.5 py-1 font-medium">
-                          {trail
-                            .split("/")
-                            .map((segment) => segment.trim())
-                            .filter(Boolean)
-                            .map((segment) => humanizeIdentifier(segment))
-                            .join(" / ")}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
+                }
+                details={
                   <div className="grid gap-2 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700">
                     <div className="flex items-center justify-between gap-3">
                       <span>EAN</span>
-                      <span data-testid={`product-sourcing-ean-${item.sourceProductId}`} className="font-semibold text-slate-900">
+                      <span
+                        data-testid={`product-sourcing-ean-${item.sourceProductId}`}
+                        className="font-semibold text-slate-900"
+                      >
                         {item.ean ?? "Sin EAN"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span>Precio de referencia</span>
                       <span className="font-semibold text-slate-900">
-                        {item.referencePrice !== null ? formatCurrency(item.referencePrice) : "Sin precio"}
+                        {item.referencePrice !== null
+                          ? formatCurrency(item.referencePrice)
+                          : "Sin precio"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
@@ -1184,11 +1453,58 @@ export function ProductSourcingScreen({
                       </span>
                     </div>
                   </div>
-                </div>
-              </article>
+                }
+              />
             );
           })}
         </section>
+
+        {results.length > 0 ? (
+          <div className="flex justify-center">
+            {hasMoreResults ? (
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  ref={setResultsSentinel}
+                  data-testid="product-sourcing-infinite-scroll-sentinel"
+                  className="h-2 w-full"
+                  aria-hidden
+                />
+                <p
+                  data-testid="product-sourcing-infinite-scroll-status"
+                  className="text-sm font-medium text-slate-500"
+                >
+                  {isLoadingMore
+                    ? "Cargando más resultados..."
+                    : "Seguí bajando para ver más resultados."}
+                </p>
+                {!isInfiniteScrollObserverSupported ? (
+                  <button
+                    type="button"
+                    data-testid="product-sourcing-load-more-button"
+                    onClick={() => void handleShowMore()}
+                    disabled={isLoadingMore}
+                    className={[
+                      "inline-flex min-h-[3.2rem] items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold",
+                      isLoadingMore
+                        ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                        : "border border-slate-200 bg-white text-slate-900 shadow-[0_12px_22px_rgba(15,23,42,0.08)]",
+                    ].join(" ")}
+                  >
+                    {isLoadingMore ? <Loader2 size={16} className="animate-spin" /> : null}
+                    {isLoadingMore ? "Cargando más resultados..." : "Mostrar más resultados"}
+                  </button>
+                ) : null}
+              </div>
+            ) : searchPerformed ? (
+              <p
+                data-testid="product-sourcing-results-end"
+                className="text-sm font-medium text-slate-500"
+              >
+                No hay más resultados para esta búsqueda.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {searchPerformed && !isLoading && results.length === 0 ? (
           <article className="rounded-[2rem] border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">

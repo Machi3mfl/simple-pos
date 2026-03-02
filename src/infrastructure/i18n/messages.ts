@@ -54,6 +54,7 @@ const spanishMessages = {
     },
     actions: {
       refresh: "Actualizar",
+      loadMore: "Cargar más",
       cancel: "Cancelar",
       close: "Cerrar",
       openCatalog: "Abrir productos",
@@ -135,6 +136,9 @@ const spanishMessages = {
       allProducts: "Todos los productos",
       emptyTitle: "Todavía no hay productos",
       emptyDescription: "Cargá productos desde Productos para llenar esta vista.",
+      loadingMore: "Cargando más productos...",
+      continueScrolling: "Seguí bajando para ver más productos.",
+      endReached: "No hay más productos para este filtro.",
     },
     checkout: {
       orderListTitle: "Lista del pedido",
@@ -306,6 +310,9 @@ const spanishMessages = {
       previous: "Anterior",
       next: "Siguiente",
       pageLabel: (current: number, total: number): string => `Página ${current} de ${total}`,
+      loadingMore: "Cargando más productos...",
+      continueScrolling: "Seguí bajando para ver más productos.",
+      endReached: "No hay más productos para estos filtros.",
     },
     errors: {
       createProduct: "No se pudo crear el producto.",

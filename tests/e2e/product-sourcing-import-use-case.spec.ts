@@ -229,6 +229,8 @@ test.describe("product sourcing import use case", () => {
 
     expect(secondAttempt.importedCount).toBe(0);
     expect(secondAttempt.invalidItems).toHaveLength(1);
+    expect(secondAttempt.invalidItems[0]?.code).toBe("already_imported");
+    expect(secondAttempt.invalidItems[0]?.retryable).toBe(false);
     expect(secondAttempt.invalidItems[0]?.reason).toContain("Ya existe una importacion previa");
   });
 });

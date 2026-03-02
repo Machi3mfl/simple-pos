@@ -6,7 +6,7 @@ import type {
   CatalogProductWriter,
   CreateCatalogProductFromExternalCandidateInput,
 } from "../../application/ports/CatalogProductWriter";
-import { ProductSourcingDomainError } from "../../domain/errors/ProductSourcingDomainError";
+import { ImportedProductSkuAlreadyExistsError } from "../../domain/errors/ProductSourcingDomainError";
 import { resolveImportedProductSku } from "../../domain/services/ResolveImportedProductSku";
 
 export class CatalogCreateProductWriter implements CatalogProductWriter {
@@ -22,8 +22,10 @@ export class CatalogCreateProductWriter implements CatalogProductWriter {
     const existingProduct = await this.productRepository.getBySku(sku);
 
     if (existingProduct) {
-      throw new ProductSourcingDomainError(
-        `Ya existe un producto importado para ${input.providerId} ${input.sourceProductId} (SKU ${sku}).`,
+      throw new ImportedProductSkuAlreadyExistsError(
+        input.providerId,
+        input.sourceProductId,
+        sku,
       );
     }
 

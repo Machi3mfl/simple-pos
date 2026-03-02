@@ -37,6 +37,13 @@ export class ExternalSourceAlreadyImportedError extends ProductSourcingDomainErr
   }
 }
 
+export class ImportedProductSkuAlreadyExistsError extends ProductSourcingDomainError {
+  constructor(providerId: string, sourceProductId: string, sku: string) {
+    super(`Ya existe un producto importado para ${providerId} ${sourceProductId} (SKU ${sku}).`);
+    this.name = "ImportedProductSkuAlreadyExistsError";
+  }
+}
+
 export class MissingExternalImageUrlError extends ProductSourcingDomainError {
   constructor(sourceProductId: string) {
     super(`El producto externo ${sourceProductId} no tiene una imagen primaria para importar.`);

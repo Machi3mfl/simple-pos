@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const searchResponse = {
+const firstPageResponse = {
   providerId: "carrefour",
   items: [
     {
@@ -31,21 +31,126 @@ const searchResponse = {
       referenceListPrice: 5250,
       productUrl: "https://www.carrefour.com.ar/gaseosa-cola-coca-cola-sabor-original-225-lts-30138/p",
     },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649300",
+      name: "Gaseosa cola Coca Cola Zero 1,25 lts",
+      brand: "Coca Cola",
+      ean: "7790895012273",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl:
+        "https://carrefourar.vteximg.com.br/arquivos/ids/795019/7790895012273_E01.jpg?v=639046894913430000",
+      referencePrice: 2915,
+      referenceListPrice: 2915,
+      productUrl: "https://www.carrefour.com.ar/gaseosa-cola-coca-cola-zero-125-lts-649300/p",
+    },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649301",
+      name: "Gaseosa cola Coca Cola Original 1,25 lts",
+      brand: "Coca Cola",
+      ean: "7790895012274",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 2915,
+      referenceListPrice: 2915,
+      productUrl: "https://example.com/original-125",
+    },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649302",
+      name: "Gaseosa cola Coca Cola Light 1,5 lts",
+      brand: "Coca Cola",
+      ean: "7790895012275",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 3210,
+      referenceListPrice: 3210,
+      productUrl: "https://example.com/light-15",
+    },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649303",
+      name: "Gaseosa cola Coca Cola sin azucar 500 ml",
+      brand: "Coca Cola",
+      ean: "7790895012276",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 1400,
+      referenceListPrice: 1400,
+      productUrl: "https://example.com/zero-500",
+    },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649304",
+      name: "Gaseosa cola Coca Cola original 500 ml",
+      brand: "Coca Cola",
+      ean: "7790895012277",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 1400,
+      referenceListPrice: 1400,
+      productUrl: "https://example.com/original-500",
+    },
+    {
+      providerId: "carrefour",
+      sourceProductId: "649305",
+      name: "Gaseosa cola Coca Cola Zero 354 ml",
+      brand: "Coca Cola",
+      ean: "7790895012278",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 980,
+      referenceListPrice: 980,
+      productUrl: "https://example.com/zero-354",
+    },
   ],
   page: 1,
+  pageSize: 8,
+  hasMore: true,
+} as const;
+
+const secondPageResponse = {
+  providerId: "carrefour",
+  items: [
+    {
+      providerId: "carrefour",
+      sourceProductId: "649307",
+      name: "Gaseosa cola Coca Cola Zero vidrio 1 lt",
+      brand: "Coca Cola",
+      ean: "7790895012280",
+      categoryTrail: ["/Bebidas/Gaseosas/Gaseosas cola/", "/Bebidas/Gaseosas/"],
+      suggestedCategoryId: "gaseosas-cola",
+      imageUrl: null,
+      referencePrice: 3500,
+      referenceListPrice: 3500,
+      productUrl: "https://example.com/zero-vidrio-1lt",
+    },
+  ],
+  page: 2,
   pageSize: 8,
   hasMore: false,
 } as const;
 
 test("opens product sourcing from /products and searches through the UI", async ({ page }) => {
   const requestedUrls: string[] = [];
+  await page.setViewportSize({ width: 1280, height: 560 });
 
   await page.route("**/api/v1/product-sourcing/search**", async (route) => {
-    requestedUrls.push(route.request().url());
+    const requestUrl = route.request().url();
+    requestedUrls.push(requestUrl);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(searchResponse),
+      body: JSON.stringify(
+        requestUrl.includes("page=2") ? secondPageResponse : firstPageResponse,
+      ),
     });
   });
 
@@ -68,18 +173,35 @@ test("opens product sourcing from /products and searches through the UI", async 
   await page.waitForTimeout(200);
   expect(requestedUrls).toHaveLength(0);
   await page.waitForTimeout(450);
-  expect(requestedUrls).toHaveLength(1);
+  expect(requestedUrls.length).toBeGreaterThanOrEqual(1);
   expect(requestedUrls[0]).toContain("q=coca%20cola");
 
-  await expect(page.getByTestId("product-sourcing-feedback")).toContainText(
-    "Se encontraron 2 resultados",
-  );
   await expect(page.getByTestId("product-sourcing-result-393964")).toContainText(
     "Gaseosa cola Coca Cola Zero 2,25 lts",
   );
+  expect(requestedUrls[0]).toContain("page=1");
 
   await page.getByTestId("product-sourcing-toggle-393964").click();
   await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
+
+  if (!requestedUrls.some((url) => url.includes("page=2"))) {
+    await expect(page.getByTestId("product-sourcing-infinite-scroll-status")).toContainText(
+      "Seguí bajando para ver más resultados.",
+    );
+    await page.getByTestId("product-sourcing-infinite-scroll-sentinel").scrollIntoViewIfNeeded();
+  }
+
+  await expect.poll(() => requestedUrls.some((url) => url.includes("page=2"))).toBe(true);
+  await expect(page.getByTestId("product-sourcing-feedback")).toContainText(
+    "Mostrando 9 resultados en Carrefour.",
+  );
+  await expect(page.getByTestId("product-sourcing-result-649307")).toContainText(
+    "Gaseosa cola Coca Cola Zero vidrio 1 lt",
+  );
+  await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
+  await expect(page.getByTestId("product-sourcing-results-end")).toContainText(
+    "No hay más resultados",
+  );
 
   await page.getByTestId("product-sourcing-back-link").click();
   await expect(page).toHaveURL(/\/products$/);

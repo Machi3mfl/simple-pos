@@ -20,6 +20,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -29,6 +30,8 @@ import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
 import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
+import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
+import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 type StockFilter = "all" | "with_stock" | "low_stock" | "out_of_stock" | "inactive";
 type SortMode = "stock" | "name" | "recent" | "price";
@@ -167,9 +170,12 @@ interface StockFormState {
 interface WorkspaceLoadOverrides {
   readonly categoryFilter?: string;
   readonly page?: number;
+  readonly append?: boolean;
   readonly searchTerm?: string;
   readonly stockFilter?: StockFilter;
 }
+
+const WORKSPACE_PAGE_SIZE = 20;
 
 const defaultEditFormState: EditProductFormState = {
   name: "",
@@ -277,6 +283,25 @@ function parsePastedRows(input: string): string[][] {
     .map((row) => row.split(/[,;\t]/).map((cell) => cell.trim()));
 }
 
+function mergeWorkspaceItems(
+  currentItems: readonly WorkspaceProductItem[],
+  incomingItems: readonly WorkspaceProductItem[],
+): readonly WorkspaceProductItem[] {
+  const seen = new Set<string>();
+  const merged: WorkspaceProductItem[] = [];
+
+  for (const item of [...currentItems, ...incomingItems]) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+
+    seen.add(item.id);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 export function ProductsInventoryPanel(): JSX.Element {
   const {
     messages,
@@ -292,12 +317,12 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [activeOnly, setActiveOnly] = useState<boolean>(true);
   const [sortMode, setSortMode] = useState<SortMode>("stock");
-  const [page, setPage] = useState<number>(1);
   const [workspace, setWorkspace] = useState<WorkspaceProductsResponse | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState<DialogId>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
+  const [isLoadingMoreWorkspace, setIsLoadingMoreWorkspace] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [movementHistory, setMovementHistory] = useState<readonly StockMovementItem[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(false);
@@ -306,6 +331,7 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [bulkProductsInput, setBulkProductsInput] = useState<string>("");
   const [bulkStockInput, setBulkStockInput] = useState<string>("");
   const [refreshToken, setRefreshToken] = useState<number>(0);
+  const workspaceRequestTokenRef = useRef<number>(0);
   const {
     categories: onboardingCategories,
     feedback: onboardingFeedback,
@@ -319,13 +345,11 @@ export function ProductsInventoryPanel(): JSX.Element {
       const searchValue = createdProduct.sku || createdProduct.name;
       setCategoryFilter("all");
       setStockFilter("all");
-      setPage(1);
       setSearchTerm(searchValue);
       setSelectedProductId(createdProduct.id);
       setOpenDialog(null);
       await refreshWorkspace({
         categoryFilter: "all",
-        page: 1,
         searchTerm: searchValue,
         stockFilter: "all",
       });
@@ -344,16 +368,14 @@ export function ProductsInventoryPanel(): JSX.Element {
     return ["all", ...dedupeCategoryCodes((workspace?.items ?? []).map((item) => item.categoryId))];
   }, [workspace?.items]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [categoryFilter, stockFilter, activeOnly, sortMode, deferredSearchTerm]);
-
   const loadWorkspace = useCallback(async (overrides?: WorkspaceLoadOverrides): Promise<void> => {
-    setIsLoadingWorkspace(true);
+    const append = overrides?.append ?? false;
+    const requestToken = workspaceRequestTokenRef.current + 1;
+    workspaceRequestTokenRef.current = requestToken;
     const effectiveSearchTerm = overrides?.searchTerm ?? deferredSearchTerm;
     const effectiveCategoryFilter = overrides?.categoryFilter ?? categoryFilter;
     const effectiveStockFilter = overrides?.stockFilter ?? stockFilter;
-    const effectivePage = overrides?.page ?? page;
+    const effectivePage = overrides?.page ?? 1;
     const params = new URLSearchParams();
     if (effectiveSearchTerm.trim().length > 0) {
       params.set("q", effectiveSearchTerm.trim());
@@ -367,7 +389,13 @@ export function ProductsInventoryPanel(): JSX.Element {
     params.set("activeOnly", String(activeOnly));
     params.set("sort", sortMode);
     params.set("page", String(effectivePage));
-    params.set("pageSize", "20");
+    params.set("pageSize", String(WORKSPACE_PAGE_SIZE));
+
+    if (append) {
+      setIsLoadingMoreWorkspace(true);
+    } else {
+      setIsLoadingWorkspace(true);
+    }
 
     try {
       const { response, data } = await fetchJsonNoStore<WorkspaceProductsResponse>(
@@ -375,6 +403,9 @@ export function ProductsInventoryPanel(): JSX.Element {
       );
 
       if (!response.ok || !data) {
+        if (workspaceRequestTokenRef.current !== requestToken) {
+          return;
+        }
         setFeedback({
           type: "error",
           message: messages.productsWorkspace.loadError,
@@ -382,28 +413,53 @@ export function ProductsInventoryPanel(): JSX.Element {
         return;
       }
 
-      setWorkspace(data);
+      if (workspaceRequestTokenRef.current !== requestToken) {
+        return;
+      }
+
+      setWorkspace((current) => {
+        if (!append || !current) {
+          return data;
+        }
+
+        return {
+          ...data,
+          items: mergeWorkspaceItems(current.items, data.items),
+        };
+      });
     } catch {
+      if (workspaceRequestTokenRef.current !== requestToken) {
+        return;
+      }
       setFeedback({
         type: "error",
         message: messages.productsWorkspace.loadError,
       });
     } finally {
-      setIsLoadingWorkspace(false);
+      if (workspaceRequestTokenRef.current === requestToken) {
+        setIsLoadingWorkspace(false);
+        setIsLoadingMoreWorkspace(false);
+      }
     }
   }, [
     activeOnly,
     categoryFilter,
     deferredSearchTerm,
     messages.productsWorkspace.loadError,
-    page,
     sortMode,
     stockFilter,
   ]);
 
   useEffect(() => {
-    void loadWorkspace();
-  }, [loadWorkspace]);
+    void loadWorkspace({ page: 1 });
+  }, [
+    activeOnly,
+    categoryFilter,
+    deferredSearchTerm,
+    loadWorkspace,
+    sortMode,
+    stockFilter,
+  ]);
 
   useEffect(() => {
     if (!workspace?.items.length) {
@@ -792,9 +848,40 @@ export function ProductsInventoryPanel(): JSX.Element {
   }
 
   const workspaceItems = workspace?.items ?? [];
+  const hasMoreWorkspaceItems =
+    workspace !== null && workspace.page < workspace.totalPages;
+  const loadNextWorkspacePage = useCallback(async (): Promise<void> => {
+    if (
+      !workspace ||
+      isLoadingWorkspace ||
+      isLoadingMoreWorkspace ||
+      workspace.page >= workspace.totalPages
+    ) {
+      return;
+    }
+
+    await loadWorkspace({
+      page: workspace.page + 1,
+      append: true,
+    });
+  }, [isLoadingMoreWorkspace, isLoadingWorkspace, loadWorkspace, workspace]);
+  const {
+    isObserverSupported: isWorkspaceInfiniteScrollObserverSupported,
+    setScrollRoot: setWorkspaceScrollRoot,
+    setSentinel: setWorkspaceSentinel,
+  } = useInfiniteScrollTrigger({
+    enabled: workspaceItems.length > 0,
+    hasMore: hasMoreWorkspaceItems,
+    isLoading: isLoadingWorkspace || isLoadingMoreWorkspace,
+    onLoadMore: loadNextWorkspacePage,
+    triggerKey: `${deferredSearchTerm.trim().toLowerCase()}:${categoryFilter}:${stockFilter}:${activeOnly}:${sortMode}:${workspace?.page ?? 0}:${workspaceItems.length}`,
+  });
 
   return (
-    <section className="min-h-0 min-w-0 overflow-y-auto bg-[#f5f6f8] p-3 lg:col-span-2 lg:h-full lg:p-4">
+    <section
+      ref={setWorkspaceScrollRoot}
+      className="min-h-0 min-w-0 overflow-y-auto bg-[#f5f6f8] p-3 lg:col-span-2 lg:h-full lg:p-4"
+    >
       <div className="flex w-full flex-col gap-3">
         {feedback ? (
           <div
@@ -1030,102 +1117,116 @@ export function ProductsInventoryPanel(): JSX.Element {
                           : messages.productsWorkspace.status.inactive;
 
                   return (
-                    <button
+                    <ProductDisplayCard
                       key={product.id}
-                      type="button"
+                      as="button"
                       onClick={() => {
                         setSelectedProductId(product.id);
                         setOpenDialog("detail");
                       }}
-                      data-testid={`products-workspace-card-${product.id}`}
-                      className="rounded-[1.25rem] border border-slate-200 bg-white p-3 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5"
-                    >
-                      <ProductImage imageUrl={product.imageUrl} name={product.name} />
-
-                      <div className="mt-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-[1.22rem] leading-[1.04] font-semibold tracking-tight text-slate-900">
-                            {product.name}
-                          </h3>
-                          <span
-                            className={[
-                              "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold",
-                              statusTone,
-                            ].join(" ")}
-                          >
-                            {statusText}
+                      testId={`products-workspace-card-${product.id}`}
+                      headerRight={
+                        <span
+                          className={[
+                            "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold",
+                            statusTone,
+                          ].join(" ")}
+                        >
+                          {statusText}
+                        </span>
+                      }
+                      media={
+                        product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- Workspace cards can show operator-provided or imported images that are not constrained to next/image allowlists.
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            loading="lazy"
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <Package size={44} className="text-slate-400" />
+                        )
+                      }
+                      title={product.name}
+                      subtitle={`${labelForCategory(product.categoryId)} • ${product.sku}`}
+                      titleClassName="text-[1.22rem] leading-[1.04]"
+                      subtitleClassName="text-[0.76rem] leading-tight"
+                      details={
+                        <div className="grid grid-cols-2 gap-1.5 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                              {messages.productsWorkspace.fields.currentStockShort}
+                            </p>
+                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
+                              {product.stock}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                              {messages.productsWorkspace.fields.minStockShort}
+                            </p>
+                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
+                              {product.minStock}
+                            </p>
+                          </div>
+                        </div>
+                      }
+                      footer={
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
+                            {formatCurrency(product.price)}
+                          </span>
+                          <span className="text-[0.74rem] font-semibold text-blue-700">
+                            {messages.productsWorkspace.detailTitle}
                           </span>
                         </div>
-
-                        <p className="mt-px text-[0.76rem] leading-tight text-slate-500">
-                          {labelForCategory(product.categoryId)} • {product.sku}
-                        </p>
-                      </div>
-
-                      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                          <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                            {messages.productsWorkspace.fields.currentStockShort}
-                          </p>
-                          <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                            {product.stock}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                          <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                            {messages.productsWorkspace.fields.minStockShort}
-                          </p>
-                          <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                            {product.minStock}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-2.5 flex items-center justify-between gap-3">
-                        <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
-                          {formatCurrency(product.price)}
-                        </span>
-                        <span className="text-[0.74rem] font-semibold text-blue-700">
-                          {messages.productsWorkspace.detailTitle}
-                        </span>
-                      </div>
-                    </button>
+                      }
+                    />
                   );
                 })}
               </div>
 
-              <footer className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
+              <footer className="flex flex-col items-center gap-3 border-t border-slate-200 px-5 py-4 text-center">
                 <p className="text-sm font-medium text-slate-500">
-                  {messages.productsWorkspace.pagination.pageLabel(
-                    workspace?.page ?? 1,
-                    workspace?.totalPages ?? 1,
-                  )}{" "}
-                  • {workspace?.totalItems ?? 0} productos
+                  {workspaceItems.length} de {workspace?.totalItems ?? workspaceItems.length} productos cargados
                 </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={(workspace?.page ?? 1) <= 1}
-                    data-testid="products-workspace-pagination-prev"
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+                {hasMoreWorkspaceItems ? (
+                  <>
+                    <div
+                      ref={setWorkspaceSentinel}
+                      data-testid="products-workspace-infinite-scroll-sentinel"
+                      className="h-2 w-full"
+                      aria-hidden
+                    />
+                    <p
+                      data-testid="products-workspace-infinite-scroll-status"
+                      className="text-sm font-medium text-slate-500"
+                    >
+                      {isLoadingMoreWorkspace
+                        ? messages.productsWorkspace.pagination.loadingMore
+                        : messages.productsWorkspace.pagination.continueScrolling}
+                    </p>
+                    {!isWorkspaceInfiniteScrollObserverSupported ? (
+                      <button
+                        type="button"
+                        onClick={() => void loadNextWorkspacePage()}
+                        data-testid="products-workspace-load-more-button"
+                        disabled={isLoadingMoreWorkspace}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+                      >
+                        {messages.common.actions.loadMore}
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <p
+                    data-testid="products-workspace-infinite-scroll-status"
+                    className="text-sm font-medium text-slate-500"
                   >
-                    {messages.productsWorkspace.pagination.previous}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((current) =>
-                        Math.min(workspace?.totalPages ?? current, current + 1),
-                      )
-                    }
-                    disabled={(workspace?.page ?? 1) >= (workspace?.totalPages ?? 1)}
-                    data-testid="products-workspace-pagination-next"
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
-                  >
-                    {messages.productsWorkspace.pagination.next}
-                  </button>
-                </div>
+                    {messages.productsWorkspace.pagination.endReached}
+                  </p>
+                )}
               </footer>
             </>
           )}

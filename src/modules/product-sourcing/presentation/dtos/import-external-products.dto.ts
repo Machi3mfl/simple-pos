@@ -54,6 +54,17 @@ export const importExternalProductsResponseDTOSchema = z
           row: z.number().int().positive(),
           sourceProductId: z.string().min(1),
           name: z.string().min(1).optional(),
+          code: z.enum([
+            "duplicate_in_batch",
+            "already_imported",
+            "missing_image",
+            "invalid_image_source",
+            "unsupported_image_content_type",
+            "image_too_large",
+            "duplicate_imported_sku",
+            "unexpected_error",
+          ]),
+          retryable: z.boolean(),
           reason: z.string().min(1),
         })
         .strict(),

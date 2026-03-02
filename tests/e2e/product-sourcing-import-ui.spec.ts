@@ -105,4 +105,100 @@ test.describe("product sourcing UI assisted import", () => {
       .first();
     await expect(salesCard).toBeVisible();
   });
+
+  test("keeps partial failed imports actionable from the sourcing screen", async ({
+    page,
+  }) => {
+    const marker = uniqueMarker();
+    const duplicateSourceId = `dup-${marker}`;
+    const newSourceId = `new-${marker}`;
+
+    await page.route("**/api/v1/product-sourcing/search**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          providerId: "carrefour",
+          items: [
+            {
+              providerId: "carrefour",
+              sourceProductId: duplicateSourceId,
+              name: `Duplicado ${marker}`,
+              brand: "Carrefour",
+              ean: `7790${marker.replace(/-/g, "").slice(-8)}`,
+              categoryTrail: ["/Bebidas/Gaseosas/"],
+              suggestedCategoryId: "drink",
+              imageUrl: tinyPngDataUrl,
+              referencePrice: 321.5,
+              referenceListPrice: 350,
+              productUrl: `https://example.com/${duplicateSourceId}`,
+            },
+            {
+              providerId: "carrefour",
+              sourceProductId: newSourceId,
+              name: `Nuevo ${marker}`,
+              brand: "Carrefour",
+              ean: `7791${marker.replace(/-/g, "").slice(-8)}`,
+              categoryTrail: ["/Bebidas/Gaseosas/"],
+              suggestedCategoryId: "drink",
+              imageUrl: tinyPngDataUrl,
+              referencePrice: 654.5,
+              referenceListPrice: 700,
+              productUrl: `https://example.com/${newSourceId}`,
+            },
+          ],
+          page: 1,
+          pageSize: 8,
+          hasMore: false,
+        }),
+      });
+    });
+
+    await page.goto("/products/sourcing");
+    await page.getByTestId("product-sourcing-search-input").fill("lote parcial");
+    await page.waitForTimeout(650);
+
+    await page.getByTestId(`product-sourcing-toggle-${duplicateSourceId}`).click();
+    await page.getByTestId(`product-sourcing-import-name-${duplicateSourceId}`).fill(
+      `Importado antes ${marker}`,
+    );
+    await page.getByTestId(`product-sourcing-import-category-${duplicateSourceId}`).fill("drink");
+    await page.getByTestId(`product-sourcing-import-price-${duplicateSourceId}`).fill("111");
+    await page.getByTestId(`product-sourcing-import-stock-${duplicateSourceId}`).fill("1");
+    await page.getByTestId(`product-sourcing-import-cost-${duplicateSourceId}`).fill("50");
+    await page.getByTestId(`product-sourcing-import-min-stock-${duplicateSourceId}`).fill("0");
+    await page.getByTestId("product-sourcing-import-button").click();
+
+    await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
+      "Importacion completada: 1 productos creados.",
+    );
+
+    await page.getByTestId(`product-sourcing-toggle-${duplicateSourceId}`).click();
+    await page.getByTestId(`product-sourcing-toggle-${newSourceId}`).click();
+    await page.getByTestId(`product-sourcing-import-name-${newSourceId}`).fill(
+      `Nuevo importado ${marker}`,
+    );
+    await page.getByTestId(`product-sourcing-import-category-${newSourceId}`).fill("drink");
+    await page.getByTestId(`product-sourcing-import-price-${newSourceId}`).fill("222");
+    await page.getByTestId(`product-sourcing-import-stock-${newSourceId}`).fill("2");
+    await page.getByTestId(`product-sourcing-import-cost-${newSourceId}`).fill("80");
+    await page.getByTestId(`product-sourcing-import-min-stock-${newSourceId}`).fill("1");
+    await page.getByTestId("product-sourcing-import-button").click();
+
+    await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
+      "Importacion completada: 1 productos creados y 1 rechazados.",
+    );
+    await expect(page.getByTestId("product-sourcing-pending-invalid-panel")).toBeVisible();
+    await expect(
+      page.getByTestId(`product-sourcing-invalid-result-${duplicateSourceId}`),
+    ).toContainText("No recuperable");
+    await expect(
+      page.getByTestId(`product-sourcing-invalid-card-${duplicateSourceId}`),
+    ).toContainText("No recuperable");
+    await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
+
+    await page.getByTestId("product-sourcing-dismiss-terminal-invalid-button").click();
+    await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("0");
+    await expect(page.getByTestId("product-sourcing-pending-invalid-panel")).toHaveCount(0);
+  });
 });

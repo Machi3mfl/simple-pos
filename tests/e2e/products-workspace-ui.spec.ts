@@ -110,6 +110,11 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     .filter({ hasText: bulkProductName })
     .first();
 
+  if ((await bulkPriceSelectionItem.count()) === 0) {
+    const loadedSelectionItems = page.locator('[data-testid^="bulk-selection-item-"]');
+    await loadedSelectionItems.last().scrollIntoViewIfNeeded();
+  }
+
   await expect(bulkPriceSelectionItem).toBeVisible();
   await bulkPriceSelectionItem.locator('input[type="checkbox"]').check();
 
