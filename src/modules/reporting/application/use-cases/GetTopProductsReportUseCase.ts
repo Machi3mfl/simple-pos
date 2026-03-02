@@ -62,7 +62,7 @@ export class GetTopProductsReportUseCase {
           revenue: 0,
         };
         current.quantitySold += line.quantity;
-        current.revenue += calculateSaleLineRevenue(line.quantity);
+        current.revenue += calculateSaleLineRevenue(line);
         aggregateByProductId.set(line.productId, current);
       }
     }

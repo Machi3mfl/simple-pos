@@ -13,7 +13,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   const marker = Date.now();
   const productName = `UI AR Product ${marker}`;
   const customerName = `UI AR ${marker}`;
-  await createCatalogProduct(request, { name: productName });
+  await createCatalogProduct(request, { name: productName, price: 4450 });
 
   await page.goto("/sales");
 
@@ -31,14 +31,16 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   );
 
   await page.getByTestId("checkout-customer-name-input").fill(customerName);
-  await page.getByTestId("checkout-on-account-initial-payment-input").fill("4");
-  await expect(page.getByTestId("checkout-on-account-remaining-value")).toHaveText("$6.00");
+  await page.getByTestId("checkout-on-account-initial-payment-input").fill("1000");
+  await expect(page.getByTestId("checkout-on-account-remaining-value")).toHaveText(
+    "$3450.00",
+  );
   await page.getByTestId("checkout-confirm-payment-button").click();
 
   const checkoutFeedback = page.getByTestId("checkout-feedback");
   await expect(checkoutFeedback).toContainText("Venta registrada correctamente.");
   await expect(checkoutFeedback).toContainText(customerName);
-  await expect(checkoutFeedback).toContainText("Saldo pendiente: $6.00.");
+  await expect(checkoutFeedback).toContainText("Saldo pendiente: $3450.00.");
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(
@@ -63,14 +65,14 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
 
   const beforeOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const beforeOutstanding = parseMoneyValue(beforeOutstandingRaw);
-  expect(beforeOutstanding).toBe(6);
+  expect(beforeOutstanding).toBe(3450);
 
   await expect(page.locator('[data-testid^="debt-ledger-entry-"]').first()).toContainText("Deuda");
 
-  await page.getByTestId("debt-payment-amount-input").fill("5");
+  await page.getByTestId("debt-payment-amount-input").fill("500");
   await page.getByTestId("debt-register-payment-button").click();
 
-  await expect(page.getByTestId("debt-feedback")).toContainText("Pago registrado: $5.00.");
+  await expect(page.getByTestId("debt-feedback")).toContainText("Pago registrado: $500.00.");
 
   const afterOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const afterOutstanding = parseMoneyValue(afterOutstandingRaw);

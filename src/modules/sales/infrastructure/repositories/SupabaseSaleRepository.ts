@@ -15,6 +15,7 @@ interface SaleItemRow {
   sale_id: string;
   product_id: string;
   quantity: number;
+  unit_price: number;
 }
 
 function toNumber(value: unknown): number {
@@ -65,11 +66,15 @@ export class SupabaseSaleRepository implements SaleRepository {
       sale_id: saleData.saleId,
       product_id: item.productId,
       quantity: item.quantity,
+      unit_price: item.unitPrice,
     }));
 
     if (itemRows.length > 0) {
       const { error: itemsError } = await this.client.from("sale_items").insert(itemRows);
       if (itemsError) {
+        // Sales are immutable in this flow. If line persistence fails, remove the parent row
+        // so downstream reporting does not ingest an orphan sale with zero items.
+        await this.client.from("sales").delete().eq("id", saleData.saleId);
         throw new Error(`Failed to save sale items in Supabase: ${itemsError.message}`);
       }
     }
@@ -119,19 +124,26 @@ export class SupabaseSaleRepository implements SaleRepository {
       current.push({
         productId: row.product_id,
         quantity: Math.trunc(toNumber(row.quantity)),
+        unitPrice: toNumber(row.unit_price),
       });
       rowsBySaleId.set(row.sale_id, current);
     }
 
-    return saleRows.map((row) => {
+    return saleRows.flatMap((row) => {
       const items = rowsBySaleId.get(row.id) ?? [];
-      return Sale.rehydrate({
-        id: row.id,
-        items,
-        paymentMethod: row.payment_method,
-        customerId: row.customer_id ?? undefined,
-        createdAt: new Date(row.created_at),
-      });
+      if (items.length === 0) {
+        return [];
+      }
+
+      return [
+        Sale.rehydrate({
+          id: row.id,
+          items,
+          paymentMethod: row.payment_method,
+          customerId: row.customer_id ?? undefined,
+          createdAt: new Date(row.created_at),
+        }),
+      ];
     });
   }
 }

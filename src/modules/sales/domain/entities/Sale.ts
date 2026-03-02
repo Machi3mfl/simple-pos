@@ -1,6 +1,7 @@
 import {
   EmptySaleItemsError,
   InvalidSaleQuantityError,
+  InvalidSaleUnitPriceError,
   SaleCustomerRequiredError,
 } from "../errors/SaleDomainError";
 
@@ -9,6 +10,7 @@ export type SalePaymentMethod = "cash" | "on_account";
 export interface SaleLineItem {
   readonly productId: string;
   readonly quantity: number;
+  readonly unitPrice: number;
 }
 
 interface CreateSaleProps {
@@ -40,6 +42,10 @@ export class Sale {
     props.items.forEach((line) => {
       if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
         throw new InvalidSaleQuantityError(line.productId);
+      }
+
+      if (!Number.isFinite(line.unitPrice) || line.unitPrice <= 0) {
+        throw new InvalidSaleUnitPriceError(line.productId);
       }
     });
 

@@ -1,3 +1,5 @@
+import { ProductNotFoundError } from "@/modules/catalog/domain/errors/ProductDomainError";
+import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
 import type { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
 import {
   NoopOnAccountDebtRecorder,
@@ -6,6 +8,7 @@ import {
 import { calculateSaleTotal } from "@/modules/sales/domain/policies/SalePricingPolicy";
 
 import { Sale } from "../../domain/entities/Sale";
+import type { SaleLineItem } from "../../domain/entities/Sale";
 import { SaleInitialPaymentOutOfRangeError } from "../../domain/errors/SaleDomainError";
 import type { SaleRepository } from "../../domain/repositories/SaleRepository";
 
@@ -33,14 +36,16 @@ export interface CreateSaleUseCaseOutput {
 export class CreateSaleUseCase {
   constructor(
     private readonly saleRepository: SaleRepository,
+    private readonly productRepository: ProductRepository,
     private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
     private readonly onAccountDebtRecorder: OnAccountDebtRecorder = new NoopOnAccountDebtRecorder(),
   ) {}
 
   async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
+    const pricedItems = await this.resolveSaleItems(input.items);
     const sale = Sale.create({
       id: crypto.randomUUID(),
-      items: input.items,
+      items: pricedItems,
       paymentMethod: input.paymentMethod,
       createdAt: new Date(),
     });
@@ -96,5 +101,31 @@ export class CreateSaleUseCase {
       outstandingAmount,
       createdAt: sale.getCreatedAt().toISOString(),
     };
+  }
+
+  private async resolveSaleItems(
+    items: CreateSaleUseCaseInput["items"],
+  ): Promise<readonly SaleLineItem[]> {
+    const productIds = Array.from(new Set(items.map((item) => item.productId)));
+    const products = await this.productRepository.list({ ids: productIds });
+    const productById = new Map(
+      products.map((product) => {
+        const primitives = product.toPrimitives();
+        return [primitives.id, primitives.price] as const;
+      }),
+    );
+
+    return items.map((item) => {
+      const unitPrice = productById.get(item.productId);
+      if (unitPrice === undefined) {
+        throw new ProductNotFoundError(item.productId);
+      }
+
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice,
+      } satisfies SaleLineItem;
+    });
   }
 }

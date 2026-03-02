@@ -1,11 +1,11 @@
 import type { SaleLineItem } from "../entities/Sale";
 
-export const DEFAULT_SALE_UNIT_PRICE = 10;
-
 export function calculateSaleTotal(items: readonly SaleLineItem[]): number {
-  return items.reduce((sum, line) => sum + line.quantity * DEFAULT_SALE_UNIT_PRICE, 0);
+  return Number(
+    items.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0).toFixed(2),
+  );
 }
 
-export function calculateSaleLineRevenue(quantity: number): number {
-  return quantity * DEFAULT_SALE_UNIT_PRICE;
+export function calculateSaleLineRevenue(line: SaleLineItem): number {
+  return Number((line.quantity * line.unitPrice).toFixed(2));
 }

@@ -19,6 +19,13 @@ export class InvalidSaleQuantityError extends SaleDomainError {
   }
 }
 
+export class InvalidSaleUnitPriceError extends SaleDomainError {
+  constructor(productId: string) {
+    super(`Precio inválido para el producto '${productId}'.`);
+    this.name = "InvalidSaleUnitPriceError";
+  }
+}
+
 export class SaleCustomerRequiredError extends SaleDomainError {
   constructor() {
     super("El cliente es obligatorio cuando el método de pago es cuenta corriente.");

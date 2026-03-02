@@ -17,7 +17,7 @@ test.describe("sales payment rules (unit)", () => {
         parsed.error.issues.some(
           (issue) =>
             issue.path.join(".") === "customerId" &&
-            issue.message.includes("customerId or customerName is required"),
+            issue.message.includes("customerId o customerName es obligatorio"),
         ),
       ).toBeTruthy();
     }
@@ -47,7 +47,7 @@ test.describe("sales payment rules (unit)", () => {
   test("sale entity enforces customer assignment for on_account", () => {
     const sale = Sale.create({
       id: "sale-on-account",
-      items: [{ productId: "prod-001", quantity: 1 }],
+      items: [{ productId: "prod-001", quantity: 1, unitPrice: 10 }],
       paymentMethod: "on_account",
       createdAt: new Date("2026-03-01T00:00:00.000Z"),
     });
@@ -61,7 +61,7 @@ test.describe("sales payment rules (unit)", () => {
   test("sale entity allows cash checkout without customer", () => {
     const sale = Sale.create({
       id: "sale-cash",
-      items: [{ productId: "prod-001", quantity: 1 }],
+      items: [{ productId: "prod-001", quantity: 1, unitPrice: 10 }],
       paymentMethod: "cash",
       createdAt: new Date("2026-03-01T00:00:00.000Z"),
     });

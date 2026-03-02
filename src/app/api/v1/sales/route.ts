@@ -4,6 +4,8 @@ import { ZodError } from "zod";
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/application/services/OnAccountDebtRecorderAdapter";
 import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
+import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
+import { SupabaseProductRepository } from "@/modules/catalog/infrastructure/repositories/SupabaseProductRepository";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
@@ -32,6 +34,7 @@ function createSaleRuntime(): {
   createSaleUseCase: CreateSaleUseCase;
 } {
   const supabaseClient = getSupabaseServerClient();
+  const productRepository: ProductRepository = new SupabaseProductRepository(supabaseClient);
   const customerRepository: CustomerRepository = new SupabaseCustomerRepository(
     supabaseClient,
   );
@@ -48,6 +51,7 @@ function createSaleRuntime(): {
   return {
     createSaleUseCase: new CreateSaleUseCase(
       saleRepository,
+      productRepository,
       findOrCreateCustomerUseCase,
       onAccountDebtRecorder,
     ),
