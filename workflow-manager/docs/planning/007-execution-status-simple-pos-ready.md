@@ -42,7 +42,7 @@
 | PRODUCTS-001 | done |
 | PRODUCTS-002 | done |
 | PRODUCTS-003 | done |
-| SOURCING-001 | in_progress |
+| SOURCING-001 | done |
 | AR-001 | done |
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
@@ -76,14 +76,14 @@
 
 ---
 
-## 5. Current Pending Items
+## 5. Current Planning Items
 
-Open planning item:
+Completed planning item:
 
 - `SOURCING-001` external product sourcing and assisted import:
-  - status: `in_progress`
+  - status: `done`
   - PoC status: `completed`
-  - implementation status: core sourcing/import flow completed; continuity follow-ups remain pending
+  - implementation status: search, assisted import, continuity recovery, and failed-queue triage are fully delivered
   - sourcing task status:
     - `SRC-TASK-001` provider feasibility and contract lock -> `done`
     - `SRC-TASK-002` search slice -> `done`
@@ -93,16 +93,16 @@ Open planning item:
     - `SRC-TASK-006` UI integration and operator UX -> `done`
     - `SRC-TASK-007` provider hardening -> `done`
     - `SRC-TASK-008` resume state across reload/session restore -> `done`
-    - `SRC-TASK-009` failed import queue across sessions -> `pending`
-  - planned follow-up use cases:
+    - `SRC-TASK-009` failed import queue across sessions -> `done`
+  - follow-up use cases:
     - `UC-SRC-012` resume sourcing search session -> `done`
     - `UC-SRC-013` resume import draft edits -> `done`
     - `UC-SRC-014` recover interrupted sourcing session after refresh/browser close -> `done`
-    - `UC-SRC-015` persist failed import items for later review -> `pending`
-    - `UC-SRC-016` review failed import queue -> `pending`
-    - `UC-SRC-017` retry a failed import item -> `pending`
-    - `UC-SRC-018` dismiss a failed import item -> `pending`
-    - `UC-SRC-019` filter failed queue by status -> `pending`
+    - `UC-SRC-015` persist failed import items for later review -> `done`
+    - `UC-SRC-016` review failed import queue -> `done`
+    - `UC-SRC-017` retry a failed import item -> `done`
+    - `UC-SRC-018` dismiss a failed import item -> `done`
+    - `UC-SRC-019` filter failed queue by status -> `done`
   - current output:
     - `GET /api/v1/product-sourcing/search`
     - `POST /api/v1/product-sourcing/import`
@@ -125,6 +125,8 @@ Open planning item:
     - partial failed import batches now stay actionable from the same sourcing screen with retryable vs non-recoverable feedback and cleanup actions
     - sourcing sessions now persist the active query, loaded results, selected ids, and inline import drafts across full page reloads
     - operators can explicitly discard a restored sourcing session from the sourcing screen to reset the workflow cleanly
+    - failed imports now persist in a separate durable queue across sessions with filters for pending, retryable, non-recoverable, dismissed, and resolved states
+    - queue entries can be reloaded into the current selection, retried directly, or dismissed from active triage
     - reusable infinite-scroll primitives now drive the product lists in `/sales`, `/products`, and `/products/sourcing`
     - the bulk price update product selector now follows the same infinite-scroll pattern for large selection scopes
     - product cards across `/sales`, `/products`, and `/products/sourcing` now share a common visual shell so media proportions and card geometry stay consistent while each module keeps its own metadata
@@ -159,6 +161,7 @@ Open cross-cutting follow-up:
 - Sourcing UI coverage: `tests/e2e/product-sourcing-ui.spec.ts`, `tests/e2e/product-sourcing-import-ui.spec.ts`, `tests/e2e/product-sourcing-import-use-case.spec.ts`.
 - Sourcing infinite-scroll verification: `tests/e2e/product-sourcing-ui.spec.ts` proves that the first provider page is loaded with `pageSize=8`, later pages append automatically through the sentinel flow, and existing selection is preserved.
 - Sourcing resume-state verification: `tests/e2e/product-sourcing-resume-state-ui.spec.ts` proves that a full page reload restores the active sourcing query, visible results, selected item, and inline draft fields without issuing a second initial search request.
+- Sourcing failed-queue verification: `tests/e2e/product-sourcing-failed-queue-ui.spec.ts` proves that failed imports persist across sessions, can be filtered by status, retried to resolution, and dismissed into a separate triage state.
 - Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.
 - Sourcing category mapping verification: `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` proves that a category confirmed in one import is auto-reused on a later result sharing the same external path.
 - Sourcing category mapping management verification: `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` proves that learned mappings can be updated and deleted from the UI and that the next search reflects the change.

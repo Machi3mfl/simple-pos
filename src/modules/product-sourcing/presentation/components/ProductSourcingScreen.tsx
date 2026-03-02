@@ -28,6 +28,15 @@ import {
   readProductSourcingSessionSnapshot,
   writeProductSourcingSessionSnapshot,
 } from "../session/productSourcingSessionStorage";
+import {
+  markProductSourcingFailedQueueEntriesResolved,
+  markProductSourcingFailedQueueEntryDismissed,
+  readProductSourcingFailedQueueEntries,
+  updateProductSourcingFailedQueueDraft,
+  upsertProductSourcingFailedQueueEntries,
+  type ProductSourcingFailedQueueEntry,
+  type ProductSourcingFailedQueueStatus,
+} from "../session/productSourcingFailedQueue";
 
 interface ApiErrorPayload {
   readonly code?: string;
@@ -154,10 +163,26 @@ interface ImportActionOptions {
   readonly sourceProductIds?: readonly string[];
 }
 
+type FailedQueueFilter =
+  | "open"
+  | "retryable"
+  | "non_recoverable"
+  | "dismissed"
+  | "resolved"
+  | "all";
+
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
 const SEARCH_PAGE_SIZE = 8;
 const CATEGORY_OPTIONS = ["drink", "snack", "dessert", "main", "other"] as const;
+const FAILED_QUEUE_FILTERS = [
+  "open",
+  "retryable",
+  "non_recoverable",
+  "dismissed",
+  "resolved",
+  "all",
+] as const satisfies readonly FailedQueueFilter[];
 
 function resolveErrorMessage(payload: unknown, fallback: string): string {
   if (
@@ -251,6 +276,63 @@ function invalidItemTone(
     : "border-rose-200 bg-rose-50 text-rose-800";
 }
 
+function failedQueueStatusLabel(status: ProductSourcingFailedQueueStatus): string {
+  switch (status) {
+    case "retryable":
+      return "Recuperable";
+    case "non_recoverable":
+      return "No recuperable";
+    case "dismissed":
+      return "Descartado";
+    case "resolved":
+      return "Resuelto";
+  }
+}
+
+function failedQueueStatusTone(status: ProductSourcingFailedQueueStatus): string {
+  switch (status) {
+    case "retryable":
+      return "border-amber-200 bg-amber-50 text-amber-800";
+    case "non_recoverable":
+      return "border-rose-200 bg-rose-50 text-rose-800";
+    case "dismissed":
+      return "border-slate-200 bg-slate-100 text-slate-700";
+    case "resolved":
+      return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+}
+
+function failedQueueFilterLabel(filter: FailedQueueFilter): string {
+  switch (filter) {
+    case "open":
+      return "Pendientes";
+    case "retryable":
+      return "Recuperables";
+    case "non_recoverable":
+      return "No recuperables";
+    case "dismissed":
+      return "Descartados";
+    case "resolved":
+      return "Resueltos";
+    case "all":
+      return "Todos";
+  }
+}
+
+function matchesFailedQueueFilter(
+  entry: ProductSourcingFailedQueueEntry,
+  filter: FailedQueueFilter,
+): boolean {
+  switch (filter) {
+    case "open":
+      return entry.status === "retryable" || entry.status === "non_recoverable";
+    case "all":
+      return true;
+    default:
+      return entry.status === filter;
+  }
+}
+
 function mergeSearchResults(
   currentItems: readonly ExternalCatalogCandidateItem[],
   incomingItems: readonly ExternalCatalogCandidateItem[],
@@ -285,6 +367,9 @@ export function ProductSourcingScreen({
   const [categoryMappingDrafts, setCategoryMappingDrafts] = useState<Record<string, string>>({});
   const [knownCategoryCodes, setKnownCategoryCodes] = useState<readonly string[]>(CATEGORY_OPTIONS);
   const [importHistory, setImportHistory] = useState<readonly ImportedProductHistoryItem[]>([]);
+  const [failedQueueEntries, setFailedQueueEntries] = useState<
+    readonly ProductSourcingFailedQueueEntry[]
+  >([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [isLoadingMappings, setIsLoadingMappings] = useState<boolean>(false);
@@ -293,11 +378,14 @@ export function ProductSourcingScreen({
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [isSessionHydrated, setIsSessionHydrated] = useState<boolean>(false);
   const [activeMappingPath, setActiveMappingPath] = useState<string | null>(null);
+  const [activeFailedQueueEntryId, setActiveFailedQueueEntryId] = useState<string | null>(null);
+  const [failedQueueFilter, setFailedQueueFilter] = useState<FailedQueueFilter>("open");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [sessionFeedback, setSessionFeedback] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<FeedbackState | null>(null);
   const [importHistoryFeedback, setImportHistoryFeedback] = useState<FeedbackState | null>(null);
   const [mappingFeedback, setMappingFeedback] = useState<FeedbackState | null>(null);
+  const [failedQueueFeedback, setFailedQueueFeedback] = useState<FeedbackState | null>(null);
   const [importResult, setImportResult] = useState<ProductSourcingImportResponse | null>(null);
   const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>("");
@@ -322,6 +410,7 @@ export function ProductSourcingScreen({
 
   useEffect(() => {
     const snapshot = readProductSourcingSessionSnapshot();
+    setFailedQueueEntries(readProductSourcingFailedQueueEntries());
 
     if (snapshot) {
       const resultIds = new Set(snapshot.results.map((item) => item.sourceProductId));
@@ -725,6 +814,25 @@ export function ProductSourcingScreen({
     () => results.filter((item) => selectedIds.includes(item.sourceProductId)),
     [results, selectedIds],
   );
+  const failedQueueCounts = useMemo(
+    () => ({
+      open: failedQueueEntries.filter(
+        (entry) => entry.status === "retryable" || entry.status === "non_recoverable",
+      ).length,
+      retryable: failedQueueEntries.filter((entry) => entry.status === "retryable").length,
+      non_recoverable: failedQueueEntries.filter(
+        (entry) => entry.status === "non_recoverable",
+      ).length,
+      dismissed: failedQueueEntries.filter((entry) => entry.status === "dismissed").length,
+      resolved: failedQueueEntries.filter((entry) => entry.status === "resolved").length,
+      all: failedQueueEntries.length,
+    }),
+    [failedQueueEntries],
+  );
+  const filteredFailedQueueEntries = useMemo(
+    () => failedQueueEntries.filter((entry) => matchesFailedQueueFilter(entry, failedQueueFilter)),
+    [failedQueueEntries, failedQueueFilter],
+  );
   const {
     isObserverSupported: isInfiniteScrollObserverSupported,
     setSentinel: setResultsSentinel,
@@ -773,15 +881,28 @@ export function ProductSourcingScreen({
     field: keyof ImportDraft,
     value: string,
   ): void {
-    setImportDrafts((current) => ({
-      ...current,
-      [sourceProductId]: {
-        ...(current[sourceProductId] ?? createImportDraft(results.find((item) => item.sourceProductId === sourceProductId) as ExternalCatalogCandidateItem)),
+    let nextDraft: ImportDraft | null = null;
+    setImportDrafts((current) => {
+      nextDraft = {
+        ...(current[sourceProductId] ??
+          createImportDraft(
+            results.find((item) => item.sourceProductId === sourceProductId) as ExternalCatalogCandidateItem,
+          )),
         [field]: value,
-      },
-    }));
+      };
+      return {
+        ...current,
+        [sourceProductId]: nextDraft,
+      };
+    });
+    if (nextDraft) {
+      setFailedQueueEntries(
+        updateProductSourcingFailedQueueDraft("carrefour", sourceProductId, nextDraft),
+      );
+    }
     setImportFeedback(null);
     setSessionFeedback(null);
+    setFailedQueueFeedback(null);
   }
 
   function handleDiscardSession(): void {
@@ -822,23 +943,26 @@ export function ProductSourcingScreen({
     });
   }
 
-  async function handleImportSelected(options: ImportActionOptions = {}): Promise<void> {
-    const sourceProductIds =
-      options.sourceProductIds && options.sourceProductIds.length > 0
-        ? options.sourceProductIds
-        : selectedIds;
-    const itemsToImport = selectedItems.filter((item) =>
-      sourceProductIds.includes(item.sourceProductId),
-    );
-
-    if (itemsToImport.length === 0) {
-      setImportFeedback({
-        type: "error",
-        message: "Selecciona al menos un producto externo para importarlo.",
-      });
-      return;
-    }
-
+  function buildImportPayloadItems(
+    itemsToImport: readonly ExternalCatalogCandidateItem[],
+    resolveDraft: (item: ExternalCatalogCandidateItem) => ImportDraft,
+  ):
+    | {
+        readonly providerId: "carrefour";
+        readonly sourceProductId: string;
+        readonly name: string;
+        readonly brand: string | null;
+        readonly ean: string | null;
+        readonly categoryTrail: readonly string[];
+        readonly categoryId: string;
+        readonly price: number;
+        readonly initialStock: number;
+        readonly minStock: number;
+        readonly cost?: number;
+        readonly sourceImageUrl: string | null;
+        readonly productUrl: string | null;
+      }[]
+    | null {
     const payloadItems = [] as {
       readonly providerId: "carrefour";
       readonly sourceProductId: string;
@@ -856,7 +980,7 @@ export function ProductSourcingScreen({
     }[];
 
     for (const item of itemsToImport) {
-      const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
+      const draft = resolveDraft(item);
       const normalizedName = draft.name.trim();
       const normalizedCategoryId = draft.categoryId.trim();
       const price = parseRequiredDecimal(draft.price);
@@ -869,7 +993,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Completa un nombre valido para ${item.name}.`,
         });
-        return;
+        return null;
       }
 
       if (normalizedCategoryId.length === 0) {
@@ -877,7 +1001,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Completa la categoria final para ${item.name}.`,
         });
-        return;
+        return null;
       }
 
       if (price === null || price <= 0) {
@@ -885,7 +1009,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Ingresa un precio valido para ${item.name}.`,
         });
-        return;
+        return null;
       }
 
       if (initialStock === null || initialStock < 0) {
@@ -893,7 +1017,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Ingresa un stock inicial entero valido para ${item.name}.`,
         });
-        return;
+        return null;
       }
 
       if (minStock === null || minStock < 0) {
@@ -901,7 +1025,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Ingresa un stock minimo entero valido para ${item.name}.`,
         });
-        return;
+        return null;
       }
 
       if (initialStock > 0 && (cost === undefined || cost <= 0)) {
@@ -909,7 +1033,7 @@ export function ProductSourcingScreen({
           type: "error",
           message: `Si cargas stock inicial para ${item.name}, tambien debes informar el costo.`,
         });
-        return;
+        return null;
       }
 
       payloadItems.push({
@@ -929,9 +1053,76 @@ export function ProductSourcingScreen({
       });
     }
 
+    return payloadItems;
+  }
+
+  function syncFailedQueueAfterImport(
+    itemsToImport: readonly ExternalCatalogCandidateItem[],
+    resolveDraft: (item: ExternalCatalogCandidateItem) => ImportDraft,
+    result: ProductSourcingImportResponse,
+  ): void {
+    let nextQueue = readProductSourcingFailedQueueEntries();
+
+    if (result.invalidItems.length > 0) {
+      nextQueue = upsertProductSourcingFailedQueueEntries(
+        result.invalidItems.flatMap((invalidItem) => {
+          const candidate = itemsToImport.find(
+            (item) => item.sourceProductId === invalidItem.sourceProductId,
+          );
+          if (!candidate) {
+            return [];
+          }
+
+          return [
+            {
+              candidate,
+              draft: resolveDraft(candidate),
+              invalidItem,
+            },
+          ];
+        }),
+      );
+      setFailedQueueFilter("open");
+    }
+
+    if (result.items.length > 0) {
+      nextQueue = markProductSourcingFailedQueueEntriesResolved(
+        result.items.map((entry) => ({
+          providerId: entry.providerId,
+          sourceProductId: entry.sourceProductId,
+          resolvedItem: {
+            productId: entry.item.id,
+            productName: entry.item.name,
+            productSku: entry.item.sku,
+          },
+        })),
+      );
+    }
+
+    setFailedQueueEntries(nextQueue);
+  }
+
+  async function runImportBatch(
+    itemsToImport: readonly ExternalCatalogCandidateItem[],
+    resolveDraft: (item: ExternalCatalogCandidateItem) => ImportDraft,
+  ): Promise<void> {
+    if (itemsToImport.length === 0) {
+      setImportFeedback({
+        type: "error",
+        message: "Selecciona al menos un producto externo para importarlo.",
+      });
+      return;
+    }
+
+    const payloadItems = buildImportPayloadItems(itemsToImport, resolveDraft);
+    if (!payloadItems) {
+      return;
+    }
+
     setIsImporting(true);
     setImportFeedback(null);
     setImportResult(null);
+    setFailedQueueFeedback(null);
 
     try {
       const response = await fetch("/api/v1/product-sourcing/import", {
@@ -958,8 +1149,11 @@ export function ProductSourcingScreen({
 
       const result = payload as ProductSourcingImportResponse;
       const importedIds = new Set(result.items.map((entry) => entry.sourceProductId));
-      setSelectedIds((current) => current.filter((sourceProductId) => !importedIds.has(sourceProductId)));
+      setSelectedIds((current) =>
+        current.filter((sourceProductId) => !importedIds.has(sourceProductId)),
+      );
       setImportResult(result);
+      syncFailedQueueAfterImport(itemsToImport, resolveDraft, result);
       await Promise.all([loadCategoryMappings(), loadImportHistory()]);
       setImportFeedback({
         type: result.importedCount > 0 ? "success" : "error",
@@ -976,6 +1170,77 @@ export function ProductSourcingScreen({
     } finally {
       setIsImporting(false);
     }
+  }
+
+  async function handleImportSelected(options: ImportActionOptions = {}): Promise<void> {
+    const sourceProductIds =
+      options.sourceProductIds && options.sourceProductIds.length > 0
+        ? options.sourceProductIds
+        : selectedIds;
+    const itemsToImport = selectedItems.filter((item) =>
+      sourceProductIds.includes(item.sourceProductId),
+    );
+
+    await runImportBatch(
+      itemsToImport,
+      (item) => importDrafts[item.sourceProductId] ?? createImportDraft(item),
+    );
+  }
+
+  function handleLoadFailedQueueEntry(entry: ProductSourcingFailedQueueEntry): void {
+    setResults((current) => {
+      const nextResults = mergeSearchResults(current, [entry.candidate]);
+      resultsRef.current = nextResults;
+      return nextResults;
+    });
+    setSelectedIds((current) =>
+      current.includes(entry.sourceProductId)
+        ? current
+        : [...current, entry.sourceProductId],
+    );
+    setImportDrafts((current) => ({
+      ...current,
+      [entry.sourceProductId]: { ...entry.draft },
+    }));
+    setSearchPerformed(true);
+    setFeedback("El producto fallido se volvió a cargar en la selección actual.");
+    setSessionFeedback(null);
+    setFailedQueueFeedback(null);
+  }
+
+  async function handleRetryFailedQueueEntry(
+    entry: ProductSourcingFailedQueueEntry,
+  ): Promise<void> {
+    setActiveFailedQueueEntryId(entry.id);
+
+    try {
+      await runImportBatch([entry.candidate], () => entry.draft);
+    } finally {
+      setActiveFailedQueueEntryId(null);
+    }
+  }
+
+  function handleDismissFailedQueueEntry(entry: ProductSourcingFailedQueueEntry): void {
+    setFailedQueueEntries(
+      markProductSourcingFailedQueueEntryDismissed(entry.providerId, entry.sourceProductId),
+    );
+    setSelectedIds((current) =>
+      current.filter((sourceProductId) => sourceProductId !== entry.sourceProductId),
+    );
+    setImportResult((current) =>
+      current
+        ? {
+            ...current,
+            invalidItems: current.invalidItems.filter(
+              (invalidItem) => invalidItem.sourceProductId !== entry.sourceProductId,
+            ),
+          }
+        : current,
+    );
+    setFailedQueueFeedback({
+      type: "success",
+      message: `Se descartó ${entry.candidate.name} de la bandeja persistente.`,
+    });
   }
 
   function keepOnlyInvalidSelection(): void {
@@ -1656,6 +1921,192 @@ export function ProductSourcingScreen({
             No hay candidatos visibles para la busqueda actual.
           </article>
         ) : null}
+
+        <section
+          data-testid="product-sourcing-failed-queue-panel"
+          className="rounded-[2rem] border border-slate-200 bg-white px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.06)]"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Pendientes persistentes
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                Bandeja de fallidos entre sesiones
+              </h2>
+              <p className="mt-2 max-w-[56rem] text-sm text-slate-600">
+                Los rechazos de importación quedan guardados para revisión posterior. Desde acá puedes filtrar, recargar en la selección, reintentar o descartarlos sin depender de la sesión actual.
+              </p>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                Estado
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {failedQueueCounts.open}
+              </p>
+              <p className="text-sm text-slate-500">
+                pendientes activos de {failedQueueCounts.all} registros guardados
+              </p>
+            </div>
+          </div>
+
+          {failedQueueFeedback ? (
+            <div
+              data-testid="product-sourcing-failed-queue-feedback"
+              className={[
+                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
+                failedQueueFeedback.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-rose-200 bg-rose-50 text-rose-700",
+              ].join(" ")}
+            >
+              {failedQueueFeedback.message}
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {FAILED_QUEUE_FILTERS.map((filterOption) => (
+              <button
+                key={filterOption}
+                type="button"
+                data-testid={`product-sourcing-failed-queue-filter-${filterOption}`}
+                onClick={() => setFailedQueueFilter(filterOption)}
+                className={[
+                  "inline-flex min-h-[2.7rem] items-center justify-center rounded-xl px-4 text-sm font-semibold",
+                  failedQueueFilter === filterOption
+                    ? "bg-slate-900 text-white"
+                    : "border border-slate-200 bg-white text-slate-700",
+                ].join(" ")}
+              >
+                {failedQueueFilterLabel(filterOption)} (
+                {failedQueueCounts[filterOption]})
+              </button>
+            ))}
+          </div>
+
+          {filteredFailedQueueEntries.length === 0 ? (
+            <div
+              data-testid="product-sourcing-failed-queue-empty"
+              className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500"
+            >
+              No hay registros para el filtro seleccionado.
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              {filteredFailedQueueEntries.map((entry) => {
+                const isQueueActionRunning = activeFailedQueueEntryId === entry.id;
+
+                return (
+                  <article
+                    key={entry.id}
+                    data-testid={`product-sourcing-failed-queue-entry-${entry.sourceProductId}`}
+                    className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {entry.candidate.name}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {entry.candidate.brand ?? "Marca no informada"} • intento {entry.failureCount}
+                        </p>
+                      </div>
+                      <span
+                        className={[
+                          "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold",
+                          failedQueueStatusTone(entry.status),
+                        ].join(" ")}
+                      >
+                        {failedQueueStatusLabel(entry.status)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 rounded-[1.25rem] border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">{entry.invalidItem.reason}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Última actualización {formatDateTime(entry.updatedAt)}
+                      </p>
+                      {entry.resolvedItem ? (
+                        <p className="mt-2 text-xs font-medium text-emerald-700">
+                          Resuelto como {entry.resolvedItem.productName} • {entry.resolvedItem.productSku}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-3 grid gap-2 rounded-[1.25rem] border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600 sm:grid-cols-2">
+                      <div>
+                        <p className="font-semibold text-slate-700">Categoría</p>
+                        <p className="mt-1">{labelForCategory(entry.draft.categoryId)}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-700">Precio</p>
+                        <p className="mt-1">
+                          {entry.draft.price.trim().length > 0
+                            ? formatCurrency(Number(entry.draft.price))
+                            : "Pendiente"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-700">Stock inicial</p>
+                        <p className="mt-1">{entry.draft.initialStock || "0"}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-700">Costo</p>
+                        <p className="mt-1">
+                          {entry.draft.cost.trim().length > 0
+                            ? formatCurrency(Number(entry.draft.cost))
+                            : "Pendiente"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        data-testid={`product-sourcing-failed-queue-load-${entry.sourceProductId}`}
+                        onClick={() => handleLoadFailedQueueEntry(entry)}
+                        className="inline-flex min-h-[2.8rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+                      >
+                        Cargar en selección
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`product-sourcing-failed-queue-retry-${entry.sourceProductId}`}
+                        onClick={() => void handleRetryFailedQueueEntry(entry)}
+                        disabled={entry.status !== "retryable" || isQueueActionRunning || isImporting}
+                        className={[
+                          "inline-flex min-h-[2.8rem] items-center justify-center rounded-xl px-4 text-sm font-semibold",
+                          entry.status !== "retryable" || isQueueActionRunning || isImporting
+                            ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                            : "bg-amber-500 text-slate-950",
+                        ].join(" ")}
+                      >
+                        {isQueueActionRunning ? <Loader2 size={16} className="animate-spin" /> : null}
+                        {isQueueActionRunning ? "Reintentando..." : "Reintentar ahora"}
+                      </button>
+                      <button
+                        type="button"
+                        data-testid={`product-sourcing-failed-queue-dismiss-${entry.sourceProductId}`}
+                        onClick={() => handleDismissFailedQueueEntry(entry)}
+                        disabled={entry.status === "dismissed" || isQueueActionRunning}
+                        className={[
+                          "inline-flex min-h-[2.8rem] items-center justify-center rounded-xl px-4 text-sm font-semibold",
+                          entry.status === "dismissed" || isQueueActionRunning
+                            ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                            : "border border-rose-200 bg-rose-50 text-rose-700",
+                        ].join(" ")}
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <section
           data-testid="product-sourcing-mappings-panel"
