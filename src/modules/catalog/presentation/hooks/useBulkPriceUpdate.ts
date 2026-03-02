@@ -11,6 +11,11 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import {
+  dedupeCategoryCodes,
+  defaultKioskCategoryCodes,
+  sortCategoryCodes,
+} from "@/shared/core/category/categoryNaming";
 
 export interface BulkPriceProductItem {
   readonly id: string;
@@ -89,7 +94,7 @@ interface UseBulkPriceUpdateResult {
   readonly apply: () => Promise<void>;
 }
 
-const defaultCategoryOptions = ["main", "drink", "snack", "dessert", "other"];
+const defaultCategoryOptions = defaultKioskCategoryCodes();
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
@@ -127,11 +132,12 @@ export function useBulkPriceUpdate({
   );
 
   const categories = useMemo(() => {
-    const set = new Set<string>(defaultCategoryOptions);
-    for (const product of products) {
-      set.add(product.categoryId);
-    }
-    return Array.from(set.values());
+    return sortCategoryCodes(
+      dedupeCategoryCodes([
+        ...defaultCategoryOptions,
+        ...products.map((product) => product.categoryId),
+      ]),
+    );
   }, [products]);
 
   const scopedProducts = useMemo(() => {
@@ -191,10 +197,12 @@ export function useBulkPriceUpdate({
       setProducts(data.items);
       setCategoryId((current) => {
         const normalizedCurrent = current.trim();
-        const knownCategories = new Set<string>([
-          ...defaultCategoryOptions,
-          ...data.items.map((item) => item.categoryId),
-        ]);
+        const knownCategories = new Set<string>(
+          dedupeCategoryCodes([
+            ...defaultCategoryOptions,
+            ...data.items.map((item) => item.categoryId),
+          ]),
+        );
 
         if (normalizedCurrent.length > 0 && knownCategories.has(normalizedCurrent)) {
           return current;

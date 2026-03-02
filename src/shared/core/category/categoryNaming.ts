@@ -20,6 +20,35 @@ const CATEGORY_CONNECTORS = new Set([
   "y",
 ]);
 
+export const DEFAULT_KIOSK_CATEGORY_CODES = [
+  "bebidas-gaseosas",
+  "bebidas-aguas",
+  "alfajores",
+  "galletitas",
+  "snacks",
+  "desayuno-y-merienda",
+  "other",
+] as const;
+
+const CATEGORY_EMOJI_BY_CODE: Record<string, string> = {
+  all: "🧃",
+  "bebidas-gaseosas": "🥤",
+  "bebidas-aguas": "💧",
+  alfajores: "🍪",
+  galletitas: "🥐",
+  snacks: "🍟",
+  "desayuno-y-merienda": "🍽️",
+  other: "📦",
+  main: "🍜",
+  drink: "🥤",
+  snack: "🍔",
+  dessert: "🍬",
+};
+
+const CATEGORY_ORDER_BY_CODE = new Map<string, number>(
+  ["all", ...DEFAULT_KIOSK_CATEGORY_CODES].map((code, index) => [code, index]),
+);
+
 function foldText(value: string): string {
   return value
     .normalize("NFD")
@@ -82,6 +111,29 @@ function normalizeLookup(value: string): string {
 export interface CategoryOption {
   readonly code: string;
   readonly label: string;
+}
+
+export function defaultKioskCategoryCodes(): readonly string[] {
+  return DEFAULT_KIOSK_CATEGORY_CODES;
+}
+
+export function resolveCategoryEmoji(categoryId: string): string {
+  return CATEGORY_EMOJI_BY_CODE[normalizeCategoryCode(categoryId)] ?? "🍽️";
+}
+
+export function sortCategoryCodes(values: readonly string[]): readonly string[] {
+  return [...values].sort((left, right) => {
+    const normalizedLeft = normalizeCategoryCode(left);
+    const normalizedRight = normalizeCategoryCode(right);
+    const leftOrder = CATEGORY_ORDER_BY_CODE.get(normalizedLeft) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = CATEGORY_ORDER_BY_CODE.get(normalizedRight) ?? Number.MAX_SAFE_INTEGER;
+
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    return normalizedLeft.localeCompare(normalizedRight, "es");
+  });
 }
 
 export function dedupeCategoryCodes(values: readonly string[]): readonly string[] {

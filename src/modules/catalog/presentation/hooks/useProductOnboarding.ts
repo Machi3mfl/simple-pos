@@ -13,7 +13,11 @@ import {
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
-import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
+import {
+  dedupeCategoryCodes,
+  defaultKioskCategoryCodes,
+  sortCategoryCodes,
+} from "@/shared/core/category/categoryNaming";
 
 export interface ProductOnboardingProduct {
   readonly id: string;
@@ -74,13 +78,13 @@ interface UseProductOnboardingResult {
   readonly submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
-const defaultCategoryOptions = ["main", "drink", "snack", "dessert", "other"];
+const defaultCategoryOptions = defaultKioskCategoryCodes();
 
 function buildDefaultFormState(): ProductOnboardingFormState {
   return {
     name: "",
     sku: "",
-    categoryId: "main",
+    categoryId: defaultCategoryOptions[0] ?? "other",
     price: "10",
     cost: "",
     initialStock: "0",
@@ -115,10 +119,10 @@ export function useProductOnboarding({
   const [feedback, setFeedback] = useState<ProductOnboardingFeedbackState | null>(null);
 
   const categories = useMemo(() => {
-    return dedupeCategoryCodes([
+    return sortCategoryCodes(dedupeCategoryCodes([
       ...defaultCategoryOptions,
       ...products.map((product) => product.categoryId),
-    ]);
+    ]));
   }, [products]);
 
   const reloadProducts = useCallback(async (): Promise<void> => {
@@ -159,7 +163,7 @@ export function useProductOnboarding({
     }
 
     if (form.categoryId.trim().length === 0) {
-      setForm((current) => ({ ...current, categoryId: categories[0] ?? "main" }));
+      setForm((current) => ({ ...current, categoryId: categories[0] ?? defaultCategoryOptions[0] ?? "other" }));
     }
   }, [categories, form.categoryId]);
 

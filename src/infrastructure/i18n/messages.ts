@@ -95,6 +95,12 @@ const spanishMessages = {
     },
     categories: {
       all: "Todo",
+      "bebidas-gaseosas": "Bebidas gaseosas",
+      "bebidas-aguas": "Aguas y saborizadas",
+      alfajores: "Alfajores",
+      galletitas: "Galletitas",
+      snacks: "Snacks",
+      "desayuno-y-merienda": "Desayuno y merienda",
       main: "Platos",
       drink: "Bebidas",
       snack: "Snacks",
@@ -256,7 +262,7 @@ const spanishMessages = {
       productsPasteHint:
         "Pegá filas con este orden: `name, sku, categoryId, price, cost, initialStock, minStock, imageUrl`.",
       productsPlaceholder:
-        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,drink,2500,1200,18,6,https://...\nAlfajor,GOL-010,snack,1500,700,24,8,",
+        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,bebidas-gaseosas,2500,1200,18,6,https://...\nAlfajor,GOL-010,alfajores,1500,700,24,8,",
       stockPasteHint:
         "Pegá filas con este orden: `sku, movementType, quantity, unitCost, reason`.",
       stockPlaceholder:

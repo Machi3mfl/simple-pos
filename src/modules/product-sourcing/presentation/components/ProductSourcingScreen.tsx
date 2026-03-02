@@ -17,7 +17,9 @@ import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import {
   dedupeCategoryCodes,
+  defaultKioskCategoryCodes,
   normalizeCategoryCode,
+  sortCategoryCodes,
 } from "@/shared/core/category/categoryNaming";
 import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
 import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
@@ -174,7 +176,7 @@ type FailedQueueFilter =
 const MIN_QUERY_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 500;
 const SEARCH_PAGE_SIZE = 8;
-const CATEGORY_OPTIONS = ["drink", "snack", "dessert", "main", "other"] as const;
+const CATEGORY_OPTIONS = defaultKioskCategoryCodes();
 const FAILED_QUEUE_FILTERS = [
   "open",
   "retryable",
@@ -514,10 +516,12 @@ export function ProductSourcingScreen({
 
       const result = payload as KnownProductsResponse;
       setKnownCategoryCodes(
-        dedupeCategoryCodes([
-          ...CATEGORY_OPTIONS,
-          ...result.items.map((item) => item.categoryId),
-        ]),
+        sortCategoryCodes(
+          dedupeCategoryCodes([
+            ...CATEGORY_OPTIONS,
+            ...result.items.map((item) => item.categoryId),
+          ]),
+        ),
       );
     } finally {
       setIsLoadingKnownCategories(false);
