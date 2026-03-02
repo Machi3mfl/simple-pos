@@ -107,8 +107,14 @@ curl -X POST /api/v1/sales \
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
   - Category and search filtering in catalog panel
+  - Category chips now keep a consistent max width and horizontally scroll when the operator has more categories than the available viewport
+  - Category chips were compacted further for dense catalogs: reduced spacing, larger label text for readability, smaller shadows that stay inside the row container, and label truncation after 10 visible characters
+  - Product list now sorts alphabetically in the sales view and exposes an A-Z quick-jump rail with animated scrolling that tracks the current visible letter while scrolling
   - Product card click adds/increments cart lines
+  - Product cards clamp the title to two lines, keep availability + price pinned to the bottom edge, tighten subtitle-to-footer spacing for denser browsing, and show current stock inside the availability badge
+  - The catalog scroll area now exposes a floating "back to top" action once the operator has moved down the product list
   - Cart quantity controls (`+` / `-`) update totals in real time
+  - Order-list items now prioritize the full product title on the first row, show the real product image beside quantity controls on the second row, and expose a dedicated delete action with a red trash-can icon
   - Checkout uses real product IDs from catalog data
   - Sales starts with an empty order list; no demo cart items are preloaded.
   - Sales no longer auto-seeds demo catalog products; empty catalog state routes operator to Products.
@@ -117,6 +123,7 @@ curl -X POST /api/v1/sales \
   - `on_account` requires customer name in UI and API validation
   - cash checkout captures customer payment amount and calculates change due before confirming; blank cash input is treated as exact payment
   - on-account checkout can capture an initial partial payment and shows the remaining balance inline
+  - checkout and downstream reporting now persist the sale-line unit price snapshot in `sale_items.unit_price`, so account-balance validation and totals use the real product price instead of the legacy placeholder constant
 - Checkout UX updates:
   - removed `discount` / `tax` rows from the live order panel for now
   - `Go to checkout` now opens a large checkout modal so payment becomes a focused final step

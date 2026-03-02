@@ -1,5 +1,6 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
@@ -16,6 +17,7 @@ export interface CheckoutOrderItem {
   readonly price: number;
   readonly quantity: number;
   readonly emoji: string;
+  readonly imageUrl?: string;
 }
 
 interface CheckoutPanelProps {
@@ -23,6 +25,7 @@ interface CheckoutPanelProps {
   readonly subtotal: number;
   readonly onIncreaseQuantity: (productId: string) => void;
   readonly onDecreaseQuantity: (productId: string) => void;
+  readonly onRemoveItem: (productId: string) => void;
   readonly onCheckoutSuccess: () => void;
 }
 
@@ -70,6 +73,7 @@ export function CheckoutPanel({
   subtotal,
   onIncreaseQuantity,
   onDecreaseQuantity,
+  onRemoveItem,
   onCheckoutSuccess,
 }: CheckoutPanelProps): JSX.Element {
   const { messages } = useI18n();
@@ -330,21 +334,43 @@ export function CheckoutPanel({
           <article
             key={item.id}
             data-testid={`order-item-${item.id}`}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
+            className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.08)]"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-xl">
-                <span aria-hidden>{item.emoji}</span>
-              </div>
+            <p className="text-[1.03rem] leading-tight font-semibold tracking-tight text-slate-900">
+              {item.name}
+            </p>
 
-              <div className="min-w-0 flex-1">
-                <p className="text-[1.03rem] leading-tight font-semibold tracking-tight text-slate-900">
-                  {item.name}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-xl">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Cart thumbnails reuse catalog images that can come from managed storage or approved external URLs.
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      loading="lazy"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span aria-hidden>{item.emoji}</span>
+                  )}
+                </div>
+                <p className="text-[0.88rem] font-medium text-slate-500">
+                  {currency(item.price)}
                 </p>
-                <p className="mt-1 text-[0.88rem] text-slate-500">{currency(item.price)}</p>
               </div>
 
-              <div className="shrink-0 flex items-center gap-1">
+              <div className="shrink-0 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onRemoveItem(item.id)}
+                  data-testid={`order-item-remove-${item.id}`}
+                  className="flex size-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600"
+                  aria-label={`eliminar ${item.name}`}
+                  title={`Eliminar ${item.name}`}
+                >
+                  <Trash2 className="size-4" strokeWidth={2.4} aria-hidden />
+                </button>
                 <button
                   type="button"
                   onClick={() => onDecreaseQuantity(item.id)}

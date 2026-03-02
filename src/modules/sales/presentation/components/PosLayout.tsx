@@ -42,6 +42,7 @@ interface ProductListApiItem {
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
+  readonly stock: number;
   readonly imageUrl?: string;
   readonly isActive: boolean;
 }
@@ -87,7 +88,8 @@ function toCatalogProduct(
     categoryId: item.categoryId,
     subtitle: resolveProductSubtitle(categoryLabel),
     price: item.price,
-    isAvailable: item.isActive,
+    stock: item.stock,
+    isAvailable: item.isActive && item.stock > 0,
     emoji: resolveProductEmoji(item.name, item.categoryId),
     imageUrl: item.imageUrl,
   };
@@ -225,6 +227,7 @@ export function PosLayout({
               price: selectedProduct.price,
               quantity: 1,
               emoji: selectedProduct.emoji,
+              imageUrl: selectedProduct.imageUrl,
             },
           ];
         }
@@ -268,6 +271,10 @@ export function PosLayout({
         )
         .filter((item) => item.quantity > 0),
     );
+  }, []);
+
+  const removeItem = useCallback((productId: string): void => {
+    setCartItems((current) => current.filter((item) => item.id !== productId));
   }, []);
 
   const subtotal = useMemo(
@@ -349,6 +356,7 @@ export function PosLayout({
               subtotal={subtotal}
               onIncreaseQuantity={increaseQuantity}
               onDecreaseQuantity={decreaseQuantity}
+              onRemoveItem={removeItem}
               onCheckoutSuccess={handleCheckoutSuccess}
             />
           </>

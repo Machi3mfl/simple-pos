@@ -14,6 +14,7 @@ interface UseIncrementalRevealResult<T> {
   readonly hasMore: boolean;
   readonly visibleCount: number;
   readonly loadMore: () => void;
+  readonly revealCount: (count: number) => void;
 }
 
 export function useIncrementalReveal<T>({
@@ -41,10 +42,18 @@ export function useIncrementalReveal<T>({
     setVisibleCount((current) => Math.min(items.length, current + safeStep));
   }, [items.length, safeStep]);
 
+  const revealCount = useCallback(
+    (count: number) => {
+      setVisibleCount(Math.min(items.length, Math.max(safeInitialCount, count)));
+    },
+    [items.length, safeInitialCount],
+  );
+
   return {
     visibleItems,
     hasMore,
     visibleCount,
     loadMore,
+    revealCount,
   };
 }

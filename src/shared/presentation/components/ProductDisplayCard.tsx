@@ -18,8 +18,10 @@ interface ProductDisplayCardProps {
   readonly className?: string;
   readonly contentClassName?: string;
   readonly mediaClassName?: string;
+  readonly textSectionClassName?: string;
   readonly titleClassName?: string;
   readonly subtitleClassName?: string;
+  readonly lowerSectionClassName?: string;
 }
 
 export function ProductDisplayCard({
@@ -38,12 +40,14 @@ export function ProductDisplayCard({
   className,
   contentClassName,
   mediaClassName,
+  textSectionClassName,
   titleClassName,
   subtitleClassName,
+  lowerSectionClassName,
 }: ProductDisplayCardProps): JSX.Element {
   const lowerSection =
     details || footer ? (
-      <div className="mt-auto flex flex-col gap-2.5">
+      <div className={cn("mt-auto flex flex-col gap-2.5", lowerSectionClassName)}>
         {details}
         {footer}
       </div>
@@ -67,7 +71,7 @@ export function ProductDisplayCard({
         {media}
       </div>
 
-      <div className="flex min-h-[5.75rem] flex-col gap-2">
+      <div className={cn("flex min-h-[5.75rem] flex-col gap-2", textSectionClassName)}>
         <div
           className={cn(
             "text-[1.02rem] leading-[1.12] font-semibold tracking-tight text-slate-900",
