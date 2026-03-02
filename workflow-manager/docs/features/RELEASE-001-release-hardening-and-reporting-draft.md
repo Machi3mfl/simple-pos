@@ -105,6 +105,15 @@ export interface SaleFilters {
   - Real-backend gate result (`2026-02-28`): `1 passed` (Playwright with local Supabase).
 - Real-backend gate runbook and schema:
   - `workflow-manager/docs/runbooks/002-runbook-release-gate-real-backend-ready.md`
+  - local bootstrap scripts:
+    - `scripts/supabase/common.sh`
+    - `scripts/supabase/start-local.sh`
+    - `scripts/supabase/reset-local.sh`
+    - `scripts/supabase/status-local.sh`
+    - `scripts/supabase/stop-local.sh`
+    - `scripts/supabase/write-local-env.sh`
+    - `scripts/supabase/dev-local.sh`
+  - `supabase/config.toml`
   - `supabase/migrations/20260228000000_simple_pos_core.sql`
   - `supabase/migrations/20260301000000_customers_and_debt_ledger.sql`
   - `supabase/migrations/20260301010000_sync_events.sql`

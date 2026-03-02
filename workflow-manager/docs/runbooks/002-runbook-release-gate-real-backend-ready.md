@@ -10,26 +10,38 @@ Execute the pre-release quality gate against a real local persistence backend (S
 
 ## Preconditions
 
-- Supabase CLI available (`npx -y supabase --version`).
 - Docker daemon running.
+- Local Supabase bootstrap scripts available via `package.json`.
 - Project dependencies installed (`npm install`).
+- No global Supabase CLI install is required because the scripts pin the CLI via `npx`.
 - Recommended Node.js version: `>=20.17.0` (newer CLI dependencies emit engine warnings on `20.16.0`).
 
 ## Steps
 
-1. Start local Supabase stack:
+1. Start local Supabase stack and write `.env.local` from the running Docker services:
 
 ```bash
-npx -y supabase start
+npm run supabase:start
 ```
 
 2. Apply/reset local schema (uses `supabase/migrations/*.sql`):
 
 ```bash
-npx -y supabase db reset --local
+npm run supabase:reset
 ```
 
-3. Export runtime env variables (optional only when running Playwright manually):
+3. Start the local Next.js app against the Dockerized Supabase stack when doing manual validation:
+
+```bash
+npm run dev:local
+```
+
+This command:
+- starts Supabase if needed
+- refreshes `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`
+- launches `next dev`
+
+4. Export runtime env variables manually only when running Playwright or custom scripts outside the provided npm commands:
 
 ```bash
 export POS_BACKEND_MODE=supabase
@@ -39,7 +51,7 @@ export SUPABASE_SERVICE_ROLE_KEY="<local-service-role-key>"
 
 `POS_BACKEND_MODE` is only used to gate real-backend test suites; application routes now always use Supabase persistence.
 
-4. Run real-backend release-gate tests:
+5. Run real-backend release-gate tests:
 
 ```bash
 npm run test:e2e:release-gate:real
@@ -51,7 +63,7 @@ This command now:
 - auto-loads `API_URL` and `SERVICE_ROLE_KEY` from `supabase status -o env`
 - maps them to `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 
-5. Run the real-backend UI suite by module (orders, catalog, inventory, sales, receivables, reporting, sync):
+6. Run the real-backend UI suite by module (orders, catalog, inventory, sales, receivables, reporting, sync):
 
 ```bash
 npm run test:e2e:ui:real:modules
@@ -68,6 +80,15 @@ This command resets the local Supabase DB before executing tests and intentional
 
 ## Notes
 
+- Local Supabase Docker orchestration is now committed in:
+  - `scripts/supabase/common.sh`
+  - `scripts/supabase/start-local.sh`
+  - `scripts/supabase/reset-local.sh`
+  - `scripts/supabase/status-local.sh`
+  - `scripts/supabase/stop-local.sh`
+  - `scripts/supabase/write-local-env.sh`
+  - `scripts/supabase/dev-local.sh`
+  - `supabase/config.toml`
 - Sales opens with an empty order list unless the operator explicitly adds products.
 - Orders shows a snapshot list of recorded sales by consuming the same `sales-history` read model used by Reporting.
 - Real-module UI specs create their own products because no demo catalog is auto-seeded anymore.
