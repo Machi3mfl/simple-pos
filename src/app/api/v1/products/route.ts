@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 
 import { ProductDomainError } from "@/modules/catalog/domain/errors/ProductDomainError";
 import { createCatalogRuntime } from "@/modules/catalog/infrastructure/runtime/catalogRuntime";
-import { createProductDTOSchema } from "@/modules/catalog/presentation/dtos/create-product.dto";
+import { CatalogProductImageInputError } from "@/modules/catalog/infrastructure/storage/SupabaseCatalogProductImageAssetStore";
+import { parseCreateProductRequest } from "@/modules/catalog/presentation/handlers/parseProductMutationRequest";
 import {
   productListResponseDTOSchema,
   productResponseDTOSchema,
@@ -20,7 +21,7 @@ interface ApiErrorDetail {
 interface ApiErrorResponse {
   readonly code: string;
   readonly message: string;
-  readonly details?: ApiErrorDetail[];
+  readonly details?: readonly ApiErrorDetail[];
 }
 
 function errorResponse(
@@ -86,34 +87,30 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const { createProductUseCase } = createCatalogRuntime();
-  let payload: unknown;
-
-  try {
-    payload = await request.json();
-  } catch {
-    return errorResponse(400, {
-      code: "invalid_json",
-      message: "El body de la request debe ser JSON válido.",
-    });
-  }
-
-  const parsedBody = createProductDTOSchema.safeParse(payload);
+  const { createProductUseCase, persistProductImageUseCase } = createCatalogRuntime();
+  const parsedBody = await parseCreateProductRequest(request);
   if (!parsedBody.success) {
-    const details = parsedBody.error.issues.map((issue) => ({
-      field: issue.path.join(".") || "body",
-      message: issue.message,
-    }));
-
     return errorResponse(400, {
-      code: "validation_error",
-      message: "La validación del payload de alta de producto falló.",
-      details,
+      code: parsedBody.code,
+      message: parsedBody.message,
+      details: parsedBody.details,
     });
   }
 
   try {
-    const item = await createProductUseCase.execute(parsedBody.data);
+    const managedImageUrl = parsedBody.imageSource
+      ? (
+          await persistProductImageUseCase.execute({
+            entityIdHint: parsedBody.data.sku ?? parsedBody.data.name,
+            source: parsedBody.imageSource,
+          })
+        ).publicUrl
+      : undefined;
+
+    const item = await createProductUseCase.execute({
+      ...parsedBody.data,
+      imageUrl: managedImageUrl,
+    });
     const responseBody = { item };
     const parsedResponse = productResponseDTOSchema.safeParse(responseBody);
 
@@ -126,6 +123,13 @@ export async function POST(request: Request): Promise<Response> {
 
     return NextResponse.json(parsedResponse.data, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof CatalogProductImageInputError) {
+      return errorResponse(400, {
+        code: "image_validation_error",
+        message: error.message,
+      });
+    }
+
     if (error instanceof ProductDomainError) {
       return errorResponse(400, {
         code: "product_rule_error",

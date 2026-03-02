@@ -135,15 +135,17 @@ Completed planning item:
     - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification and persisted category mapping reuse
   - main artifact: `workflow-manager/docs/features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md`
 
-Open cross-cutting follow-up:
+Resolved cross-cutting planning item:
 
 - `Product image storage strategy`
-  - status: `pending`
-  - scope: define how product images should be managed outside sourcing, especially in manual onboarding and edit flows
-  - open decision:
-    - keep external `imageUrl` references as-is,
-    - or copy operator-provided images into managed Supabase storage,
-    - and decide whether existing external image URLs need a later migration/backfill plan
+  - status: `done`
+  - scope delivered:
+    - manual onboarding now supports file upload and URL ingestion into managed Supabase Storage
+    - product edit now supports image replacement by file upload or URL ingestion into managed Supabase Storage
+    - sourcing already persisted imported images into managed storage, so interactive product flows now share the same policy
+    - no migration/backfill is planned for existing development data
+  - remaining optional extension:
+    - align `/api/v1/products/import` batch CSV ingestion with the same managed-image policy
   - related artifact: `workflow-manager/docs/features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md`
 
 ---
@@ -168,5 +170,6 @@ Open cross-cutting follow-up:
 - Sourcing import history verification: `tests/e2e/product-sourcing-import-ui.spec.ts` and `tests/e2e/product-sourcing-import-history-use-case.spec.ts` prove that recent imports remain queryable from persisted trace data with internal product name and SKU.
 - Partial failed import verification: `tests/e2e/product-sourcing-import-ui.spec.ts` proves that a batch with one already-imported source and one new source keeps the failed item visible, classified as non-recoverable, and removable from the active selection.
 - Category canonicalization verification: `tests/e2e/catalog-onboarding-api.spec.ts`, `tests/e2e/products-workspace-ui.spec.ts`, and `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` prove that operator-facing category labels remain readable while stored ids are normalized to canonical slug codes.
+- Managed product image verification: `tests/e2e/catalog-onboarding-api.spec.ts` proves that explicit `imageUrl` values are copied into Supabase Storage and that multipart file replacement on `PATCH /api/v1/products/{id}` also returns managed storage URLs; `tests/e2e/products-workspace-ui.spec.ts` proves the same behavior through the `/products` UI.
 - Provider hardening verification: `tests/e2e/product-sourcing-provider-hardening.spec.ts` proves throttled provider calls plus structured success/failure health events for the Carrefour adapter wrapper.
 - Responsive sourcing verification: `tests/e2e/product-sourcing-responsive-ui.spec.ts` proves the sourcing flow remains usable on tablet and mobile widths without losing the selected-items summary or the import action.

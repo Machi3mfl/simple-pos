@@ -67,6 +67,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateProductRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateProductMultipartRequest'
       responses:
         '201':
           description: Product created
@@ -292,6 +295,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateProductRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateProductMultipartRequest'
       responses:
         '200':
           description: Product updated
@@ -978,6 +984,36 @@ components:
           type: string
       description: Cost is required when initialStock is greater than 0.
 
+    CreateProductMultipartRequest:
+      type: object
+      required: [name, categoryId, price, initialStock]
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: string
+          description: Decimal string.
+        cost:
+          type: string
+          description: Decimal string. Required when initialStock is greater than 0.
+        initialStock:
+          type: string
+          description: Integer string.
+        minStock:
+          type: string
+          description: Integer string.
+        imageUrl:
+          type: string
+          description: Remote or data URL. The server downloads it and stores it in managed storage.
+        imageFile:
+          type: string
+          format: binary
+          description: Uploaded image file. If both imageFile and imageUrl are informed, imageFile wins.
+
     UpdateProductRequest:
       type: object
       minProperties: 1
@@ -1001,6 +1037,36 @@ components:
           type: string
         isActive:
           type: boolean
+
+    UpdateProductMultipartRequest:
+      type: object
+      minProperties: 1
+      properties:
+        sku:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: string
+        price:
+          type: string
+          description: Decimal string.
+        cost:
+          type: string
+          description: Decimal string.
+        minStock:
+          type: string
+          description: Integer string.
+        imageUrl:
+          type: string
+          description: Remote or data URL. The server downloads it and stores it in managed storage.
+        imageFile:
+          type: string
+          format: binary
+          description: Uploaded image file. If both imageFile and imageUrl are informed, imageFile wins.
+        isActive:
+          type: string
+          enum: ['true', 'false']
 
     ProductsWorkspaceItem:
       type: object

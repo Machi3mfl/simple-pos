@@ -28,6 +28,8 @@ import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
+import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
+import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
 import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
@@ -157,6 +159,7 @@ interface EditProductFormState {
   readonly cost: string;
   readonly minStock: string;
   readonly imageUrl: string;
+  readonly imageFile: File | null;
   readonly isActive: boolean;
 }
 
@@ -185,6 +188,7 @@ const defaultEditFormState: EditProductFormState = {
   cost: "",
   minStock: "0",
   imageUrl: "",
+  imageFile: null,
   isActive: true,
 };
 
@@ -484,7 +488,8 @@ export function ProductsInventoryPanel(): JSX.Element {
       price: String(selectedProduct.price),
       cost: selectedProduct.averageCost > 0 ? String(selectedProduct.averageCost) : "",
       minStock: String(selectedProduct.minStock),
-      imageUrl: selectedProduct.imageUrl,
+      imageUrl: "",
+      imageFile: null,
       isActive: selectedProduct.isActive,
     });
   }, [selectedProduct]);
@@ -545,19 +550,21 @@ export function ProductsInventoryPanel(): JSX.Element {
     try {
       const response = await fetch(`/api/v1/products/${selectedProduct.id}`, {
         method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          sku: editForm.sku.trim(),
-          name: editForm.name.trim(),
-          categoryId: editForm.categoryId.trim(),
-          price: Number(editForm.price),
-          cost: editForm.cost.trim().length > 0 ? Number(editForm.cost) : undefined,
-          minStock: Number(editForm.minStock),
-          imageUrl: editForm.imageUrl.trim(),
-          isActive: editForm.isActive,
-        }),
+        body: buildProductMutationFormData(
+          {
+            sku: editForm.sku,
+            name: editForm.name,
+            categoryId: editForm.categoryId,
+            price: Number(editForm.price),
+            cost: editForm.cost.trim().length > 0 ? Number(editForm.cost) : undefined,
+            minStock: Number(editForm.minStock),
+            isActive: editForm.isActive,
+          },
+          {
+            imageUrl: editForm.imageUrl,
+            imageFile: editForm.imageFile,
+          },
+        ),
       });
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
@@ -1534,20 +1541,21 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="md:col-span-2 flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.image}
-              </span>
-              <input
-                data-testid="products-workspace-create-image-input"
-                value={onboardingForm.imageUrl}
-                onChange={(event) =>
-                  setOnboardingForm((current) => ({ ...current, imageUrl: event.target.value }))
-                }
-                placeholder={messages.common.placeholders.imageUrl}
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <ManagedProductImageField
+              className="md:col-span-2"
+              label={messages.productsWorkspace.fields.image}
+              previewAlt={onboardingForm.name.trim() || messages.productsWorkspace.fields.image}
+              imageUrl={onboardingForm.imageUrl}
+              imageFile={onboardingForm.imageFile}
+              urlInputTestId="products-workspace-create-image-input"
+              fileInputTestId="products-workspace-create-image-file-input"
+              onImageUrlChange={(value) =>
+                setOnboardingForm((current) => ({ ...current, imageUrl: value }))
+              }
+              onImageFileChange={(file) =>
+                setOnboardingForm((current) => ({ ...current, imageFile: file }))
+              }
+            />
             {onboardingFeedback ? (
               <p
                 className={[
@@ -1696,19 +1704,22 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="md:col-span-2 flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.image}
-              </span>
-              <input
-                data-testid="products-workspace-edit-image-input"
-                value={editForm.imageUrl}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, imageUrl: event.target.value }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <ManagedProductImageField
+              className="md:col-span-2"
+              label={messages.productsWorkspace.fields.image}
+              previewAlt={editForm.name.trim() || selectedProduct.name}
+              currentImageUrl={selectedProduct.imageUrl}
+              imageUrl={editForm.imageUrl}
+              imageFile={editForm.imageFile}
+              urlInputTestId="products-workspace-edit-image-input"
+              fileInputTestId="products-workspace-edit-image-file-input"
+              onImageUrlChange={(value) =>
+                setEditForm((current) => ({ ...current, imageUrl: value }))
+              }
+              onImageFileChange={(file) =>
+                setEditForm((current) => ({ ...current, imageFile: file }))
+              }
+            />
             <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
               <input
                 data-testid="products-workspace-edit-active-checkbox"

@@ -12,6 +12,7 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 
 export interface ProductOnboardingProduct {
@@ -52,6 +53,7 @@ export interface ProductOnboardingFormState {
   readonly initialStock: string;
   readonly minStock: string;
   readonly imageUrl: string;
+  readonly imageFile: File | null;
 }
 
 interface UseProductOnboardingOptions {
@@ -84,6 +86,7 @@ function buildDefaultFormState(): ProductOnboardingFormState {
     initialStock: "0",
     minStock: "0",
     imageUrl: "",
+    imageFile: null,
   };
 }
 
@@ -213,19 +216,21 @@ export function useProductOnboarding({
     try {
       const response = await fetch("/api/v1/products", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          sku: form.sku.trim() || undefined,
-          name: form.name.trim(),
-          categoryId: form.categoryId.trim(),
-          price: parsedPrice,
-          cost: parsedCost,
-          initialStock: parsedStock,
-          minStock: parsedMinStock,
-          imageUrl: form.imageUrl.trim() || undefined,
-        }),
+        body: buildProductMutationFormData(
+          {
+            sku: form.sku,
+            name: form.name,
+            categoryId: form.categoryId,
+            price: parsedPrice,
+            cost: parsedCost,
+            initialStock: parsedStock,
+            minStock: parsedMinStock,
+          },
+          {
+            imageUrl: form.imageUrl,
+            imageFile: form.imageFile,
+          },
+        ),
       });
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;

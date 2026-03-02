@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import {
   type ProductOnboardingProduct,
   useProductOnboarding,
@@ -133,20 +134,21 @@ export function ProductOnboardingPanel({
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">
-            {messages.catalog.onboarding.imageUrlLabel}
-          </span>
-          <input
-            data-testid="onboarding-image-input"
-            value={form.imageUrl}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, imageUrl: event.target.value }))
-            }
-            placeholder={messages.common.placeholders.imageUrl}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
-          />
-        </label>
+        <ManagedProductImageField
+          className="md:col-span-2"
+          label={messages.catalog.onboarding.imageUrlLabel}
+          previewAlt={form.name.trim() || messages.catalog.onboarding.title}
+          imageUrl={form.imageUrl}
+          imageFile={form.imageFile}
+          urlInputTestId="onboarding-image-input"
+          fileInputTestId="onboarding-image-file-input"
+          onImageUrlChange={(value) =>
+            setForm((current) => ({ ...current, imageUrl: value }))
+          }
+          onImageFileChange={(file) =>
+            setForm((current) => ({ ...current, imageFile: file }))
+          }
+        />
 
         <div className="md:col-span-2">
           <button

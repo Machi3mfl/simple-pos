@@ -65,6 +65,7 @@ export interface BulkPriceUpdateDTO {
 - [x] Placeholder assignment is deterministic and test-covered.
 - [x] Created product is visible and usable in POS.
 - [x] Category entry accepts a human-readable label, persists a canonical code, and prevents duplicate category variants caused by punctuation/casing differences.
+- [x] Manual onboarding and product edit flows accept either direct file upload or an operator-provided image URL, and both end in managed Supabase Storage.
 - [x] Bulk price update supports percentage/fixed amount by scope with preview and validation.
 - [x] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
 
@@ -104,9 +105,12 @@ export interface BulkPriceUpdateDTO {
 - Shared category naming utilities:
   - `src/shared/core/category/categoryNaming.ts`
   - `src/modules/catalog/presentation/components/CategoryInputField.tsx`
-- Placeholder strategy:
+- Managed image policy:
   - deterministic SVG data URI by category when `imageUrl` is missing
-  - explicit `imageUrl` remains unchanged
+  - manual create/edit now use `ManagedProductImageField`
+  - operator-provided image URLs are downloaded server-side and stored in Supabase bucket `product-images`
+  - uploaded image files are stored in the same managed bucket
+  - sourced imports already followed the same managed-storage policy through `product-sourcing-images`
 - Test evidence:
   - `tests/e2e/catalog-onboarding-api.spec.ts`
   - `tests/e2e/catalog-bulk-price-update-api.spec.ts`
@@ -115,6 +119,4 @@ export interface BulkPriceUpdateDTO {
 
 ## Pending Follow-up
 
-- Define the long-term product image storage strategy across manual onboarding, product edit flows, and sourced imports.
-- Decide whether operator-provided image URLs should remain external references or be copied into managed Supabase storage.
-- Define how to handle legacy external `imageUrl` values already stored in products and whether a later migration/import-backfill is required.
+- Optional extension: apply the same managed-image ingestion policy to `/api/v1/products/import` batch CSV rows that currently still accept raw `imageUrl` values.

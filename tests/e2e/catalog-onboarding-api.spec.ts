@@ -6,6 +6,11 @@ import {
   productResponseDTOSchema,
 } from "../../src/modules/catalog/presentation/dtos/product-response.dto";
 
+const TINY_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z6BYAAAAASUVORK5CYII=";
+const TINY_PNG_DATA_URL = `data:image/png;base64,${TINY_PNG_BASE64}`;
+const TINY_PNG_BUFFER = Buffer.from(TINY_PNG_BASE64, "base64");
+
 const apiErrorResponseSchema = z
   .object({
     code: z.string().min(1),
@@ -74,9 +79,9 @@ test.describe("catalog onboarding api", () => {
     expect(secondParsed.data.item.imageUrl).toBe(firstImageUrl);
   });
 
-  test("respects explicit imageUrl and supports list filters", async ({ request }) => {
-    const customImageUrl = "https://example.com/images/product-001.png";
-
+  test("copies explicit imageUrl into managed Supabase Storage and supports list filters", async ({
+    request,
+  }) => {
     const createResponse = await request.post("/api/v1/products", {
       data: {
         name: "Alfajor Premium",
@@ -84,7 +89,7 @@ test.describe("catalog onboarding api", () => {
         price: 4.25,
         cost: 2,
         initialStock: 30,
-        imageUrl: customImageUrl,
+        imageUrl: TINY_PNG_DATA_URL,
       },
     });
 
@@ -97,7 +102,9 @@ test.describe("catalog onboarding api", () => {
       throw new Error("Expected valid product response for explicit image");
     }
 
-    expect(createParsed.data.item.imageUrl).toBe(customImageUrl);
+    expect(createParsed.data.item.imageUrl).toContain(
+      "/storage/v1/object/public/product-images/",
+    );
 
     const listResponse = await request.get("/api/v1/products?categoryId=snack&activeOnly=true");
     expect(listResponse.status()).toBe(200);
@@ -110,6 +117,55 @@ test.describe("catalog onboarding api", () => {
     }
 
     expect(listParsed.data.items.some((item) => item.name === "Alfajor Premium")).toBe(true);
+  });
+
+  test("updates a product image via multipart upload and persists the managed storage URL", async ({
+    request,
+  }) => {
+    const createResponse = await request.post("/api/v1/products", {
+      data: {
+        name: "Bizcochos de prueba",
+        categoryId: "snack",
+        price: 9,
+        cost: 3,
+        initialStock: 10,
+      },
+    });
+
+    expect(createResponse.status()).toBe(201);
+    const createBody = await createResponse.json();
+    const createParsed = productResponseDTOSchema.safeParse(createBody);
+    expect(createParsed.success).toBe(true);
+
+    if (!createParsed.success) {
+      throw new Error("Expected valid product response for image update creation");
+    }
+
+    const updateResponse = await request.patch(`/api/v1/products/${createParsed.data.item.id}`, {
+      multipart: {
+        name: "Bizcochos de prueba editados",
+        imageFile: {
+          name: "bizcochos.png",
+          mimeType: "image/png",
+          buffer: TINY_PNG_BUFFER,
+        },
+      },
+    });
+
+    expect(updateResponse.status()).toBe(200);
+    const updateBody = await updateResponse.json();
+    const updateParsed = productResponseDTOSchema.safeParse(updateBody);
+    expect(updateParsed.success).toBe(true);
+
+    if (!updateParsed.success) {
+      throw new Error("Expected valid product response for multipart image update");
+    }
+
+    expect(updateParsed.data.item.name).toBe("Bizcochos de prueba editados");
+    expect(updateParsed.data.item.imageUrl).toContain(
+      "/storage/v1/object/public/product-images/",
+    );
+    expect(updateParsed.data.item.imageUrl).not.toBe(createParsed.data.item.imageUrl);
   });
 
   test("canonicalizes custom category names into stable category codes", async ({

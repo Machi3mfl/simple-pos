@@ -57,6 +57,8 @@ const spanishMessages = {
       loadMore: "Cargar más",
       cancel: "Cancelar",
       close: "Cerrar",
+      chooseFile: "Elegir archivo",
+      clearFile: "Quitar archivo",
       openCatalog: "Abrir productos",
       processPayment: "Ir a cobrar",
       confirmPayment: "Confirmar cobro",
@@ -89,6 +91,7 @@ const spanishMessages = {
       exampleCustomer: "Ej. Juan Pérez",
       amount: "Monto",
       imageUrl: "https://...",
+      imageStorageHint: "Subí un archivo o pegá una URL. Siempre guardamos la imagen en storage propio.",
     },
     categories: {
       all: "Todo",
@@ -197,6 +200,14 @@ const spanishMessages = {
     movementsLoadError: "No se pudieron cargar los movimientos del producto.",
     forms: {
       activeOnlyHelp: "Solo visible en listados activos",
+      imageUploadLabel: "Subir archivo",
+      imageUrlLabel: "O pegar URL",
+      imageCurrentLabel: "Imagen actual",
+      imageEmptyLabel: "Sin imagen cargada",
+      imageSelectedFile: (fileName: string): string => `Archivo seleccionado: ${fileName}`,
+      imageNoFileSelected: "Todavía no hay archivo seleccionado.",
+      imageReplaceHint:
+        "Si elegís archivo o URL, la imagen se descarga y queda guardada en Supabase Storage.",
     },
     summary: {
       withStock: "Con stock",
@@ -350,7 +361,7 @@ const spanishMessages = {
       priceLabel: "Precio",
       costLabel: "Costo (opcional)",
       initialStockLabel: "Stock inicial",
-      imageUrlLabel: "URL de imagen (opcional)",
+      imageUrlLabel: "Imagen del producto",
       recentProducts: "Productos recientes",
       loadError: "No se pudieron cargar los productos para el alta.",
       invalidPrice: "El precio debe ser mayor a cero.",
