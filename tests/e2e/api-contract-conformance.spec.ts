@@ -42,6 +42,7 @@ test.describe("API contract conformance", () => {
         items: [{ productId: "product-002", quantity: 1 }],
         paymentMethod: "on_account",
         customerName: "Carlos Perez",
+        createCustomerIfMissing: true,
         initialPaymentAmount: 5,
       },
     ];

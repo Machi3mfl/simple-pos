@@ -23,15 +23,26 @@ test.describe("sales payment rules (unit)", () => {
     }
   });
 
-  test("dto accepts on_account payload when customerName is present", () => {
+  test("dto accepts on_account payload when new customer creation is explicit", () => {
     const parsed = createSaleDTOSchema.safeParse({
       items: [{ productId: "prod-001", quantity: 1 }],
       paymentMethod: "on_account",
       customerName: "Cliente Test",
+      createCustomerIfMissing: true,
       initialPaymentAmount: 4,
     });
 
     expect(parsed.success).toBeTruthy();
+  });
+
+  test("dto rejects implicit customer creation from free text", () => {
+    const parsed = createSaleDTOSchema.safeParse({
+      items: [{ productId: "prod-001", quantity: 1 }],
+      paymentMethod: "on_account",
+      customerName: "Cliente Test",
+    });
+
+    expect(parsed.success).toBeFalsy();
   });
 
   test("dto rejects initialPaymentAmount for cash payloads", () => {

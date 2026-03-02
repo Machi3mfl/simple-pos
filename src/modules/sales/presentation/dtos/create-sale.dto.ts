@@ -14,6 +14,7 @@ export const createSaleDTOSchema = z.object({
   paymentMethod: paymentMethodSchema,
   customerId: z.string().min(1).optional(),
   customerName: z.string().min(2).max(120).optional(),
+  createCustomerIfMissing: z.boolean().optional(),
   initialPaymentAmount: z.number().min(0).optional(),
 }).superRefine((payload, context) => {
   if (
@@ -38,6 +39,20 @@ export const createSaleDTOSchema = z.object({
       path: ["initialPaymentAmount"],
       message:
         "initialPaymentAmount solo está permitido cuando paymentMethod es on_account.",
+    });
+  }
+
+  if (
+    payload.paymentMethod === "on_account" &&
+    payload.customerName &&
+    !payload.customerId &&
+    payload.createCustomerIfMissing !== true
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["createCustomerIfMissing"],
+      message:
+        "Para crear un cliente nuevo en cuenta corriente debés confirmar createCustomerIfMissing.",
     });
   }
 });

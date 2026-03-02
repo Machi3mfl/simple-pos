@@ -82,6 +82,7 @@ test.describe("mock runtime critical scenarios", () => {
         items: [{ productId: "product-persistence-001", quantity: 2 }],
         paymentMethod: "on_account",
         customerName,
+        createCustomerIfMissing: true,
       },
     });
 

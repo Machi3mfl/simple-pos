@@ -48,6 +48,7 @@ test.describe("accounts receivable debt flows", () => {
         ],
         paymentMethod: "on_account",
         customerName: uniqueCustomerName(),
+        createCustomerIfMissing: true,
         initialPaymentAmount: 12,
       },
     });

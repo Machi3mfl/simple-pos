@@ -34,7 +34,7 @@ test.describe("sales on-account customer constraint (integration)", () => {
     ).toBeTruthy();
   });
 
-  test("accepts on_account checkout when customerName is provided", async ({
+  test("rejects implicit on_account customer creation from free text", async ({
     request,
   }) => {
     const response = await request.post("/api/v1/sales", {
@@ -42,6 +42,35 @@ test.describe("sales on-account customer constraint (integration)", () => {
         items: [{ productId: "prod-on-account-constraint", quantity: 1 }],
         paymentMethod: "on_account",
         customerName: `Integration Customer ${Date.now()}`,
+      },
+    });
+
+    expect(response.status()).toBe(400);
+    const payload = (await response.json()) as {
+      readonly code: string;
+      readonly message: string;
+      readonly details?: ReadonlyArray<{ readonly field: string; readonly message: string }>;
+    };
+
+    expect(payload.code).toBe("validation_error");
+    expect(
+      payload.details?.some(
+        (detail) =>
+          detail.field === "createCustomerIfMissing" &&
+          detail.message.includes("createCustomerIfMissing"),
+      ),
+    ).toBeTruthy();
+  });
+
+  test("accepts on_account checkout when new customer creation is explicit", async ({
+    request,
+  }) => {
+    const response = await request.post("/api/v1/sales", {
+      data: {
+        items: [{ productId: "prod-on-account-constraint", quantity: 1 }],
+        paymentMethod: "on_account",
+        customerName: `Integration Customer ${Date.now()}`,
+        createCustomerIfMissing: true,
       },
     });
 

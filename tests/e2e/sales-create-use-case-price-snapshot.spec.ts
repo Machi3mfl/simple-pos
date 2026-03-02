@@ -72,6 +72,7 @@ test("uses the real catalog price snapshot for on-account totals", async () => {
     items: [{ productId: pricedProduct.getId(), quantity: 1 }],
     paymentMethod: "on_account",
     customerName: "Cliente real",
+    createCustomerIfMissing: true,
     initialPaymentAmount: 1000,
   });
 

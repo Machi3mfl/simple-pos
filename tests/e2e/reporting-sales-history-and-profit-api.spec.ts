@@ -92,6 +92,7 @@ test.describe("reporting api", () => {
         items: [{ productId: productBId, quantity: 1 }],
         paymentMethod: "on_account",
         customerName: `Cliente Reporting ${marker}`,
+        createCustomerIfMissing: true,
       },
     });
     expect(onAccountSaleResponse.status()).toBe(201);

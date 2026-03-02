@@ -20,6 +20,7 @@ export interface CreateSaleUseCaseInput {
   readonly paymentMethod: "cash" | "on_account";
   readonly customerId?: string;
   readonly customerName?: string;
+  readonly createCustomerIfMissing?: boolean;
   readonly initialPaymentAmount?: number;
 }
 
@@ -54,6 +55,7 @@ export class CreateSaleUseCase {
       const customer = await this.findOrCreateCustomerUseCase.execute({
         customerId: input.customerId,
         customerName: input.customerName,
+        createCustomerIfMissing: input.createCustomerIfMissing,
       });
 
       if (customer) {
