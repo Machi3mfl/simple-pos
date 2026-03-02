@@ -92,12 +92,12 @@ Open planning item:
     - `SRC-TASK-005` import history -> `done`
     - `SRC-TASK-006` UI integration and operator UX -> `done`
     - `SRC-TASK-007` provider hardening -> `done`
-    - `SRC-TASK-008` resume state across reload/session restore -> `pending`
+    - `SRC-TASK-008` resume state across reload/session restore -> `done`
     - `SRC-TASK-009` failed import queue across sessions -> `pending`
   - planned follow-up use cases:
-    - `UC-SRC-012` resume sourcing search session -> `pending`
-    - `UC-SRC-013` resume import draft edits -> `pending`
-    - `UC-SRC-014` recover interrupted sourcing session after refresh/browser close -> `pending`
+    - `UC-SRC-012` resume sourcing search session -> `done`
+    - `UC-SRC-013` resume import draft edits -> `done`
+    - `UC-SRC-014` recover interrupted sourcing session after refresh/browser close -> `done`
     - `UC-SRC-015` persist failed import items for later review -> `pending`
     - `UC-SRC-016` review failed import queue -> `pending`
     - `UC-SRC-017` retry a failed import item -> `pending`
@@ -123,6 +123,8 @@ Open planning item:
     - recent imports can be reviewed from the sourcing workspace with internal product name, SKU, category, and import timestamp
     - sourcing UI now has explicit tablet/mobile validation coverage for search, selection summary placement, and import CTA visibility
     - partial failed import batches now stay actionable from the same sourcing screen with retryable vs non-recoverable feedback and cleanup actions
+    - sourcing sessions now persist the active query, loaded results, selected ids, and inline import drafts across full page reloads
+    - operators can explicitly discard a restored sourcing session from the sourcing screen to reset the workflow cleanly
     - reusable infinite-scroll primitives now drive the product lists in `/sales`, `/products`, and `/products/sourcing`
     - the bulk price update product selector now follows the same infinite-scroll pattern for large selection scopes
     - product cards across `/sales`, `/products`, and `/products/sourcing` now share a common visual shell so media proportions and card geometry stay consistent while each module keeps its own metadata
@@ -156,6 +158,7 @@ Open cross-cutting follow-up:
 - Bulk price selection infinite-scroll coverage: `tests/e2e/bulk-price-selection-infinite-scroll-ui.spec.ts`.
 - Sourcing UI coverage: `tests/e2e/product-sourcing-ui.spec.ts`, `tests/e2e/product-sourcing-import-ui.spec.ts`, `tests/e2e/product-sourcing-import-use-case.spec.ts`.
 - Sourcing infinite-scroll verification: `tests/e2e/product-sourcing-ui.spec.ts` proves that the first provider page is loaded with `pageSize=8`, later pages append automatically through the sentinel flow, and existing selection is preserved.
+- Sourcing resume-state verification: `tests/e2e/product-sourcing-resume-state-ui.spec.ts` proves that a full page reload restores the active sourcing query, visible results, selected item, and inline draft fields without issuing a second initial search request.
 - Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.
 - Sourcing category mapping verification: `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` proves that a category confirmed in one import is auto-reused on a later result sharing the same external path.
 - Sourcing category mapping management verification: `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` proves that learned mappings can be updated and deleted from the UI and that the next search reflects the change.

@@ -63,8 +63,7 @@ The current gap is not internal product persistence. The gap is **external disco
 
 What is still missing after the current vertical slice:
 
-- no persisted resume state across browser reloads yet,
-- and no operator queue for revisiting failed imports across multiple sessions yet.
+- no operator queue for revisiting failed imports across multiple sessions yet.
 
 ---
 
@@ -487,7 +486,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - [x] Batch import feedback shows per-item success and failure states without hiding partial results.
 - [x] The architecture keeps retailer-specific logic outside `catalog` and `products`.
 
-Core `SOURCING-001` scope is functionally complete. The remaining work is continuity-oriented follow-up scope (`resume state` and `failed queue across sessions`), not a gap in the main sourcing/import flow.
+Core `SOURCING-001` scope is functionally complete. The remaining work is now limited to the durable `failed queue across sessions` follow-up, not a gap in the main sourcing/import flow.
 
 ---
 
@@ -502,7 +501,7 @@ Core `SOURCING-001` scope is functionally complete. The remaining work is contin
 | `SRC-TASK-005` Import history | done | Recent import history persisted and exposed in the sourcing workspace |
 | `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, infinite scroll, and shared product cards delivered |
 | `SRC-TASK-007` Provider hardening | done | Rate limiting, structured health logs, deterministic tests, and live smoke probe delivered |
-| `SRC-TASK-008` Resume state across reload/session restore | pending | Requires persistent sourcing session state and recovery UX |
+| `SRC-TASK-008` Resume state across reload/session restore | done | Query, visible result window, selected items, and draft fields now restore from a persisted sourcing session snapshot |
 | `SRC-TASK-009` Failed import queue across sessions | pending | Requires durable failed-item queue, review screen, retry, and dismiss lifecycle |
 
 ## Follow-up Use Cases
@@ -512,10 +511,13 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
 ### Resume State
 
 - `UC-SRC-012` Resume sourcing search session
+  - status: `done`
   - restore the last active query, loaded result window, and selected items when the operator returns to `/products/sourcing`
 - `UC-SRC-013` Resume import draft edits
+  - status: `done`
   - restore per-item draft fields such as final name, category, price, cost, stock, and minimum stock
 - `UC-SRC-014` Recover interrupted sourcing session after refresh or accidental browser close
+  - status: `done`
   - offer the operator a clear way to continue the previous sourcing session instead of starting over
 
 ### Failed Queue
@@ -641,6 +643,8 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - actionable partial-failure handling with retryable vs non-recoverable invalid items,
   - inline failure banners on the selected draft cards that remain pending after a partial import,
   - quick actions to keep only rejected items, retry recoverable ones, or dismiss non-recoverable ones,
+  - persisted resume-state recovery across reloads/browser restarts for the active query, loaded results, selected items, and inline import drafts,
+  - a clear operator action to discard the restored sourcing session and start clean,
   - persisted category mapping reuse across later searches,
   - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
   - persistent recent import history sourced from `imported_product_sources` and internal catalog names/SKUs,
@@ -651,6 +655,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
   - `tests/e2e/product-sourcing-import-ui.spec.ts` also verifies a partial import batch where one item succeeds and another is rejected as already imported, keeping the failed item actionable from the same screen.
   - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active and that infinite scroll appends later provider pages without losing the current selection.
+  - `tests/e2e/product-sourcing-resume-state-ui.spec.ts` verifies that a sourcing session survives a full page reload without re-running the initial search and restores the draft fields exactly as the operator left them.
   - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the selected-items summary staying above results and the import CTA remaining visible.
   - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
   - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
@@ -708,6 +713,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
 - real-backend UI validation for persisted category mapping reuse,
 - real-backend UI validation for learned mapping management (`list/update/delete`),
 - persisted recent import history projection linked back to internal product names and SKUs,
+- client-side resume-state recovery for interrupted sourcing sessions,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
 - responsive UI validation for tablet/mobile sourcing interaction,
 - real product visibility after batch import in `/products` and `/sales`,

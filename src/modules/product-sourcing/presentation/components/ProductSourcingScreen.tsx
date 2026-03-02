@@ -23,6 +23,11 @@ import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisp
 import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 import { resolveImportedProductSku } from "../../domain/services/ResolveImportedProductSku";
+import {
+  clearProductSourcingSessionSnapshot,
+  readProductSourcingSessionSnapshot,
+  writeProductSourcingSessionSnapshot,
+} from "../session/productSourcingSessionStorage";
 
 interface ApiErrorPayload {
   readonly code?: string;
@@ -286,8 +291,10 @@ export function ProductSourcingScreen({
   const [isLoadingKnownCategories, setIsLoadingKnownCategories] = useState<boolean>(false);
   const [isLoadingImportHistory, setIsLoadingImportHistory] = useState<boolean>(false);
   const [isImporting, setIsImporting] = useState<boolean>(false);
+  const [isSessionHydrated, setIsSessionHydrated] = useState<boolean>(false);
   const [activeMappingPath, setActiveMappingPath] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [sessionFeedback, setSessionFeedback] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<FeedbackState | null>(null);
   const [importHistoryFeedback, setImportHistoryFeedback] = useState<FeedbackState | null>(null);
   const [mappingFeedback, setMappingFeedback] = useState<FeedbackState | null>(null);
@@ -297,6 +304,7 @@ export function ProductSourcingScreen({
   const [searchPage, setSearchPage] = useState<number>(1);
   const [hasMoreResults, setHasMoreResults] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const shouldSkipNextAutoSearchRef = useRef<boolean>(false);
   const resultsRef = useRef<readonly ExternalCatalogCandidateItem[]>([]);
   const effectiveKnownCategoryCodes = useMemo(
     () =>
@@ -311,6 +319,37 @@ export function ProductSourcingScreen({
   useEffect(() => {
     resultsRef.current = results;
   }, [results]);
+
+  useEffect(() => {
+    const snapshot = readProductSourcingSessionSnapshot();
+
+    if (snapshot) {
+      const resultIds = new Set(snapshot.results.map((item) => item.sourceProductId));
+      const restoredSelectedIds = snapshot.selectedIds.filter((sourceProductId) =>
+        resultIds.has(sourceProductId),
+      );
+      const restoredDrafts = Object.fromEntries(
+        Object.entries(snapshot.importDrafts).filter(([sourceProductId]) =>
+          resultIds.has(sourceProductId),
+        ),
+      );
+
+      shouldSkipNextAutoSearchRef.current = true;
+      resultsRef.current = snapshot.results;
+      setQuery(snapshot.query);
+      setDebouncedQuery(snapshot.query);
+      setResults(snapshot.results);
+      setSelectedIds(restoredSelectedIds);
+      setImportDrafts(restoredDrafts);
+      setImportResult(snapshot.importResult);
+      setSearchPerformed(snapshot.searchPerformed);
+      setActiveSearchQuery(snapshot.activeSearchQuery);
+      setSearchPage(snapshot.searchPage);
+      setHasMoreResults(snapshot.hasMoreResults);
+      setSessionFeedback("Se restauró la sesión anterior de sourcing.");
+    }
+    setIsSessionHydrated(true);
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -446,6 +485,9 @@ export function ProductSourcingScreen({
 
     setSearchPerformed(true);
     setFeedback(null);
+    if (!append) {
+      setSessionFeedback(null);
+    }
 
     if (normalizedQuery.replace(/\s/g, "").length < MIN_QUERY_LENGTH) {
       resultsRef.current = [];
@@ -552,13 +594,72 @@ export function ProductSourcingScreen({
   }, []);
 
   useEffect(() => {
+    if (!isSessionHydrated) {
+      return;
+    }
+
+    const resultIds = new Set(results.map((item) => item.sourceProductId));
+    const sanitizedSelectedIds = selectedIds.filter((sourceProductId) =>
+      resultIds.has(sourceProductId),
+    );
+    const sanitizedDrafts = Object.fromEntries(
+      Object.entries(importDrafts).filter(([sourceProductId]) => resultIds.has(sourceProductId)),
+    );
+    const hasMeaningfulSession =
+      query.trim().length > 0 ||
+      activeSearchQuery.trim().length > 0 ||
+      results.length > 0 ||
+      sanitizedSelectedIds.length > 0 ||
+      importResult !== null;
+
+    if (!hasMeaningfulSession) {
+      clearProductSourcingSessionSnapshot();
+      return;
+    }
+
+    writeProductSourcingSessionSnapshot({
+      query,
+      activeSearchQuery,
+      results,
+      selectedIds: sanitizedSelectedIds,
+      importDrafts: sanitizedDrafts,
+      importResult,
+      searchPerformed,
+      searchPage,
+      hasMoreResults,
+    });
+  }, [
+    activeSearchQuery,
+    hasMoreResults,
+    importDrafts,
+    importResult,
+    isSessionHydrated,
+    query,
+    results,
+    searchPage,
+    searchPerformed,
+    selectedIds,
+  ]);
+
+  useEffect(() => {
+    if (!isSessionHydrated) {
+      return;
+    }
+
     if (debouncedQuery === query) {
+      if (shouldSkipNextAutoSearchRef.current) {
+        shouldSkipNextAutoSearchRef.current = false;
+        return;
+      }
+
       const normalized = normalizeQuery(debouncedQuery);
       if (normalized.length === 0) {
         resultsRef.current = [];
         setResults([]);
         setSelectedIds([]);
+        setImportDrafts({});
         setFeedback(null);
+        setSessionFeedback(null);
         setImportFeedback(null);
         setImportResult(null);
         setSearchPerformed(false);
@@ -574,7 +675,7 @@ export function ProductSourcingScreen({
 
       void executeSearch(normalized);
     }
-  }, [debouncedQuery, executeSearch, query]);
+  }, [debouncedQuery, executeSearch, isSessionHydrated, query]);
 
   useEffect(() => {
     return () => {
@@ -664,6 +765,7 @@ export function ProductSourcingScreen({
         : [...current, sourceProductId],
     );
     setImportFeedback(null);
+    setSessionFeedback(null);
   }
 
   function updateDraft(
@@ -679,6 +781,29 @@ export function ProductSourcingScreen({
       },
     }));
     setImportFeedback(null);
+    setSessionFeedback(null);
+  }
+
+  function handleDiscardSession(): void {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    resultsRef.current = [];
+    clearProductSourcingSessionSnapshot();
+    setQuery("");
+    setDebouncedQuery("");
+    setResults([]);
+    setSelectedIds([]);
+    setImportDrafts({});
+    setFeedback(null);
+    setSessionFeedback(null);
+    setImportFeedback(null);
+    setImportResult(null);
+    setSearchPerformed(false);
+    setActiveSearchQuery("");
+    setSearchPage(1);
+    setHasMoreResults(false);
+    setIsLoading(false);
+    setIsLoadingMore(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -1017,7 +1142,10 @@ export function ProductSourcingScreen({
                   data-testid="product-sourcing-search-input"
                   type="text"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setSessionFeedback(null);
+                  }}
                   placeholder="Ej. coca cola zero 2,25"
                   className="w-full border-none bg-transparent text-base text-slate-900 outline-none"
                 />
@@ -1039,6 +1167,23 @@ export function ProductSourcingScreen({
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
               >
                 {feedback}
+              </div>
+            ) : null}
+
+            {sessionFeedback ? (
+              <div
+                data-testid="product-sourcing-session-feedback"
+                className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span>{sessionFeedback}</span>
+                <button
+                  type="button"
+                  data-testid="product-sourcing-discard-session-button"
+                  onClick={handleDiscardSession}
+                  className="inline-flex min-h-[2.65rem] items-center justify-center rounded-xl border border-blue-200 bg-white px-4 text-sm font-semibold text-blue-900"
+                >
+                  Descartar sesión
+                </button>
               </div>
             ) : null}
 
