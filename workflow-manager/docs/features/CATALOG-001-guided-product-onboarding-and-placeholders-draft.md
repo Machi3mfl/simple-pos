@@ -112,3 +112,9 @@ export interface BulkPriceUpdateDTO {
   - `tests/e2e/catalog-bulk-price-update-api.spec.ts`
   - `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`
   - `tests/e2e/products-workspace-ui.spec.ts`
+
+## Pending Follow-up
+
+- Define the long-term product image storage strategy across manual onboarding, product edit flows, and sourced imports.
+- Decide whether operator-provided image URLs should remain external references or be copied into managed Supabase storage.
+- Define how to handle legacy external `imageUrl` values already stored in products and whether a later migration/import-backfill is required.

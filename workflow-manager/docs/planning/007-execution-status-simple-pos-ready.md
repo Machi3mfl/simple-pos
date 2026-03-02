@@ -8,9 +8,9 @@
 **GitHub Issue**: #18  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.3`
+**Version**: `0.4`
 **Created At**: `2026-03-01`  
-**Last Updated**: `2026-03-01`  
+**Last Updated**: `2026-03-02`  
 **Source Docs**: `001`, `002`, `003`, `004`, `005`, `006`  
 
 ---
@@ -83,7 +83,26 @@ Open planning item:
 - `SOURCING-001` external product sourcing and assisted import:
   - status: `in_progress`
   - PoC status: `completed`
-  - implementation status: `Phase 1 / Search Slice` completed + `Phase 2/3` UI-first assisted import slice running with persisted category mapping reuse
+  - implementation status: core sourcing/import flow completed; continuity follow-ups remain pending
+  - sourcing task status:
+    - `SRC-TASK-001` provider feasibility and contract lock -> `done`
+    - `SRC-TASK-002` search slice -> `done`
+    - `SRC-TASK-003` assisted import slice -> `done`
+    - `SRC-TASK-004` learned category mappings -> `done`
+    - `SRC-TASK-005` import history -> `done`
+    - `SRC-TASK-006` UI integration and operator UX -> `done`
+    - `SRC-TASK-007` provider hardening -> `done`
+    - `SRC-TASK-008` resume state across reload/session restore -> `pending`
+    - `SRC-TASK-009` failed import queue across sessions -> `pending`
+  - planned follow-up use cases:
+    - `UC-SRC-012` resume sourcing search session -> `pending`
+    - `UC-SRC-013` resume import draft edits -> `pending`
+    - `UC-SRC-014` recover interrupted sourcing session after refresh/browser close -> `pending`
+    - `UC-SRC-015` persist failed import items for later review -> `pending`
+    - `UC-SRC-016` review failed import queue -> `pending`
+    - `UC-SRC-017` retry a failed import item -> `pending`
+    - `UC-SRC-018` dismiss a failed import item -> `pending`
+    - `UC-SRC-019` filter failed queue by status -> `pending`
   - current output:
     - `GET /api/v1/product-sourcing/search`
     - `POST /api/v1/product-sourcing/import`
@@ -91,6 +110,7 @@ Open planning item:
     - `GET /api/v1/product-sourcing/import-history`
     - dedicated `/products/sourcing` screen reachable from `/products`
     - `/products/sourcing` now runs inside the shared workspace shell so the main navigation remains visible during sourcing
+    - sourcing search now uses shared infinite-scroll loading instead of treating the first page size as a final total
     - `product-sourcing` module runtime wired to real catalog creation through `CatalogProductWriter`
     - selected external images are persisted into the managed storage bucket `product-sourcing-images`
     - traceability rows are persisted in `imported_product_sources`
@@ -102,10 +122,25 @@ Open planning item:
     - learned category mappings can be reviewed, corrected, and deleted from the sourcing workspace itself
     - recent imports can be reviewed from the sourcing workspace with internal product name, SKU, category, and import timestamp
     - sourcing UI now has explicit tablet/mobile validation coverage for search, selection summary placement, and import CTA visibility
+    - partial failed import batches now stay actionable from the same sourcing screen with retryable vs non-recoverable feedback and cleanup actions
+    - reusable infinite-scroll primitives now drive the product lists in `/sales`, `/products`, and `/products/sourcing`
+    - the bulk price update product selector now follows the same infinite-scroll pattern for large selection scopes
+    - product cards across `/sales`, `/products`, and `/products/sourcing` now share a common visual shell so media proportions and card geometry stay consistent while each module keeps its own metadata
     - deterministic SKU dedupe (`CRF-<sourceProductId>`) remains as a secondary import guardrail
     - contract/use-case/provider/UI tests with deterministic fixtures, including fixture-backed real-backend sourcing runs
     - real-backend UI proof from sourcing to `/products` and `/sales`, plus managed image URL verification and persisted category mapping reuse
   - main artifact: `workflow-manager/docs/features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md`
+
+Open cross-cutting follow-up:
+
+- `Product image storage strategy`
+  - status: `pending`
+  - scope: define how product images should be managed outside sourcing, especially in manual onboarding and edit flows
+  - open decision:
+    - keep external `imageUrl` references as-is,
+    - or copy operator-provided images into managed Supabase storage,
+    - and decide whether existing external image URLs need a later migration/backfill plan
+  - related artifact: `workflow-manager/docs/features/CATALOG-001-guided-product-onboarding-and-placeholders-draft.md`
 
 ---
 
@@ -115,13 +150,17 @@ Open planning item:
 - Real-backend release gate: `npm run test:e2e:release-gate:real` -> passing.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
-- Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.
+- Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.
 - Converged `/products` coverage: `tests/e2e/ui-vertical-slices-smoke.spec.ts`, `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`, `tests/e2e/inventory-ui-stock-movement.spec.ts`.
+- Sales catalog infinite-scroll coverage: `tests/e2e/sales-catalog-infinite-scroll-ui.spec.ts`.
+- Bulk price selection infinite-scroll coverage: `tests/e2e/bulk-price-selection-infinite-scroll-ui.spec.ts`.
 - Sourcing UI coverage: `tests/e2e/product-sourcing-ui.spec.ts`, `tests/e2e/product-sourcing-import-ui.spec.ts`, `tests/e2e/product-sourcing-import-use-case.spec.ts`.
+- Sourcing infinite-scroll verification: `tests/e2e/product-sourcing-ui.spec.ts` proves that the first provider page is loaded with `pageSize=8`, later pages append automatically through the sentinel flow, and existing selection is preserved.
 - Sourcing trace verification: local Supabase validation confirmed one `imported_product_sources` row and a managed public URL under `product-sourcing-images` after the real-backend UI import flow.
 - Sourcing category mapping verification: `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` proves that a category confirmed in one import is auto-reused on a later result sharing the same external path.
 - Sourcing category mapping management verification: `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` proves that learned mappings can be updated and deleted from the UI and that the next search reflects the change.
 - Sourcing import history verification: `tests/e2e/product-sourcing-import-ui.spec.ts` and `tests/e2e/product-sourcing-import-history-use-case.spec.ts` prove that recent imports remain queryable from persisted trace data with internal product name and SKU.
+- Partial failed import verification: `tests/e2e/product-sourcing-import-ui.spec.ts` proves that a batch with one already-imported source and one new source keeps the failed item visible, classified as non-recoverable, and removable from the active selection.
 - Category canonicalization verification: `tests/e2e/catalog-onboarding-api.spec.ts`, `tests/e2e/products-workspace-ui.spec.ts`, and `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` prove that operator-facing category labels remain readable while stored ids are normalized to canonical slug codes.
 - Provider hardening verification: `tests/e2e/product-sourcing-provider-hardening.spec.ts` proves throttled provider calls plus structured success/failure health events for the Carrefour adapter wrapper.
 - Responsive sourcing verification: `tests/e2e/product-sourcing-responsive-ui.spec.ts` proves the sourcing flow remains usable on tablet and mobile widths without losing the selected-items summary or the import action.
