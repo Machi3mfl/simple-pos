@@ -1,0 +1,36 @@
+{
+  "records": [
+    {
+      "key": "payment-marta-01",
+      "occurredAt": "2026-02-25T18:40:00-03:00",
+      "customerName": "Marta Gomez",
+      "saleRef": "sale-account-marta-01",
+      "amount": 10,
+      "notes": "Pago parcial de demostracion"
+    },
+    {
+      "key": "payment-carlos-01",
+      "occurredAt": "2026-02-26T19:00:00-03:00",
+      "customerName": "Carlos Perez",
+      "saleRef": "sale-account-carlos-01",
+      "amount": 30,
+      "notes": "Pago parcial de demostracion"
+    },
+    {
+      "key": "payment-marta-02",
+      "occurredAt": "2026-02-28T16:20:00-03:00",
+      "customerName": "Marta Gomez",
+      "saleRef": "sale-account-marta-02",
+      "amount": 15,
+      "notes": "Pago parcial de demostracion"
+    },
+    {
+      "key": "payment-lucia-01",
+      "occurredAt": "2026-03-01T18:00:00-03:00",
+      "customerName": "Lucia Fernandez",
+      "saleRef": "sale-account-lucia-01",
+      "amount": 20,
+      "notes": "Cancelacion total de demostracion"
+    }
+  ]
+}

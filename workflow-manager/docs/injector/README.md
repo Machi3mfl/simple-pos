@@ -1,187 +1,147 @@
-# Sample Data Injector
+# Simple POS Demo Injector
 
-A modular injector to seed Supabase + local API with sample data in a scalable way.
+Injector de datos de demostracion para `simple-pos`.
 
-## Goal
+Este injector ya no usa tenants, claim templates ni entidades del proyecto anterior. Ahora siembra un escenario de kiosco para mostrar informacion realista en las pantallas principales del POS.
 
-- Inject entities independently (`users`, `tenants`, `sku metadata`, etc.).
-- Resolve relationships across files using references (`tenantRef`, `userRef`, `collectionRef`, `apiClientRef`).
-- Upload SKU images to Storage and automatically link them in `claim_sku_metadata`.
-- Run everything from a bash menu with clear success/error logs.
+## Que genera
 
-## Structure
+- `20` productos importados desde un snapshot curado de Carrefour.
+- `5` categorias de kiosco:
+  - `bebidas-gaseosas`
+  - `bebidas-aguas`
+  - `alfajores`
+  - `galletitas`
+  - `snacks`
+- stock inicial variado:
+  - con stock alto
+  - con stock bajo
+  - sin stock
+  - algunos inactivos
+- ventas mixtas:
+  - `cash`
+  - `on_account`
+- pagos de deuda posteriores para mostrar estados `paid`, `partial` y `pending`.
+- movimientos de stock de salida por cada venta para que productos, historial y reportes de profit queden coherentes.
 
-```text
-docs/injector/
-|-- injector.sh
-|-- lib/
-|   |-- common.sh
-|   |-- http.sh
-|   |-- datasets.sh
-|   |-- refs.sh
-|   |-- relationships.sh
-|   `-- storage.sh
-|-- entities/
-|   |-- users.sh
-|   |-- tenants.sh
-|   |-- tenant-members.sh
-|   |-- api-clients.sh
-|   |-- sku-collections.sh
-|   |-- sku-metadata.sh
-|   |-- claim-templates.sh
-|   |-- inventory.sh
-|   `-- orders.sh
-|-- datasets/
-|   |-- shared/brand-colors.json
-|   |-- users/
-|   |-- tenants/
-|   |-- tenant-members/
-|   |-- api-clients/
-|   |-- sku-collections/
-|   |-- sku-metadata/
-|   |-- claim-templates/
-|   |-- inventory/
-|   `-- orders/
-`-- assets/
-    `-- skus/<SKU>/{brand.*,product.*}
-```
+## Pantallas cubiertas
 
-## Requirements
+Con `all` deberias poder navegar con data en:
 
+- `Ventas`
+- `Pedidos`
+- `Productos`
+- `Deudas`
+- `Reportes`
+- `Productos > sourcing`
+
+Nota: `Sincronizacion` usa `localStorage` del navegador. Este injector siembra backend y storage, no la cola offline del browser.
+
+## Como funciona
+
+- Los productos se crean a traves de `POST /api/v1/product-sourcing/import`.
+- Las imagenes se descargan desde `sourceImageUrl` y quedan guardadas en Supabase Storage (`product-sourcing-images`).
+- Las ventas se crean via `POST /api/v1/sales`.
+- Los movimientos de stock de salida se crean via `POST /api/v1/stock-movements`.
+- Los pagos de deuda se crean via `POST /api/v1/debt-payments`.
+- El cleanup usa Supabase REST para limpiar el entorno de desarrollo completo antes de regenerar la demo.
+
+## Requisitos
+
+- `node` 20+
 - `bash`
-- `curl`
-- `jq`
+- `curl` no es obligatorio para el main script, pero es util para verificar el entorno.
+- Next.js corriendo para comandos que usan API del proyecto (`products`, `sales`, `debt-payments`, `all`).
+- Supabase local o remoto accesible con service role.
 
-## Environment Variables
+## Variables de entorno
 
-By default it reads `<project-root>/.env.local`.
+Por defecto intenta leer:
 
-Required:
+- `<repo>/.env.local`
+- si faltan variables criticas, cae a `supabase status -o env`
+
+Requeridas:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Optional:
-- `INJECTOR_APP_BASE_URL` (default: `NEXT_PUBLIC_APP_URL` or `http://localhost:4000`)
-- `INJECTOR_SKIP_API_STEPS=1` to skip `inventory` and `orders` in the full flow
-- `INJECTOR_DATASETS_DIR` to use a custom datasets root directory
-- `INJECTOR_PROFILE` to filter datasets by filename prefix (`<profile>-*.json`, default `all`)
+Opcionales:
 
-## Usage
+- `INJECTOR_APP_BASE_URL`
+  - default: `http://127.0.0.1:3000`
+- `ENV_FILE`
+  - para apuntar a otro archivo `.env`
 
-### Interactive Menu
+## Uso
+
+### Modo interactivo
 
 ```bash
 bash workflow-manager/docs/injector/injector.sh
 ```
 
-### Direct Mode (No Menu)
+### Modo directo
 
 ```bash
 bash workflow-manager/docs/injector/injector.sh all
-bash workflow-manager/docs/injector/injector.sh users
-bash workflow-manager/docs/injector/injector.sh sku-metadata
-bash workflow-manager/docs/injector/injector.sh customer
+bash workflow-manager/docs/injector/injector.sh products
+bash workflow-manager/docs/injector/injector.sh sales
+bash workflow-manager/docs/injector/injector.sh debt-payments
 bash workflow-manager/docs/injector/injector.sh status
 bash workflow-manager/docs/injector/injector.sh show-all
 bash workflow-manager/docs/injector/injector.sh clear-all
 bash workflow-manager/docs/injector/injector.sh clear-all -f
-bash workflow-manager/docs/injector/injector.sh -f clear-all
 ```
 
-## Recommended Order
+## Orden recomendado
 
-1. `users`
-2. `tenants`
-3. `tenant-members`
-4. `sku-collections`
-5. `sku-metadata`
-6. `claim-templates`
-7. `api-clients`
-8. `inventory`
-9. `orders`
+Para una demo completa:
 
-`all` runs this full sequence.
+1. levantar app + supabase
+2. `clear-all -f`
+3. `all`
 
-`customer` runs a minimal onboarding baseline:
-1. `users`
-2. `tenants`
-3. `tenant-members`
-4. `claim-templates`
-5. `api-clients`
+Para iterar por entidad:
 
-`show-all` prints a full database snapshot and a final summary with row counts per collection/table.
+1. `products`
+2. `sales`
+3. `debt-payments`
 
-`clear-all` reuses the same `show-all` snapshot output, then asks for confirmation before deleting all injector-managed rows.
+## Datasets
 
-`clear-all -f` (or `-f clear-all`) skips the snapshot/listing step and goes directly to the confirmation prompt + deletion flow.
-
-## New Customer Onboarding (Scalable)
-
-Use `onboard-customer.sh` to generate a dedicated customer dataset and inject only the baseline entities for a new tenant.
-
-1. Create an env file from [`examples/customer-onboarding.env.example`](./examples/customer-onboarding.env.example):
-
-```bash
-cp workflow-manager/docs/injector/examples/customer-onboarding.env.example .env.onboarding
+```text
+workflow-manager/docs/injector/
+|-- injector.sh
+|-- injector.mjs
+|-- README.md
+`-- datasets/
+    |-- products/demo-kiosk-carrefour-products.json
+    |-- sales/demo-sales.json
+    `-- debt-payments/demo-debt-payments.json
 ```
 
-2. Fill at least:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `ONBOARD_TENANT_NAME`
-- `ONBOARD_OWNER_EMAIL`
-- `ONBOARD_OWNER_PASSWORD`
+## Notas de limpieza
 
-3. Run onboarding:
+- `clear-all` limpia toda la data funcional del proyecto en este entorno:
+  - `products`
+  - `inventory_items`
+  - `stock_movements`
+  - `sales`
+  - `sale_items` via cascade
+  - `customers`
+  - `debt_ledger`
+  - `sync_events`
+  - `imported_product_sources`
+  - `external_category_mappings`
+- Tambien borra objetos de storage en:
+  - `product-images`
+  - `product-sourcing-images`
+- No hace `supabase db reset`; limpia las tablas funcionales y buckets usados por la app.
+- `show-all` imprime el snapshot del dataset demo gestionado por el injector, no un dump completo de toda la base.
 
-```bash
-bash workflow-manager/docs/injector/onboard-customer.sh --env-file .env.onboarding
-```
+## Limitaciones conocidas
 
-4. Preview without injecting:
-
-```bash
-bash workflow-manager/docs/injector/onboard-customer.sh --env-file .env.onboarding --dry-run
-```
-
-Notes:
-- The script generates files prefixed with `customer-` and runs injector with `INJECTOR_PROFILE=customer`.
-- This keeps demo datasets and customer onboarding datasets fully isolated.
-- `ONBOARD_CREATE_API_CLIENT=true` creates an API client and API key for the new tenant.
-
-## Relationship Convention
-
-Each entity can define a local `key`, and other entities can reference it through `*Ref`.
-
-Example:
-
-```json
-{
-  "key": "api_global_default",
-  "tenantRef": "tenant_global_demo",
-  "createdByUserRef": "owner_demo",
-  "name": "Global Demo Client",
-  "apiKey": "dk_demo_global_001"
-}
-```
-
-## SKU Images
-
-- Place images in `docs/injector/assets/skus/<SKU>/brand.png` and `product.png`.
-- The injector also supports SKU alias resolution for `US`/`USA` in folder names (for example `APPLE-US-10-USD` can resolve from `assets/skus/APPLE-USA-10-USD/...`).
-- If a SKU image is missing, it falls back to `docs/injector/assets/brands/<brand>.png` or `docs/injector/assets/brands/<brand>-logo.png` when available.
-- The injector uploads them to the tenant bucket (e.g. `claim-assets`) at:
-  - `tenants/<tenant-id>/skus/<sku-normalized>/brand.<ext>`
-  - `tenants/<tenant-id>/skus/<sku-normalized>/product.<ext>`
-- Then it stores these paths in `claim_sku_metadata.brand_image_path` and `product_image_path`.
-
-## Inventory Note
-
-`inventory` is injected via `POST /api/inventory/upload` (not direct DB insert) so encryption and domain rules are preserved.
-Make sure your Next.js server is running before using `inventory` or `orders`.
-
-If the app is not reachable at `INJECTOR_APP_BASE_URL`, the injector now fails fast with a clear error before iterating records.
-
-## Reuse Note
-
-Datasets and assets in this folder are examples. Replace them with project-specific data before using the injector in another repository.
+- La cola offline de `Sincronizacion` vive en `localStorage`, asi que no puede sembrarse desde este injector backend-only.
+- En `Ventas`, algunas chips de categorias son atajos visuales estaticos y pueden seguir visibles aunque no haya productos cargados.
+- El snapshot de productos Carrefour es curado y versionado. Si Carrefour cambia catalogo o imagenes, el dataset sigue siendo valido como referencia, pero una reinyeccion puede depender de que el `sourceImageUrl` siga respondiendo.

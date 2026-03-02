@@ -1,0 +1,144 @@
+{
+  "records": [
+    {
+      "key": "sale-cash-01",
+      "occurredAt": "2026-02-21T09:10:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "coke-zero-225", "quantity": 2 },
+        { "productRef": "alfajor-tita-36", "quantity": 2 },
+        { "productRef": "snack-lays-134", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-cash-02",
+      "occurredAt": "2026-02-21T18:25:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "water-carrefour-2l", "quantity": 2 },
+        { "productRef": "galletitas-manon-182", "quantity": 1 },
+        { "productRef": "snack-pehuamar-135", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-account-marta-01",
+      "occurredAt": "2026-02-22T11:40:00-03:00",
+      "paymentMethod": "on_account",
+      "customerName": "Marta Gomez",
+      "initialPaymentAmount": 20,
+      "items": [
+        { "productRef": "coke-original-225", "quantity": 1 },
+        { "productRef": "galletitas-pepas-carrefour-500", "quantity": 1 },
+        { "productRef": "snack-krachitos-55", "quantity": 2 },
+        { "productRef": "water-smartwater-591", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-cash-03",
+      "occurredAt": "2026-02-22T19:05:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "coke-zero-175", "quantity": 1 },
+        { "productRef": "alfajor-oreo-triple", "quantity": 1 },
+        { "productRef": "snack-pehuamar-135", "quantity": 2 }
+      ]
+    },
+    {
+      "key": "sale-account-carlos-01",
+      "occurredAt": "2026-02-23T10:20:00-03:00",
+      "paymentMethod": "on_account",
+      "customerName": "Carlos Perez",
+      "initialPaymentAmount": 0,
+      "items": [
+        { "productRef": "snack-lays-134", "quantity": 2 },
+        { "productRef": "water-villavicencio-2l", "quantity": 1 },
+        { "productRef": "alfajor-tita-36", "quantity": 3 }
+      ]
+    },
+    {
+      "key": "sale-cash-04",
+      "occurredAt": "2026-02-23T17:55:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "galletitas-manon-182", "quantity": 2 },
+        { "productRef": "galletitas-pepas-carrefour-500", "quantity": 1 },
+        { "productRef": "coke-zero-225", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-account-marta-02",
+      "occurredAt": "2026-02-24T12:45:00-03:00",
+      "paymentMethod": "on_account",
+      "customerName": "Marta Gomez",
+      "initialPaymentAmount": 10,
+      "items": [
+        { "productRef": "snack-pehuamar-135", "quantity": 1 },
+        { "productRef": "water-carrefour-2l", "quantity": 2 },
+        { "productRef": "alfajor-block-40", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-cash-05",
+      "occurredAt": "2026-02-24T19:15:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "alfajor-oreo-triple", "quantity": 2 },
+        { "productRef": "water-smartwater-591", "quantity": 1 },
+        { "productRef": "coke-original-225", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-cash-06",
+      "occurredAt": "2026-02-25T09:35:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "coke-zero-175", "quantity": 2 },
+        { "productRef": "alfajor-tita-36", "quantity": 2 }
+      ]
+    },
+    {
+      "key": "sale-cash-07",
+      "occurredAt": "2026-02-26T08:55:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "water-carrefour-2l", "quantity": 3 },
+        { "productRef": "snack-lays-134", "quantity": 1 },
+        { "productRef": "galletitas-manon-182", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-account-lucia-01",
+      "occurredAt": "2026-02-27T14:10:00-03:00",
+      "paymentMethod": "on_account",
+      "customerName": "Lucia Fernandez",
+      "initialPaymentAmount": 20,
+      "items": [
+        { "productRef": "galletitas-pepas-carrefour-500", "quantity": 1 },
+        { "productRef": "alfajor-block-40", "quantity": 2 },
+        { "productRef": "water-villavicencio-2l", "quantity": 1 }
+      ]
+    },
+    {
+      "key": "sale-cash-08",
+      "occurredAt": "2026-02-28T11:05:00-03:00",
+      "paymentMethod": "cash",
+      "items": [
+        { "productRef": "snack-pehuamar-135", "quantity": 2 },
+        { "productRef": "alfajor-tita-36", "quantity": 1 },
+        { "productRef": "galletitas-manon-182", "quantity": 2 }
+      ]
+    },
+    {
+      "key": "sale-account-raul-01",
+      "occurredAt": "2026-03-01T10:30:00-03:00",
+      "paymentMethod": "on_account",
+      "customerName": "Raul Sosa",
+      "initialPaymentAmount": 0,
+      "items": [
+        { "productRef": "snack-pehuamar-135", "quantity": 1 },
+        { "productRef": "alfajor-block-40", "quantity": 1 },
+        { "productRef": "water-carrefour-2l", "quantity": 1 }
+      ]
+    }
+  ]
+}
