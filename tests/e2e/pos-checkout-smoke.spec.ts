@@ -5,7 +5,7 @@ import onAccountMissingCustomer from "../fixtures/mock-api/sale-on-account-missi
 import onAccountSuccess from "../fixtures/mock-api/sale-on-account-success.json";
 import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
 import unsupportedMethod from "../fixtures/mock-api/sale-unsupported-method-error.json";
-import { fillCashReceivedWithExactTotal } from "./support/checkout";
+import { createNewOnAccountCustomer, fillCashReceivedWithExactTotal } from "./support/checkout";
 
 interface CreateSaleRequestPayload {
   readonly paymentMethod?: string;
@@ -77,9 +77,25 @@ async function mockProductsEndpoint(page: Page): Promise<void> {
   });
 }
 
+async function mockCustomersEndpoint(page: Page): Promise<void> {
+  await page.route("**/api/v1/customers**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items: [] }),
+    });
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await mockProductsEndpoint(page);
   await mockSalesEndpoint(page);
+  await mockCustomersEndpoint(page);
 });
 
 test("runs checkout smoke in mock mode for cash and on_account", async ({ page }) => {
@@ -93,19 +109,19 @@ test("runs checkout smoke in mock mode for cash and on_account", async ({ page }
   await page.getByRole("button", { name: "Ir a cobrar" }).click();
   await fillCashReceivedWithExactTotal(page);
   await page.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(page.getByText("Venta registrada correctamente.")).toBeVisible();
+  await expect(page.getByTestId("app-toast")).toContainText("Venta registrada correctamente.");
 
   await page.getByTestId("product-card-product-002").click();
   await page.getByRole("button", { name: "Ir a cobrar" }).click();
   await page.getByRole("button", { name: "Cuenta corriente" }).click();
   await page.getByRole("button", { name: "Confirmar cobro" }).click();
   await expect(
-    page.getByText("Para cuenta corriente primero asigná el nombre del cliente."),
-  ).toBeVisible();
+    page.getByTestId("app-toast"),
+  ).toContainText("Elegí un cliente existente o tocá crear cliente nuevo antes de cobrar.");
 
-  await page.getByPlaceholder("Ej. Juan Pérez").fill("Juan Perez");
+  await createNewOnAccountCustomer(page, "Juan Perez");
   await page.getByRole("button", { name: "Confirmar cobro" }).click();
-  await expect(page.getByText("Venta registrada correctamente.")).toBeVisible();
+  await expect(page.getByTestId("app-toast")).toContainText("Venta registrada correctamente.");
 });
 
 test("rejects unsupported payment method request in mock mode", async ({ page }) => {

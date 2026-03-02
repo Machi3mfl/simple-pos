@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
+import { createNewOnAccountCustomer } from "./support/checkout";
 
 function parseMoneyValue(raw: string): number {
   const match = raw.match(/\$([0-9]+(?:\.[0-9]{1,2})?)/);
@@ -22,7 +23,7 @@ async function createOnAccountSale(
   await addProductToCart(page, input.productName, input.quantity);
   await page.getByTestId("checkout-open-payment-button").click();
   await page.getByTestId("checkout-payment-on-account-button").click();
-  await page.getByTestId("checkout-customer-name-input").fill(input.customerName);
+  await createNewOnAccountCustomer(page, input.customerName);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
     "Venta registrada correctamente.",

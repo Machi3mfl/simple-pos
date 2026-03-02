@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
-import { fillCashReceivedWithExactTotal } from "./support/checkout";
+import { createNewOnAccountCustomer, fillCashReceivedWithExactTotal } from "./support/checkout";
 
 function uniqueMarker(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -39,7 +39,7 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();
-    await page.getByTestId("checkout-customer-name-input").fill(customerName);
+    await createNewOnAccountCustomer(page, customerName);
     await page.getByTestId("checkout-confirm-payment-button").click();
 
     const checkoutFeedback = page.getByTestId("checkout-feedback");

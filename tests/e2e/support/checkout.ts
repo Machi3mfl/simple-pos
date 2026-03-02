@@ -12,3 +12,15 @@ export async function fillCashReceivedWithExactTotal(page: Page): Promise<number
 
   return total;
 }
+
+export async function createNewOnAccountCustomer(
+  page: Page,
+  customerName: string,
+): Promise<void> {
+  await page.getByTestId("checkout-customer-name-input").fill(customerName);
+  await page.getByTestId("checkout-customer-create-button").click();
+  const confirmButton = page.getByTestId("checkout-customer-create-confirm-button");
+  if (await confirmButton.isVisible().catch(() => false)) {
+    await confirmButton.click();
+  }
+}

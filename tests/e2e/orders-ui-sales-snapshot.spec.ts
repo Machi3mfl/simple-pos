@@ -28,6 +28,7 @@ async function createSale(
       items: [{ productId: input.productId, quantity: input.quantity }],
       paymentMethod: input.paymentMethod,
       customerName: input.customerName,
+      createCustomerIfMissing: input.customerName ? true : undefined,
       initialPaymentAmount: input.initialPaymentAmount,
     },
   });

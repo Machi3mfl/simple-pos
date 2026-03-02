@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 
+import { Toaster } from "@/components/ui/toaster";
 import { I18nProvider } from "@/infrastructure/i18n/I18nProvider";
 
 import "./globals.css";
@@ -23,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={poppins.className}>
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider>
+          {children}
+          <Toaster />
+        </I18nProvider>
       </body>
     </html>
   );

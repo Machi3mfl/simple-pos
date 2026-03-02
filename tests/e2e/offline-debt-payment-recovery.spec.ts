@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
+import { createNewOnAccountCustomer } from "./support/checkout";
 
 function parseMoneyValue(raw: string): number {
   return Number(raw.replace(/[^0-9.-]/g, ""));
@@ -46,7 +47,7 @@ test.describe("offline debt payment recovery", () => {
     await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();
-    await page.getByTestId("checkout-customer-name-input").fill(customerName);
+    await createNewOnAccountCustomer(page, customerName);
     await page.getByTestId("checkout-confirm-payment-button").click();
     await expect(page.getByTestId("checkout-feedback")).toContainText(
       "Venta registrada correctamente.",

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { fillCashReceivedWithExactTotal } from "./support/checkout";
+import { createNewOnAccountCustomer, fillCashReceivedWithExactTotal } from "./support/checkout";
 
 function uniqueMarker(): string {
   return `report-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -46,7 +46,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
   await productCard.click();
   await page.getByTestId("checkout-open-payment-button").click();
   await page.getByTestId("checkout-payment-on-account-button").click();
-  await page.getByTestId("checkout-customer-name-input").fill(customerName);
+  await createNewOnAccountCustomer(page, customerName);
   await page.getByTestId("checkout-confirm-payment-button").click();
   await expect(page.getByTestId("checkout-feedback")).toContainText(
     "Venta registrada correctamente.",

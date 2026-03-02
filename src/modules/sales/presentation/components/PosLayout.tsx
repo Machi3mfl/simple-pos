@@ -25,6 +25,7 @@ import {
 } from "@/modules/sales/presentation/posWorkspace";
 import {
   dedupeCategoryCodes,
+  normalizeCategoryCode,
   resolveCategoryEmoji,
   sortCategoryCodes,
 } from "@/shared/core/category/categoryNaming";
@@ -61,6 +62,16 @@ const nameEmojiHints: Record<string, string> = {
   alfajor: "🍪",
 };
 
+const salesCategoryAliases: Record<string, string> = {
+  snack: "snacks",
+};
+
+function resolveSalesCategoryId(categoryId: string): string {
+  const normalizedCategoryId = normalizeCategoryCode(categoryId);
+
+  return salesCategoryAliases[normalizedCategoryId] ?? normalizedCategoryId;
+}
+
 function resolveProductEmoji(name: string, categoryId: string): string {
   const normalizedName = name.toLowerCase();
   const hint = Object.entries(nameEmojiHints).find(([token]) =>
@@ -80,17 +91,18 @@ function resolveProductSubtitle(categoryLabel: string): string {
 
 function toCatalogProduct(
   item: ProductListApiItem,
+  categoryId: string,
   categoryLabel: string,
 ): CatalogProduct {
   return {
     id: item.id,
     name: item.name,
-    categoryId: item.categoryId,
+    categoryId,
     subtitle: resolveProductSubtitle(categoryLabel),
     price: item.price,
     stock: item.stock,
     isAvailable: item.isActive && item.stock > 0,
-    emoji: resolveProductEmoji(item.name, item.categoryId),
+    emoji: resolveProductEmoji(item.name, categoryId),
     imageUrl: item.imageUrl,
   };
 }
@@ -164,9 +176,11 @@ export function PosLayout({
       throw new Error("No se pudo cargar el catálogo.");
     }
 
-    return data.items.map((item) =>
-      toCatalogProduct(item, labelForCategory(item.categoryId)),
-    );
+    return data.items.map((item) => {
+      const categoryId = resolveSalesCategoryId(item.categoryId);
+
+      return toCatalogProduct(item, categoryId, labelForCategory(categoryId));
+    });
   }, [labelForCategory]);
 
   const refreshCatalog = useCallback(async (): Promise<void> => {

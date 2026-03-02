@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
+import { createNewOnAccountCustomer } from "./support/checkout";
 
 function parseMoneyValue(raw: string): number {
   return Number(raw.replace(/[^0-9.-]/g, ""));
@@ -27,10 +28,10 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await page.getByTestId("checkout-confirm-payment-button").click();
 
   await expect(page.getByTestId("checkout-feedback")).toContainText(
-    "Para cuenta corriente primero asigná el nombre del cliente.",
+    "Elegí un cliente existente o tocá crear cliente nuevo antes de cobrar.",
   );
 
-  await page.getByTestId("checkout-customer-name-input").fill(customerName);
+  await createNewOnAccountCustomer(page, customerName);
   await page.getByTestId("checkout-on-account-initial-payment-input").fill("1000");
   await expect(page.getByTestId("checkout-on-account-remaining-value")).toHaveText(
     "$3450.00",

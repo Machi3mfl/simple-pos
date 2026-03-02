@@ -160,6 +160,8 @@ const spanishMessages = {
       cashMustCoverTotal: "El efectivo debe cubrir el total para completar la venta.",
       onAccountCustomerRequired:
         "Para cuenta corriente primero asigná el nombre del cliente.",
+      onAccountCustomerSelectionRequired:
+        "Elegí un cliente existente o tocá crear cliente nuevo antes de cobrar.",
       initialPaymentInvalid:
         "El pago inicial debe ser un monto válido mayor o igual a cero.",
       initialPaymentUseCash:
@@ -172,6 +174,25 @@ const spanishMessages = {
       decreaseAria: (itemName: string): string => `disminuir ${itemName}`,
       increaseAria: (itemName: string): string => `aumentar ${itemName}`,
       customerNameLabel: "Cliente",
+      customerSearchPlaceholder: "Buscar cliente existente",
+      customerSearchHint:
+        "Primero buscá un cliente existente. Si no aparece, recién ahí creá uno nuevo.",
+      customerRecentTitle: "Clientes recientes",
+      customerMatchesTitle: "Clientes encontrados",
+      customerNoMatches: "No encontramos coincidencias exactas con ese nombre.",
+      customerLookupLoadError: "No se pudo cargar la lista de clientes.",
+      createNewCustomerButton: (customerName: string): string =>
+        `Crear cliente nuevo "${customerName}"`,
+      confirmCreateCustomerButton: (customerName: string): string =>
+        `Confirmar cliente nuevo "${customerName}"`,
+      customerSimilarWarningTitle: "Ya existen clientes parecidos",
+      customerSimilarWarningDescription: (customerName: string): string =>
+        `Revisá la lista antes de crear "${customerName}" para no dividir cuentas corrientes.`,
+      customerExistingBadge: "Cliente existente",
+      customerExistingHelp: "La deuda se va a registrar sobre este cliente.",
+      customerNewBadge: "Cliente nuevo",
+      customerNewHelp: "Se va a crear este cliente al confirmar el cobro.",
+      changeSelectedCustomer: "Cambiar",
       onAccountInitialPaymentLabel: "Paga ahora",
       retryOfflineSyncButton: (count: number): string =>
         `Reintentar sincronización (${count})`,
