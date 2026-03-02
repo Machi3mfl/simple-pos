@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts/supabase" && pwd)/common.sh"
+
 cd "$ROOT_DIR"
 
 echo "[1/4] Starting local Supabase stack"
-npx -y supabase start
+supabase_cli start
 
 echo "[2/4] Resetting local database before release gate"
-npx -y supabase db reset --local
+supabase_cli db reset --local
 
 echo "[3/4] Loading Supabase local environment"
-supabase_env_output="$(npx -y supabase status -o env)"
+supabase_env_output="$(supabase_cli status -o env)"
 supabase_env_exports="$(
   printf '%s\n' "$supabase_env_output" \
     | grep -E '^(API_URL|SERVICE_ROLE_KEY)=' \
