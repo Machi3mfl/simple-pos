@@ -1,0 +1,56 @@
+[
+  {
+    "productId": 393964,
+    "productName": "Gaseosa cola Coca Cola Zero 2,25 lts",
+    "brand": "Coca Cola",
+    "categories": [
+      "/Bebidas/Gaseosas/Gaseosas cola/"
+    ],
+    "link": "/gaseosa-cola-coca-cola-zero-225-lts-393964/p",
+    "items": [
+      {
+        "ean": "7790895067570",
+        "images": [
+          {
+            "imageUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9s0lH8sAAAAASUVORK5CYII="
+          }
+        ],
+        "sellers": [
+          {
+            "commertialOffer": {
+              "Price": 5250,
+              "ListPrice": 5499
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": 111111,
+    "productName": "Gaseosa cola Coca Cola Zero 1,5 lts",
+    "brand": "Coca Cola",
+    "categories": [
+      "/Bebidas/Gaseosas/Gaseosas cola/"
+    ],
+    "link": "/gaseosa-cola-coca-cola-zero-15-lts-111111/p",
+    "items": [
+      {
+        "ean": "7790895000000",
+        "images": [
+          {
+            "imageUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9s0lH8sAAAAASUVORK5CYII="
+          }
+        ],
+        "sellers": [
+          {
+            "commertialOffer": {
+              "Price": 4200,
+              "ListPrice": 4300
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

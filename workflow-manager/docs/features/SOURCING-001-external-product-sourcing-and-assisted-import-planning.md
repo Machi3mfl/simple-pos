@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `SOURCING-001`  
-**Status**: `planning`  
+**Status**: `done`  
 **GitHub Issue**: #32  
 **Priority**: `high`  
 **Linked FR/NFR**: `FR-003`, `FR-008`, `FR-009`, `NFR-002`, `NFR-004`, `NFR-005`  
@@ -59,15 +59,11 @@ The first explicit product decision for this feature is now locked:
 - **why**: the images are more normalized, visually consistent, and easier to identify quickly
 - **fixed source URL**: `https://www.carrefour.com.ar/`
 
-The current gap is not internal product persistence. The gap is **external discovery and image ingestion**.
+The current gap is not internal product persistence. The gap is **external discovery, assisted import orchestration, and image ownership**.
 
-What is missing today:
+What is still missing after the current vertical slice:
 
-- no external catalog search endpoint,
-- no provider abstraction for supermarket sources,
-- no normalization layer for titles, images, barcodes, category paths, and reference prices,
-- no import orchestration that downloads and stores the selected product image,
-- no source-trace record linking an internal product to the original retailer candidate.
+- no operator queue for revisiting failed imports across multiple sessions yet.
 
 ---
 
@@ -325,6 +321,13 @@ Introduce an infrastructure table such as `external_category_mappings`:
 
 This avoids hardcoding retailer taxonomy logic inside UI components.
 
+Current implementation status:
+
+- persisted in `public.external_category_mappings`,
+- keyed by `provider_id + external_category_path`,
+- written during successful import confirmation,
+- and reused on later searches so the next candidate defaults to the already-confirmed internal category.
+
 ---
 
 ## Image Storage Strategy
@@ -395,6 +398,8 @@ Why:
 - support explicit `Enter` submit for operators who type decisively,
 - cancel in-flight searches with `AbortController`,
 - never auto-import or auto-select the first provider result,
+- keep the selected-items summary directly below the search form and full-width so the operator never loses context while reviewing chosen items,
+- show the first result window quickly and continue appending later pages through infinite scroll, keeping a manual fallback only when `IntersectionObserver` is unavailable,
 - show a Carrefour origin badge and large image preview in result cards,
 - allow selecting `1..n` visible results before confirming import,
 - keep a persistent selected-count summary and batch import action,
@@ -463,18 +468,75 @@ Multi-provider search is a valid later extension, but it should be added only af
 
 ## Acceptance Criteria
 
-- [ ] The operator can search Carrefour Argentina from `/products` without leaving the app.
-- [ ] The sourcing flow runs in a dedicated screen with enough space to inspect result images comfortably.
-- [ ] Search results show a large enough image and descriptive title to distinguish nearby variants quickly.
-- [ ] Search requests are not fired on every keystroke and only run after typing stops or the operator presses `Enter`.
-- [ ] The first visible result images load fast enough to support quick product recognition.
-- [ ] The operator can select one or many search results and confirm a batch import in one action.
-- [ ] Each selected item allows category confirmation and minimum product field review before import.
-- [ ] The system stores the selected external image for each successful item in managed storage and creates the product through the internal catalog command path.
-- [ ] The imported products are visible in `/products` and usable from the sales workspace after refresh.
-- [ ] Source metadata (provider, source product id, source URL, image URL, category path, EAN if present) is persisted for traceability.
-- [ ] Batch import feedback shows per-item success and failure states without hiding partial results.
-- [ ] The architecture keeps retailer-specific logic outside `catalog` and `products`.
+- [x] The operator can search Carrefour Argentina from `/products` without leaving the app.
+- [x] The sourcing flow runs in a dedicated screen with enough space to inspect result images comfortably.
+- [x] The sourcing screen preserves the main application shell and navigation rail while the operator works inside `/products/sourcing`.
+- [x] Search results show a large enough image and descriptive title to distinguish nearby variants quickly.
+- [x] Search requests are not fired on every keystroke and only run after typing stops or the operator presses `Enter`.
+- [x] The first visible result images load fast enough to support quick product recognition.
+- [x] The operator can select one or many search results and confirm a batch import in one action.
+- [x] Each selected item allows category confirmation and minimum product field review before import.
+- [x] Category confirmation uses a human-readable label plus a canonical stored code so duplicate internal categories are not created from alternate writing styles.
+- [x] The system stores the selected external image for each successful item in managed storage and creates the product through the internal catalog command path.
+- [x] The imported products are visible in `/products` and usable from the sales workspace after refresh.
+- [x] Source metadata (provider, source product id, source URL, image URL, category path, EAN if present) is persisted for traceability.
+- [x] A category confirmed for one imported external path is reused automatically in later search results that share the same external category path.
+- [x] The operator can review, correct, or delete learned category mappings from the sourcing workspace.
+- [x] The operator can review a persistent recent import history from the sourcing workspace itself.
+- [x] Batch import feedback shows per-item success and failure states without hiding partial results.
+- [x] The architecture keeps retailer-specific logic outside `catalog` and `products`.
+
+`SOURCING-001` is functionally complete. Remaining related work is now outside this feature scope, such as the broader cross-cutting product image storage strategy tracked from `CATALOG-001`.
+
+---
+
+## Sourcing Task Status
+
+| Sourcing Task | Status | Notes |
+| --- | --- | --- |
+| `SRC-TASK-001` Provider feasibility and contract lock | done | Carrefour locked as v1 source, PoC and OpenAPI baseline linked |
+| `SRC-TASK-002` Search slice | done | Search use case, provider adapters, endpoint, and UI search surface delivered |
+| `SRC-TASK-003` Assisted import slice | done | Batch import, managed image persistence, and source traceability delivered |
+| `SRC-TASK-004` Learned category mappings | done | Reuse, review, update, and delete supported from the sourcing workspace |
+| `SRC-TASK-005` Import history | done | Recent import history persisted and exposed in the sourcing workspace |
+| `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, infinite scroll, and shared product cards delivered |
+| `SRC-TASK-007` Provider hardening | done | Rate limiting, structured health logs, deterministic tests, and live smoke probe delivered |
+| `SRC-TASK-008` Resume state across reload/session restore | done | Query, visible result window, selected items, and draft fields now restore from a persisted sourcing session snapshot |
+| `SRC-TASK-009` Failed import queue across sessions | done | Failed imports now persist across sessions with review, filtering, retry, load-into-selection, and dismiss actions |
+
+## Follow-up Use Cases
+
+These are planned continuity follow-ups that extend `SOURCING-001` without blocking the now-complete core sourcing/import workflow.
+
+### Resume State
+
+- `UC-SRC-012` Resume sourcing search session
+  - status: `done`
+  - restore the last active query, loaded result window, and selected items when the operator returns to `/products/sourcing`
+- `UC-SRC-013` Resume import draft edits
+  - status: `done`
+  - restore per-item draft fields such as final name, category, price, cost, stock, and minimum stock
+- `UC-SRC-014` Recover interrupted sourcing session after refresh or accidental browser close
+  - status: `done`
+  - offer the operator a clear way to continue the previous sourcing session instead of starting over
+
+### Failed Queue
+
+- `UC-SRC-015` Persist failed import items for later review
+  - status: `done`
+  - failed or rejected items remain available after the current browser session ends
+- `UC-SRC-016` Review failed import queue
+  - status: `done`
+  - show the operator a persistent list of failed items, failure reasons, and recoverability state
+- `UC-SRC-017` Retry a failed import item
+  - status: `done`
+  - allow reattempting recoverable items after correcting input or waiting for transient conditions to clear
+- `UC-SRC-018` Dismiss a failed import item
+  - status: `done`
+  - allow operators to discard a non-actionable or no-longer-needed failed item from the queue
+- `UC-SRC-019` Filter failed queue by status
+  - status: `done`
+  - separate retryable, non-recoverable, dismissed, or resolved items for faster triage
 
 ---
 
@@ -494,12 +556,74 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Expose `GET /api/v1/product-sourcing/search`.
 - Add contract and adapter integration tests.
 
+### Phase 1 - Current Output
+
+- `src/modules/product-sourcing/domain/value-objects/SearchQuery.ts`
+- `src/modules/product-sourcing/domain/entities/ExternalCatalogCandidate.ts`
+- `src/modules/product-sourcing/application/ports/RetailerCatalogProvider.ts`
+- `src/modules/product-sourcing/application/use-cases/SearchExternalProductsUseCase.ts`
+- `src/modules/product-sourcing/infrastructure/providers/vtex/VtexCatalogProvider.ts`
+- `src/modules/product-sourcing/infrastructure/providers/carrefour/CarrefourCatalogProvider.ts`
+- `src/modules/product-sourcing/infrastructure/runtime/productSourcingRuntime.ts`
+- `src/modules/product-sourcing/presentation/dtos/product-sourcing-search.dto.ts`
+- `src/modules/product-sourcing/presentation/handlers/searchExternalProductsHandler.ts`
+- `src/app/api/v1/product-sourcing/search/route.ts`
+- `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/search`
+- Deterministic fixtures and tests:
+  - `tests/fixtures/product-sourcing/carrefour-search-response.json`
+  - `tests/fixtures/product-sourcing/carrefour-search-response-local-fixture.json`
+  - `tests/e2e/product-sourcing-search-use-case.spec.ts`
+  - `tests/e2e/product-sourcing-carrefour-provider.spec.ts`
+  - `tests/e2e/product-sourcing-search-handler.spec.ts`
+- UI search surface:
+  - `src/modules/product-sourcing/presentation/components/ProductSourcingScreen.tsx`
+  - `src/app/products/sourcing/page.tsx`
+  - `tests/e2e/product-sourcing-ui.spec.ts`
+
 ### Phase 2 - Assisted Import Slice
 
 - Implement image asset storage adapter.
 - Implement source trace persistence.
 - Expose `POST /api/v1/product-sourcing/import` with batch payload support.
 - Adapt to `CreateProductUseCase` through `CatalogProductWriter`.
+
+### Phase 2 - Current Output
+
+- `src/modules/product-sourcing/application/ports/CatalogProductWriter.ts`
+- `src/modules/product-sourcing/application/ports/ProductImageAssetStore.ts`
+- `src/modules/product-sourcing/application/ports/ImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository.ts`
+- `src/modules/product-sourcing/application/use-cases/ImportExternalProductsUseCase.ts`
+- `src/modules/product-sourcing/infrastructure/adapters/CatalogCreateProductWriter.ts`
+- `src/modules/product-sourcing/infrastructure/storage/SupabaseProductImageAssetStore.ts`
+- `src/modules/product-sourcing/infrastructure/repositories/SupabaseExternalCategoryMappingRepository.ts`
+- `src/modules/product-sourcing/infrastructure/repositories/SupabaseImportedProductSourceRepository.ts`
+- `src/modules/product-sourcing/domain/entities/CategoryMappingRule.ts`
+- `src/modules/product-sourcing/domain/entities/ImportedProductSource.ts`
+- `src/modules/product-sourcing/domain/services/ResolveExternalCategoryPath.ts`
+- `src/modules/product-sourcing/domain/services/ResolveImportedProductImageObjectKey.ts`
+- `src/modules/product-sourcing/domain/services/ResolveImportedProductSku.ts`
+- `src/modules/product-sourcing/presentation/dtos/import-external-products.dto.ts`
+- `src/modules/product-sourcing/presentation/handlers/importExternalProductsHandler.ts`
+- `src/app/api/v1/product-sourcing/import/route.ts`
+- `src/app/api/v1/openapi.yaml` updated with `/product-sourcing/import`
+- `supabase/migrations/20260301130000_product_sourcing_trace.sql`
+- `supabase/migrations/20260301140000_external_category_mappings.sql`
+- Current duplicate-protection rule:
+  - deterministic SKU generation (`CRF-<sourceProductId>`) remains as a secondary guardrail,
+  - primary duplicate detection now comes from persisted `imported_product_sources` uniqueness (`provider_id + source_product_id`).
+- Image/trace behavior now implemented:
+  - selected images are persisted into the public Supabase bucket `product-sourcing-images`,
+  - the imported catalog product receives the managed storage URL instead of the external retailer hotlink,
+  - and each successful import writes a trace record with provider, source ids, stored asset metadata, and linked internal product id.
+- Category mapping behavior now implemented:
+  - each successful import persists `provider_id + external_category_path -> internal_category_id`,
+  - later searches override the raw retailer suggestion with the confirmed internal category,
+  - and the `/products/sourcing` import form now reuses that mapping on subsequent results sharing the same external path.
+- Deterministic coverage:
+  - `tests/e2e/product-sourcing-import-use-case.spec.ts`
+  - `tests/e2e/product-sourcing-import-ui.spec.ts`
+  - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts`
 
 ### Phase 3 - `/products` UI Integration
 
@@ -509,11 +633,68 @@ Multi-provider search is a valid later extension, but it should be added only af
 - Implement debounced search and image-loading rules for above-the-fold thumbnails.
 - Validate the operator flow on tablet and mobile widths.
 
+### Phase 3 - Current Output
+
+- `/products` now links to `/products/sourcing` through the converged workspace CTA in `src/modules/products/presentation/components/ProductsInventoryPanel.tsx`.
+- `/products/sourcing` now supports:
+  - rendering inside the shared POS shell so the main navigation rail remains visible while sourcing,
+  - debounced Carrefour search,
+  - multi-select result cards,
+  - infinite scroll result loading with shared observer/fallback primitives instead of classic paginated navigation,
+  - a full-width selected-items summary directly below the search form instead of a detached right-side column,
+  - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
+  - category confirmation through the shared `CategoryInputField`, with visible labels plus canonical stored codes,
+  - assisted batch import execution against the real catalog runtime,
+  - actionable partial-failure handling with retryable vs non-recoverable invalid items,
+  - inline failure banners on the selected draft cards that remain pending after a partial import,
+  - quick actions to keep only rejected items, retry recoverable ones, or dismiss non-recoverable ones,
+  - persisted resume-state recovery across reloads/browser restarts for the active query, loaded results, selected items, and inline import drafts,
+  - a clear operator action to discard the restored sourcing session and start clean,
+  - a durable failed-import queue that survives browser reloads and later sessions,
+  - queue filters for pending, retryable, non-recoverable, dismissed, resolved, and all items,
+  - queue actions to re-load a failed item into the current selection, retry it directly, or dismiss it from active triage,
+  - persisted category mapping reuse across later searches,
+  - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
+  - persistent recent import history sourced from `imported_product_sources` and internal catalog names/SKUs,
+  - managed image persistence plus source trace recording during each successful import,
+  - reuse of the same shared infinite-scroll primitives now adopted across `/sales`, `/products`, and `/products/sourcing`,
+  - and navigation back to `/products` to verify imported products in the live workspace.
+- Real-backend UI proof:
+  - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
+  - `tests/e2e/product-sourcing-import-ui.spec.ts` also verifies a partial import batch where one item succeeds and another is rejected as already imported, keeping the failed item actionable from the same screen.
+  - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active and that infinite scroll appends later provider pages without losing the current selection.
+  - `tests/e2e/product-sourcing-resume-state-ui.spec.ts` verifies that a sourcing session survives a full page reload without re-running the initial search and restores the draft fields exactly as the operator left them.
+  - `tests/e2e/product-sourcing-failed-queue-ui.spec.ts` verifies that failed imports persist across sessions, can be filtered by status, retried to resolution, and dismissed into a separate state bucket.
+  - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the selected-items summary staying above results and the import CTA remaining visible.
+  - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
+  - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
+  - `tests/e2e/product-sourcing-import-history-use-case.spec.ts` + `tests/e2e/product-sourcing-import-ui.spec.ts` verify that recent imports remain visible after persistence with internal product name and SKU.
+
 ### Phase 4 - Hardening
 
 - Add rate limiting and provider health logging.
 - Add E2E with mocked provider responses.
 - Add an opt-in smoke probe for live provider access outside deterministic CI.
+
+### Phase 4 - Current Output
+
+- Provider hardening now wraps the Carrefour adapter with:
+  - `src/modules/product-sourcing/infrastructure/providers/RateLimitedRetailerCatalogProvider.ts`
+  - `src/modules/product-sourcing/infrastructure/providers/ObservedRetailerCatalogProvider.ts`
+- Runtime composition now applies:
+  - structured provider health logging for each search attempt,
+  - provider latency and item-count logging on success,
+  - provider error/status logging on failure,
+  - and a process-local minimum interval between external provider calls (`PRODUCT_SOURCING_PROVIDER_MIN_INTERVAL_MS`, default `350`).
+- Deterministic hardening coverage:
+  - `tests/e2e/product-sourcing-provider-hardening.spec.ts`
+  - verifies throttled execution spacing
+  - verifies structured success/failure health events
+  - verifies console JSON output shape for provider telemetry
+- Opt-in live smoke command:
+  - `npm run probe:product-sourcing:carrefour -- "coca cola" 5`
+  - requires `PRODUCT_SOURCING_LIVE_SMOKE=1`
+  - delegates to `workflow-manager/docs/pocs/scripts/product-sourcing-vtex-probe.mjs`
 
 ---
 
@@ -529,6 +710,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 ### Integration
 
 - Carrefour adapter against captured VTEX-like fixtures,
+- provider hardening wrappers around the Carrefour adapter,
 - image asset persistence to Supabase storage,
 - source import repository persistence,
 - runtime wiring between `product-sourcing` and `catalog`.
@@ -536,7 +718,14 @@ Multi-provider search is a valid later extension, but it should be added only af
 ### E2E
 
 - mocked Carrefour-backed search and batch import flow from `/products`,
+- real-backend UI validation for actionable partial import failures,
+- real-backend UI validation for persisted category mapping reuse,
+- real-backend UI validation for learned mapping management (`list/update/delete`),
+- persisted recent import history projection linked back to internal product names and SKUs,
+- client-side resume-state recovery for interrupted sourcing sessions,
+- client-side durable failed-import queue recovery, filtering, retry, and dismiss flows across sessions,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
+- responsive UI validation for tablet/mobile sourcing interaction,
 - real product visibility after batch import in `/products` and `/sales`,
 - optional live provider smoke checks behind an explicit env flag, not in the stable CI gate.
 

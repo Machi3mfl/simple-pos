@@ -1,5 +1,14 @@
+import { normalizeCategoryCode } from "@/shared/core/category/categoryNaming";
+
 const CATEGORY_PLACEHOLDER_TOKENS: Record<string, string> = {
   all: "ALL",
+  "bebidas-gaseosas": "GASEOSA",
+  "bebidas-aguas": "AGUA",
+  alfajores: "ALFAJOR",
+  galletitas: "GALLETAS",
+  snacks: "SNACKS",
+  "desayuno-y-merienda": "DESAYUNO",
+  other: "PRODUCTO",
   main: "MAIN",
   drink: "DRINK",
   snack: "SNACK",
@@ -21,6 +30,6 @@ export function resolveCatalogPlaceholderImage(
     return cleanImageUrl;
   }
 
-  const token = CATEGORY_PLACEHOLDER_TOKENS[categoryId.trim()] ?? "PRODUCT";
+  const token = CATEGORY_PLACEHOLDER_TOKENS[normalizeCategoryCode(categoryId)] ?? "PRODUCTO";
   return buildPlaceholderDataUri(token);
 }

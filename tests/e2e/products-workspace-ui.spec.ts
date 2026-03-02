@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+const TINY_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z6BYAAAAASUVORK5CYII=";
+const TINY_PNG_DATA_URL = `data:image/png;base64,${TINY_PNG_BASE64}`;
+const TINY_PNG_BUFFER = Buffer.from(TINY_PNG_BASE64, "base64");
+
 function uniqueMarker(): string {
   return `products-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }
@@ -19,11 +24,12 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(singleProductName);
   await page.getByTestId("products-workspace-create-sku-input").fill(singleProductSku);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("snack");
+  await page.getByTestId("products-workspace-create-category-input").fill("Desayuno y merienda");
   await page.getByTestId("products-workspace-create-price-input").fill("80");
   await page.getByTestId("products-workspace-create-cost-input").fill("30");
   await page.getByTestId("products-workspace-create-stock-input").fill("4");
   await page.getByTestId("products-workspace-create-min-stock-input").fill("2");
+  await page.getByTestId("products-workspace-create-image-input").fill(TINY_PNG_DATA_URL);
   await page.getByTestId("products-workspace-create-submit-button").click();
 
   await expect(page.getByTestId("products-workspace-feedback")).toContainText(
@@ -35,6 +41,13 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     .filter({ hasText: singleProductName })
     .first();
   await expect(singleCard).toBeVisible();
+  await expect(singleCard).toContainText("Desayuno y merienda");
+  const singleCardImage = singleCard.locator("img").first();
+  await expect(singleCardImage).toHaveAttribute(
+    "src",
+    /\/storage\/v1\/object\/public\/product-images\//,
+  );
+  const createdImageSrc = await singleCardImage.getAttribute("src");
 
   await page.getByTestId("nav-item-sales").click();
   await page.getByLabel("Buscar en el menú").fill(singleProductName);
@@ -52,12 +65,22 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   await page.getByTestId("products-workspace-open-edit-button").click();
   await page.getByTestId("products-workspace-edit-price-input").fill("95");
   await page.getByTestId("products-workspace-edit-min-stock-input").fill("3");
+  await page.getByTestId("products-workspace-edit-image-file-input").setInputFiles({
+    name: "workspace-product.png",
+    mimeType: "image/png",
+    buffer: TINY_PNG_BUFFER,
+  });
   await page.getByTestId("products-workspace-edit-submit-button").click();
 
   await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     `Producto actualizado: ${singleProductName}.`,
   );
   await expect(singleCard).toContainText("$95.00");
+  await expect(singleCardImage).toHaveAttribute(
+    "src",
+    /\/storage\/v1\/object\/public\/product-images\//,
+  );
+  await expect(singleCardImage).not.toHaveAttribute("src", createdImageSrc ?? "");
 
   await singleCard.click();
   await page.getByTestId("products-workspace-open-add-stock-button").click();
@@ -108,6 +131,11 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
     .locator('[data-testid^="bulk-selection-item-"]')
     .filter({ hasText: bulkProductName })
     .first();
+
+  if ((await bulkPriceSelectionItem.count()) === 0) {
+    const loadedSelectionItems = page.locator('[data-testid^="bulk-selection-item-"]');
+    await loadedSelectionItems.last().scrollIntoViewIfNeeded();
+  }
 
   await expect(bulkPriceSelectionItem).toBeVisible();
   await bulkPriceSelectionItem.locator('input[type="checkbox"]').check();

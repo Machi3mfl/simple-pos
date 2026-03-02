@@ -10,7 +10,7 @@ test("registers inventory movement from UI and shows validation feedback", async
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(uniqueProductName);
   await page.getByTestId("products-workspace-create-sku-input").fill(uniqueProductSku);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("main");
+  await page.getByTestId("products-workspace-create-category-input").fill("Platos");
   await page.getByTestId("products-workspace-create-price-input").fill("10");
   await page.getByTestId("products-workspace-create-cost-input").fill("4");
   await page.getByTestId("products-workspace-create-stock-input").fill("5");

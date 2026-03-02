@@ -54,6 +54,14 @@ class InMemoryProductRepository implements ProductRepository {
   async getById(productId: string): Promise<Product | null> {
     return this.items.get(productId) ?? null;
   }
+
+  async getBySku(sku: string): Promise<Product | null> {
+    const normalizedSku = sku.trim().toUpperCase();
+
+    return Array.from(this.items.values()).find(
+      (product) => product.toPrimitives().sku === normalizedSku,
+    ) ?? null;
+  }
 }
 
 class InMemoryInventoryRepository implements InventoryRepository {

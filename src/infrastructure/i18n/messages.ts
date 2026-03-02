@@ -54,8 +54,11 @@ const spanishMessages = {
     },
     actions: {
       refresh: "Actualizar",
+      loadMore: "Cargar más",
       cancel: "Cancelar",
       close: "Cerrar",
+      chooseFile: "Elegir archivo",
+      clearFile: "Quitar archivo",
       openCatalog: "Abrir productos",
       processPayment: "Ir a cobrar",
       confirmPayment: "Confirmar cobro",
@@ -88,9 +91,16 @@ const spanishMessages = {
       exampleCustomer: "Ej. Juan Pérez",
       amount: "Monto",
       imageUrl: "https://...",
+      imageStorageHint: "Subí un archivo o pegá una URL. Siempre guardamos la imagen en storage propio.",
     },
     categories: {
       all: "Todo",
+      "bebidas-gaseosas": "Bebidas gaseosas",
+      "bebidas-aguas": "Aguas y saborizadas",
+      alfajores: "Alfajores",
+      galletitas: "Galletitas",
+      snacks: "Snacks",
+      "desayuno-y-merienda": "Desayuno y merienda",
       main: "Platos",
       drink: "Bebidas",
       snack: "Snacks",
@@ -135,6 +145,9 @@ const spanishMessages = {
       allProducts: "Todos los productos",
       emptyTitle: "Todavía no hay productos",
       emptyDescription: "Cargá productos desde Productos para llenar esta vista.",
+      loadingMore: "Cargando más productos...",
+      continueScrolling: "Seguí bajando para ver más productos.",
+      endReached: "No hay más productos para este filtro.",
     },
     checkout: {
       orderListTitle: "Lista del pedido",
@@ -193,6 +206,14 @@ const spanishMessages = {
     movementsLoadError: "No se pudieron cargar los movimientos del producto.",
     forms: {
       activeOnlyHelp: "Solo visible en listados activos",
+      imageUploadLabel: "Subir archivo",
+      imageUrlLabel: "O pegar URL",
+      imageCurrentLabel: "Imagen actual",
+      imageEmptyLabel: "Sin imagen cargada",
+      imageSelectedFile: (fileName: string): string => `Archivo seleccionado: ${fileName}`,
+      imageNoFileSelected: "Todavía no hay archivo seleccionado.",
+      imageReplaceHint:
+        "Si elegís archivo o URL, la imagen se descarga y queda guardada en Supabase Storage.",
     },
     summary: {
       withStock: "Con stock",
@@ -241,7 +262,7 @@ const spanishMessages = {
       productsPasteHint:
         "Pegá filas con este orden: `name, sku, categoryId, price, cost, initialStock, minStock, imageUrl`.",
       productsPlaceholder:
-        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,drink,2500,1200,18,6,https://...\nAlfajor,GOL-010,snack,1500,700,24,8,",
+        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,bebidas-gaseosas,2500,1200,18,6,https://...\nAlfajor,GOL-010,alfajores,1500,700,24,8,",
       stockPasteHint:
         "Pegá filas con este orden: `sku, movementType, quantity, unitCost, reason`.",
       stockPlaceholder:
@@ -306,6 +327,9 @@ const spanishMessages = {
       previous: "Anterior",
       next: "Siguiente",
       pageLabel: (current: number, total: number): string => `Página ${current} de ${total}`,
+      loadingMore: "Cargando más productos...",
+      continueScrolling: "Seguí bajando para ver más productos.",
+      endReached: "No hay más productos para estos filtros.",
     },
     errors: {
       createProduct: "No se pudo crear el producto.",
@@ -343,7 +367,7 @@ const spanishMessages = {
       priceLabel: "Precio",
       costLabel: "Costo (opcional)",
       initialStockLabel: "Stock inicial",
-      imageUrlLabel: "URL de imagen (opcional)",
+      imageUrlLabel: "Imagen del producto",
       recentProducts: "Productos recientes",
       loadError: "No se pudieron cargar los productos para el alta.",
       invalidPrice: "El precio debe ser mayor a cero.",

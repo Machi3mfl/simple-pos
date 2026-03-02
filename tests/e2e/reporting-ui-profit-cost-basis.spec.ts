@@ -29,7 +29,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   await page.getByTestId("products-workspace-open-create-button").click();
   await page.getByTestId("products-workspace-create-name-input").fill(productName);
   await page.getByTestId("products-workspace-create-sku-input").fill(`PFT-${marker.slice(-6)}`);
-  await page.getByTestId("products-workspace-create-category-input").selectOption("snack");
+  await page.getByTestId("products-workspace-create-category-input").fill("Snacks");
   await page.getByTestId("products-workspace-create-price-input").fill("25");
   await page.getByTestId("products-workspace-create-cost-input").fill("7");
   await page.getByTestId("products-workspace-create-stock-input").fill("0");

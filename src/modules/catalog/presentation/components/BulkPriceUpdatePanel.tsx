@@ -1,5 +1,7 @@
 "use client";
 
+import { useIncrementalReveal } from "@/shared/presentation/hooks/useIncrementalReveal";
+import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 import {
   type BulkPriceUpdateResponse,
   useBulkPriceUpdate,
@@ -44,6 +46,28 @@ export function BulkPriceUpdatePanel({
   } = useBulkPriceUpdate({
     onPricesUpdated,
     refreshToken,
+  });
+  const selectionResetKey = products.map((product) => product.id).join(":");
+  const {
+    visibleItems: visibleSelectionProducts,
+    hasMore: hasMoreSelectionProducts,
+    loadMore: loadMoreSelectionProducts,
+  } = useIncrementalReveal({
+    items: products,
+    initialCount: 16,
+    step: 16,
+    resetKey: selectionResetKey,
+  });
+  const {
+    isObserverSupported: isBulkSelectionObserverSupported,
+    setScrollRoot: setBulkSelectionScrollRoot,
+    setSentinel: setBulkSelectionSentinel,
+  } = useInfiniteScrollTrigger({
+    enabled: scopeType === "selection",
+    hasMore: hasMoreSelectionProducts,
+    isLoading: false,
+    onLoadMore: loadMoreSelectionProducts,
+    triggerKey: `${selectionResetKey}:${visibleSelectionProducts.length}`,
   });
 
   const containerClassName =
@@ -189,8 +213,11 @@ export function BulkPriceUpdatePanel({
           <p className="px-1 text-xs font-semibold text-slate-600">
             {messages.catalog.bulkPriceUpdate.selectProducts}
           </p>
-          <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto md:grid-cols-2">
-            {products.map((product) => (
+          <ul
+            ref={setBulkSelectionScrollRoot}
+            className="mt-2 grid max-h-40 gap-1 overflow-y-auto md:grid-cols-2"
+          >
+            {visibleSelectionProducts.map((product) => (
               <li key={product.id}>
                 <label
                   data-testid={`bulk-selection-item-${product.id}`}
@@ -208,6 +235,32 @@ export function BulkPriceUpdatePanel({
                 </label>
               </li>
             ))}
+            {hasMoreSelectionProducts ? (
+              <li className="md:col-span-2">
+                <div
+                  ref={setBulkSelectionSentinel}
+                  data-testid="bulk-selection-infinite-scroll-sentinel"
+                  className="h-2 w-full"
+                  aria-hidden
+                />
+                <div className="mt-2 flex items-center justify-center gap-2 text-xs font-medium text-slate-500">
+                  <span data-testid="bulk-selection-infinite-scroll-status">
+                    {isBulkSelectionObserverSupported
+                      ? messages.productsWorkspace.pagination.continueScrolling
+                      : messages.catalog.bulkPriceUpdate.selectProducts}
+                  </span>
+                  {!isBulkSelectionObserverSupported ? (
+                    <button
+                      type="button"
+                      onClick={loadMoreSelectionProducts}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700"
+                    >
+                      {messages.common.actions.loadMore}
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ) : null}
           </ul>
         </div>
       ) : null}

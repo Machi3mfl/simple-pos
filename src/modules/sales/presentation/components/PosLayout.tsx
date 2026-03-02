@@ -23,6 +23,11 @@ import {
   workspacePathById,
   type PosWorkspaceId,
 } from "@/modules/sales/presentation/posWorkspace";
+import {
+  dedupeCategoryCodes,
+  resolveCategoryEmoji,
+  sortCategoryCodes,
+} from "@/shared/core/category/categoryNaming";
 
 import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
@@ -45,14 +50,6 @@ interface ProductListApiResponse {
   readonly items: readonly ProductListApiItem[];
 }
 
-const categoryEmojiById: Record<string, string> = {
-  all: "🧃",
-  main: "🍜",
-  drink: "🥤",
-  snack: "🍔",
-  dessert: "🍬",
-};
-
 const nameEmojiHints: Record<string, string> = {
   noodles: "🍜",
   spaghetti: "🍝",
@@ -62,10 +59,6 @@ const nameEmojiHints: Record<string, string> = {
   burger: "🍔",
   alfajor: "🍪",
 };
-
-function resolveCategoryEmoji(categoryId: string): string {
-  return categoryEmojiById[categoryId] ?? "🍽️";
-}
 
 function resolveProductEmoji(name: string, categoryId: string): string {
   const normalizedName = name.toLowerCase();
@@ -145,37 +138,20 @@ export function PosLayout({
     ],
     [messages],
   );
-  const baseCategories = useMemo<readonly CatalogCategory[]>(
-    () => [
-      { id: "all", label: labelForCategory("all"), emoji: "🧃" },
-      { id: "main", label: labelForCategory("main"), emoji: "🍜" },
-      { id: "drink", label: labelForCategory("drink"), emoji: "🥤" },
-      { id: "snack", label: labelForCategory("snack"), emoji: "🍔" },
-      { id: "dessert", label: labelForCategory("dessert"), emoji: "🍬" },
-    ],
-    [labelForCategory],
-  );
-
   const categories = useMemo(() => {
-    const dynamicCategories = new Map<string, CatalogCategory>();
-    for (const category of baseCategories) {
-      dynamicCategories.set(category.id, category);
-    }
+    const categoryCodes = sortCategoryCodes(
+      dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
+    );
 
-    for (const product of catalogProducts) {
-      const categoryId = product.categoryId;
-
-      if (!dynamicCategories.has(categoryId)) {
-        dynamicCategories.set(categoryId, {
-          id: categoryId,
-          label: labelForCategory(categoryId),
-          emoji: resolveCategoryEmoji(categoryId),
-        });
-      }
-    }
-
-    return Array.from(dynamicCategories.values());
-  }, [baseCategories, catalogProducts, labelForCategory]);
+    return [
+      { id: "all", label: labelForCategory("all"), emoji: resolveCategoryEmoji("all") },
+      ...categoryCodes.map((categoryId) => ({
+        id: categoryId,
+        label: labelForCategory(categoryId),
+        emoji: resolveCategoryEmoji(categoryId),
+      })),
+    ];
+  }, [catalogProducts, labelForCategory]);
 
   const loadCatalogProducts = useCallback(async (): Promise<readonly CatalogProduct[]> => {
     const { response, data } = await fetchJsonNoStore<ProductListApiResponse>(
@@ -204,6 +180,14 @@ export function PosLayout({
   useEffect(() => {
     void refreshCatalog();
   }, [refreshCatalog]);
+
+  useEffect(() => {
+    if (categories.some((category) => category.id === activeCategoryId)) {
+      return;
+    }
+
+    setActiveCategoryId("all");
+  }, [activeCategoryId, categories]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();

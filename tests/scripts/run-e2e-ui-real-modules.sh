@@ -31,12 +31,16 @@ eval "$supabase_env_exports"
 export POS_BACKEND_MODE=supabase
 export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+export PRODUCT_SOURCING_CARREFOUR_FIXTURE="${PRODUCT_SOURCING_CARREFOUR_FIXTURE:-tests/fixtures/product-sourcing/carrefour-search-response-local-fixture.json}"
 
 echo "[4/4] Running UI E2E suite by module (real backend)"
 npx playwright test --workers=1 "$@" \
   tests/e2e/ui-vertical-slices-smoke.spec.ts \
   tests/e2e/orders-ui-sales-snapshot.spec.ts \
   tests/e2e/products-workspace-ui.spec.ts \
+  tests/e2e/product-sourcing-import-ui.spec.ts \
+  tests/e2e/product-sourcing-category-mapping-ui.spec.ts \
+  tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts \
   tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts \
   tests/e2e/inventory-ui-stock-movement.spec.ts \
   tests/e2e/sales-ui-checkout-history-and-debt.spec.ts \

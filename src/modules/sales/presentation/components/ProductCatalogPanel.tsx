@@ -1,4 +1,7 @@
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
+import { useIncrementalReveal } from "@/shared/presentation/hooks/useIncrementalReveal";
+import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 export interface CatalogCategory {
   readonly id: string;
@@ -41,6 +44,27 @@ export function ProductCatalogPanel({
   onOpenCatalogWorkspace,
 }: ProductCatalogPanelProps): JSX.Element {
   const { messages } = useI18n();
+  const resetKey = `${activeCategoryId}:${searchTerm.trim().toLowerCase()}:${products.length}`;
+  const {
+    visibleItems,
+    hasMore,
+    loadMore,
+  } = useIncrementalReveal({
+    items: products,
+    initialCount: 12,
+    step: 12,
+    resetKey,
+  });
+  const {
+    isObserverSupported,
+    setScrollRoot,
+    setSentinel,
+  } = useInfiniteScrollTrigger({
+    hasMore,
+    isLoading: false,
+    onLoadMore: loadMore,
+    triggerKey: `${resetKey}:${visibleItems.length}`,
+  });
   const activeCategoryLabel =
     categories.find((category) => category.id === activeCategoryId)?.label ??
     messages.sales.catalog.allProducts;
@@ -48,7 +72,10 @@ export function ProductCatalogPanel({
     activeCategoryId === "all" ? messages.sales.catalog.allProducts : activeCategoryLabel;
 
   return (
-    <section className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8">
+    <section
+      ref={setScrollRoot}
+      className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8"
+    >
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="whitespace-nowrap text-[2.45rem] font-semibold tracking-tight text-slate-900">
           {messages.sales.catalog.title}
@@ -113,55 +140,97 @@ export function ProductCatalogPanel({
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {products.map((product) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => onProductSelect(product.id)}
-              disabled={!product.isAvailable}
-              data-testid={`product-card-${product.id}`}
-              className="min-h-[330px] rounded-[1.7rem] border border-slate-200 bg-white p-5 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <div className="mx-auto mt-2 flex size-32 items-center justify-center rounded-full bg-slate-100 text-6xl">
-                {product.imageUrl ? (
-                  <span
-                    role="img"
-                    aria-label={product.name}
-                    className="size-full rounded-full bg-cover bg-center"
-                    style={{ backgroundImage: `url(${product.imageUrl})` }}
-                  />
-                ) : (
-                  <span aria-hidden>{product.emoji}</span>
-                )}
-              </div>
-              <h3 className="mt-5 text-[1.85rem] leading-tight font-semibold tracking-tight text-slate-900">
-                {product.name}
-              </h3>
-              <p className="mt-2 min-h-12 text-base leading-tight text-slate-500">
-                {product.subtitle}
-              </p>
-              <div className="mt-7 flex items-center justify-between">
-                <span
-                  className={[
-                    "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-semibold",
-                    product.isAvailable
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-rose-100 text-rose-700",
-                  ].join(" ")}
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {visibleItems.map((product) => (
+              <ProductDisplayCard
+                key={product.id}
+                as="button"
+                onClick={() => onProductSelect(product.id)}
+                disabled={!product.isAvailable}
+                testId={`product-card-${product.id}`}
+                contentClassName="min-h-[22.5rem] gap-4 p-5"
+                mediaClassName="h-[8.75rem] rounded-[1.55rem] bg-transparent p-0 lg:h-[9.25rem]"
+                media={
+                  product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Product images can come from managed storage or dynamic external URLs already accepted in the catalog runtime.
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      loading="lazy"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span aria-hidden className="text-[4.3rem] leading-none">
+                      {product.emoji}
+                    </span>
+                  )
+                }
+                title={product.name}
+                subtitle={product.subtitle}
+                titleClassName="text-[1.56rem] leading-[1.06]"
+                subtitleClassName="min-h-[2.75rem] text-[0.98rem] leading-tight"
+                footer={
+                  <div className="flex items-end justify-between gap-3 pt-1">
+                    <span
+                      className={[
+                        "inline-flex shrink-0 items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold",
+                        product.isAvailable
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-rose-100 text-rose-700",
+                      ].join(" ")}
+                    >
+                      <span className="size-2 rounded-full bg-current" />
+                      {product.isAvailable
+                        ? messages.common.availability.available
+                        : messages.common.availability.unavailable}
+                    </span>
+                    <span className="shrink-0 text-[1.95rem] leading-[0.95] font-bold tracking-tight text-slate-900">
+                      ${product.price.toFixed(0)}
+                    </span>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            {hasMore ? (
+              <>
+                <div
+                  ref={setSentinel}
+                  data-testid="sales-catalog-infinite-scroll-sentinel"
+                  className="h-2 w-full"
+                  aria-hidden
+                />
+                <p
+                  data-testid="sales-catalog-infinite-scroll-status"
+                  className="text-sm font-medium text-slate-500"
                 >
-                  <span className="size-2 rounded-full bg-current" />
-                  {product.isAvailable
-                    ? messages.common.availability.available
-                    : messages.common.availability.unavailable}
-                </span>
-                <span className="text-[2.1rem] leading-none font-bold tracking-tight text-slate-900">
-                  ${product.price.toFixed(0)}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+                  {isObserverSupported
+                    ? messages.sales.catalog.continueScrolling
+                    : messages.sales.catalog.loadingMore}
+                </p>
+                {!isObserverSupported ? (
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    className="ml-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                  >
+                    {messages.common.actions.loadMore}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <p
+                data-testid="sales-catalog-infinite-scroll-status"
+                className="text-sm font-medium text-slate-500"
+              >
+                {messages.sales.catalog.endReached}
+              </p>
+            )}
+          </div>
+        </>
       )}
     </section>
   );

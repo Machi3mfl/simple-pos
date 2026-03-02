@@ -13,19 +13,27 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import {
   type FormEvent,
   useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
+import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
+import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
+import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
+import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
+import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
+import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 type StockFilter = "all" | "with_stock" | "low_stock" | "out_of_stock" | "inactive";
 type SortMode = "stock" | "name" | "recent" | "price";
@@ -151,6 +159,7 @@ interface EditProductFormState {
   readonly cost: string;
   readonly minStock: string;
   readonly imageUrl: string;
+  readonly imageFile: File | null;
   readonly isActive: boolean;
 }
 
@@ -164,9 +173,12 @@ interface StockFormState {
 interface WorkspaceLoadOverrides {
   readonly categoryFilter?: string;
   readonly page?: number;
+  readonly append?: boolean;
   readonly searchTerm?: string;
   readonly stockFilter?: StockFilter;
 }
+
+const WORKSPACE_PAGE_SIZE = 20;
 
 const defaultEditFormState: EditProductFormState = {
   name: "",
@@ -176,6 +188,7 @@ const defaultEditFormState: EditProductFormState = {
   cost: "",
   minStock: "0",
   imageUrl: "",
+  imageFile: null,
   isActive: true,
 };
 
@@ -274,6 +287,25 @@ function parsePastedRows(input: string): string[][] {
     .map((row) => row.split(/[,;\t]/).map((cell) => cell.trim()));
 }
 
+function mergeWorkspaceItems(
+  currentItems: readonly WorkspaceProductItem[],
+  incomingItems: readonly WorkspaceProductItem[],
+): readonly WorkspaceProductItem[] {
+  const seen = new Set<string>();
+  const merged: WorkspaceProductItem[] = [];
+
+  for (const item of [...currentItems, ...incomingItems]) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+
+    seen.add(item.id);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 export function ProductsInventoryPanel(): JSX.Element {
   const {
     messages,
@@ -289,12 +321,12 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [activeOnly, setActiveOnly] = useState<boolean>(true);
   const [sortMode, setSortMode] = useState<SortMode>("stock");
-  const [page, setPage] = useState<number>(1);
   const [workspace, setWorkspace] = useState<WorkspaceProductsResponse | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState<DialogId>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
+  const [isLoadingMoreWorkspace, setIsLoadingMoreWorkspace] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [movementHistory, setMovementHistory] = useState<readonly StockMovementItem[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(false);
@@ -303,6 +335,7 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [bulkProductsInput, setBulkProductsInput] = useState<string>("");
   const [bulkStockInput, setBulkStockInput] = useState<string>("");
   const [refreshToken, setRefreshToken] = useState<number>(0);
+  const workspaceRequestTokenRef = useRef<number>(0);
   const {
     categories: onboardingCategories,
     feedback: onboardingFeedback,
@@ -316,13 +349,11 @@ export function ProductsInventoryPanel(): JSX.Element {
       const searchValue = createdProduct.sku || createdProduct.name;
       setCategoryFilter("all");
       setStockFilter("all");
-      setPage(1);
       setSearchTerm(searchValue);
       setSelectedProductId(createdProduct.id);
       setOpenDialog(null);
       await refreshWorkspace({
         categoryFilter: "all",
-        page: 1,
         searchTerm: searchValue,
         stockFilter: "all",
       });
@@ -338,24 +369,17 @@ export function ProductsInventoryPanel(): JSX.Element {
     workspace?.items.find((item) => item.id === selectedProductId) ?? workspace?.items[0] ?? null;
 
   const categoryOptions = useMemo(() => {
-    const categorySet = new Set<string>(["all"]);
-    for (const item of workspace?.items ?? []) {
-      categorySet.add(item.categoryId);
-    }
-
-    return Array.from(categorySet.values());
+    return ["all", ...dedupeCategoryCodes((workspace?.items ?? []).map((item) => item.categoryId))];
   }, [workspace?.items]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [categoryFilter, stockFilter, activeOnly, sortMode, deferredSearchTerm]);
-
   const loadWorkspace = useCallback(async (overrides?: WorkspaceLoadOverrides): Promise<void> => {
-    setIsLoadingWorkspace(true);
+    const append = overrides?.append ?? false;
+    const requestToken = workspaceRequestTokenRef.current + 1;
+    workspaceRequestTokenRef.current = requestToken;
     const effectiveSearchTerm = overrides?.searchTerm ?? deferredSearchTerm;
     const effectiveCategoryFilter = overrides?.categoryFilter ?? categoryFilter;
     const effectiveStockFilter = overrides?.stockFilter ?? stockFilter;
-    const effectivePage = overrides?.page ?? page;
+    const effectivePage = overrides?.page ?? 1;
     const params = new URLSearchParams();
     if (effectiveSearchTerm.trim().length > 0) {
       params.set("q", effectiveSearchTerm.trim());
@@ -369,7 +393,13 @@ export function ProductsInventoryPanel(): JSX.Element {
     params.set("activeOnly", String(activeOnly));
     params.set("sort", sortMode);
     params.set("page", String(effectivePage));
-    params.set("pageSize", "20");
+    params.set("pageSize", String(WORKSPACE_PAGE_SIZE));
+
+    if (append) {
+      setIsLoadingMoreWorkspace(true);
+    } else {
+      setIsLoadingWorkspace(true);
+    }
 
     try {
       const { response, data } = await fetchJsonNoStore<WorkspaceProductsResponse>(
@@ -377,6 +407,9 @@ export function ProductsInventoryPanel(): JSX.Element {
       );
 
       if (!response.ok || !data) {
+        if (workspaceRequestTokenRef.current !== requestToken) {
+          return;
+        }
         setFeedback({
           type: "error",
           message: messages.productsWorkspace.loadError,
@@ -384,28 +417,53 @@ export function ProductsInventoryPanel(): JSX.Element {
         return;
       }
 
-      setWorkspace(data);
+      if (workspaceRequestTokenRef.current !== requestToken) {
+        return;
+      }
+
+      setWorkspace((current) => {
+        if (!append || !current) {
+          return data;
+        }
+
+        return {
+          ...data,
+          items: mergeWorkspaceItems(current.items, data.items),
+        };
+      });
     } catch {
+      if (workspaceRequestTokenRef.current !== requestToken) {
+        return;
+      }
       setFeedback({
         type: "error",
         message: messages.productsWorkspace.loadError,
       });
     } finally {
-      setIsLoadingWorkspace(false);
+      if (workspaceRequestTokenRef.current === requestToken) {
+        setIsLoadingWorkspace(false);
+        setIsLoadingMoreWorkspace(false);
+      }
     }
   }, [
     activeOnly,
     categoryFilter,
     deferredSearchTerm,
     messages.productsWorkspace.loadError,
-    page,
     sortMode,
     stockFilter,
   ]);
 
   useEffect(() => {
-    void loadWorkspace();
-  }, [loadWorkspace]);
+    void loadWorkspace({ page: 1 });
+  }, [
+    activeOnly,
+    categoryFilter,
+    deferredSearchTerm,
+    loadWorkspace,
+    sortMode,
+    stockFilter,
+  ]);
 
   useEffect(() => {
     if (!workspace?.items.length) {
@@ -430,7 +488,8 @@ export function ProductsInventoryPanel(): JSX.Element {
       price: String(selectedProduct.price),
       cost: selectedProduct.averageCost > 0 ? String(selectedProduct.averageCost) : "",
       minStock: String(selectedProduct.minStock),
-      imageUrl: selectedProduct.imageUrl,
+      imageUrl: "",
+      imageFile: null,
       isActive: selectedProduct.isActive,
     });
   }, [selectedProduct]);
@@ -491,19 +550,21 @@ export function ProductsInventoryPanel(): JSX.Element {
     try {
       const response = await fetch(`/api/v1/products/${selectedProduct.id}`, {
         method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          sku: editForm.sku.trim(),
-          name: editForm.name.trim(),
-          categoryId: editForm.categoryId.trim(),
-          price: Number(editForm.price),
-          cost: editForm.cost.trim().length > 0 ? Number(editForm.cost) : undefined,
-          minStock: Number(editForm.minStock),
-          imageUrl: editForm.imageUrl.trim(),
-          isActive: editForm.isActive,
-        }),
+        body: buildProductMutationFormData(
+          {
+            sku: editForm.sku,
+            name: editForm.name,
+            categoryId: editForm.categoryId,
+            price: Number(editForm.price),
+            cost: editForm.cost.trim().length > 0 ? Number(editForm.cost) : undefined,
+            minStock: Number(editForm.minStock),
+            isActive: editForm.isActive,
+          },
+          {
+            imageUrl: editForm.imageUrl,
+            imageFile: editForm.imageFile,
+          },
+        ),
       });
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
@@ -794,9 +855,40 @@ export function ProductsInventoryPanel(): JSX.Element {
   }
 
   const workspaceItems = workspace?.items ?? [];
+  const hasMoreWorkspaceItems =
+    workspace !== null && workspace.page < workspace.totalPages;
+  const loadNextWorkspacePage = useCallback(async (): Promise<void> => {
+    if (
+      !workspace ||
+      isLoadingWorkspace ||
+      isLoadingMoreWorkspace ||
+      workspace.page >= workspace.totalPages
+    ) {
+      return;
+    }
+
+    await loadWorkspace({
+      page: workspace.page + 1,
+      append: true,
+    });
+  }, [isLoadingMoreWorkspace, isLoadingWorkspace, loadWorkspace, workspace]);
+  const {
+    isObserverSupported: isWorkspaceInfiniteScrollObserverSupported,
+    setScrollRoot: setWorkspaceScrollRoot,
+    setSentinel: setWorkspaceSentinel,
+  } = useInfiniteScrollTrigger({
+    enabled: workspaceItems.length > 0,
+    hasMore: hasMoreWorkspaceItems,
+    isLoading: isLoadingWorkspace || isLoadingMoreWorkspace,
+    onLoadMore: loadNextWorkspacePage,
+    triggerKey: `${deferredSearchTerm.trim().toLowerCase()}:${categoryFilter}:${stockFilter}:${activeOnly}:${sortMode}:${workspace?.page ?? 0}:${workspaceItems.length}`,
+  });
 
   return (
-    <section className="min-h-0 min-w-0 overflow-y-auto bg-[#f5f6f8] p-3 lg:col-span-2 lg:h-full lg:p-4">
+    <section
+      ref={setWorkspaceScrollRoot}
+      className="min-h-0 min-w-0 overflow-y-auto bg-[#f5f6f8] p-3 lg:col-span-2 lg:h-full lg:p-4"
+    >
       <div className="flex w-full flex-col gap-3">
         {feedback ? (
           <div
@@ -821,7 +913,7 @@ export function ProductsInventoryPanel(): JSX.Element {
                 </h1>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 xl:w-[48rem] xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:w-[60rem] xl:grid-cols-5">
                 <button
                   type="button"
                   onClick={() => {
@@ -861,6 +953,14 @@ export function ProductsInventoryPanel(): JSX.Element {
                   <PackagePlus size={20} />
                   {messages.productsWorkspace.actions.bulkStock}
                 </button>
+                <Link
+                  href="/products/sourcing"
+                  data-testid="products-workspace-open-sourcing-link"
+                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                >
+                  <Search size={20} />
+                  Buscar afuera
+                </Link>
               </div>
             </div>
 
@@ -1024,102 +1124,118 @@ export function ProductsInventoryPanel(): JSX.Element {
                           : messages.productsWorkspace.status.inactive;
 
                   return (
-                    <button
+                    <ProductDisplayCard
                       key={product.id}
-                      type="button"
+                      as="button"
                       onClick={() => {
                         setSelectedProductId(product.id);
                         setOpenDialog("detail");
                       }}
-                      data-testid={`products-workspace-card-${product.id}`}
-                      className="rounded-[1.25rem] border border-slate-200 bg-white p-3 text-left shadow-[0_20px_30px_rgba(15,23,42,0.09)] transition hover:-translate-y-0.5"
-                    >
-                      <ProductImage imageUrl={product.imageUrl} name={product.name} />
-
-                      <div className="mt-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-[1.22rem] leading-[1.04] font-semibold tracking-tight text-slate-900">
-                            {product.name}
-                          </h3>
-                          <span
-                            className={[
-                              "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold",
-                              statusTone,
-                            ].join(" ")}
-                          >
-                            {statusText}
+                      testId={`products-workspace-card-${product.id}`}
+                      contentClassName="min-h-[24.25rem] gap-4 p-5"
+                      headerRight={
+                        <span
+                          className={[
+                            "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-semibold",
+                            statusTone,
+                          ].join(" ")}
+                        >
+                          {statusText}
+                        </span>
+                      }
+                      media={
+                        product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- Workspace cards can show operator-provided or imported images that are not constrained to next/image allowlists.
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            loading="lazy"
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <Package size={44} className="text-slate-400" />
+                        )
+                      }
+                      mediaClassName="h-[8.5rem] rounded-[1.45rem] bg-transparent p-0 lg:h-[9rem]"
+                      title={product.name}
+                      subtitle={`${labelForCategory(product.categoryId)} • ${product.sku}`}
+                      titleClassName="text-[1.16rem] leading-[1.08]"
+                      subtitleClassName="text-[0.82rem] leading-tight"
+                      details={
+                        <div className="grid grid-cols-2 gap-1.5 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                              {messages.productsWorkspace.fields.currentStockShort}
+                            </p>
+                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
+                              {product.stock}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                              {messages.productsWorkspace.fields.minStockShort}
+                            </p>
+                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
+                              {product.minStock}
+                            </p>
+                          </div>
+                        </div>
+                      }
+                      footer={
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
+                            {formatCurrency(product.price)}
+                          </span>
+                          <span className="text-[0.74rem] font-semibold text-blue-700">
+                            {messages.productsWorkspace.detailTitle}
                           </span>
                         </div>
-
-                        <p className="mt-px text-[0.76rem] leading-tight text-slate-500">
-                          {labelForCategory(product.categoryId)} • {product.sku}
-                        </p>
-                      </div>
-
-                      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                          <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                            {messages.productsWorkspace.fields.currentStockShort}
-                          </p>
-                          <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                            {product.stock}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                          <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                            {messages.productsWorkspace.fields.minStockShort}
-                          </p>
-                          <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                            {product.minStock}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-2.5 flex items-center justify-between gap-3">
-                        <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
-                          {formatCurrency(product.price)}
-                        </span>
-                        <span className="text-[0.74rem] font-semibold text-blue-700">
-                          {messages.productsWorkspace.detailTitle}
-                        </span>
-                      </div>
-                    </button>
+                      }
+                    />
                   );
                 })}
               </div>
 
-              <footer className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
+              <footer className="flex flex-col items-center gap-3 border-t border-slate-200 px-5 py-4 text-center">
                 <p className="text-sm font-medium text-slate-500">
-                  {messages.productsWorkspace.pagination.pageLabel(
-                    workspace?.page ?? 1,
-                    workspace?.totalPages ?? 1,
-                  )}{" "}
-                  • {workspace?.totalItems ?? 0} productos
+                  {workspaceItems.length} de {workspace?.totalItems ?? workspaceItems.length} productos cargados
                 </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={(workspace?.page ?? 1) <= 1}
-                    data-testid="products-workspace-pagination-prev"
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+                {hasMoreWorkspaceItems ? (
+                  <>
+                    <div
+                      ref={setWorkspaceSentinel}
+                      data-testid="products-workspace-infinite-scroll-sentinel"
+                      className="h-2 w-full"
+                      aria-hidden
+                    />
+                    <p
+                      data-testid="products-workspace-infinite-scroll-status"
+                      className="text-sm font-medium text-slate-500"
+                    >
+                      {isLoadingMoreWorkspace
+                        ? messages.productsWorkspace.pagination.loadingMore
+                        : messages.productsWorkspace.pagination.continueScrolling}
+                    </p>
+                    {!isWorkspaceInfiniteScrollObserverSupported ? (
+                      <button
+                        type="button"
+                        onClick={() => void loadNextWorkspacePage()}
+                        data-testid="products-workspace-load-more-button"
+                        disabled={isLoadingMoreWorkspace}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+                      >
+                        {messages.common.actions.loadMore}
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <p
+                    data-testid="products-workspace-infinite-scroll-status"
+                    className="text-sm font-medium text-slate-500"
                   >
-                    {messages.productsWorkspace.pagination.previous}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((current) =>
-                        Math.min(workspace?.totalPages ?? current, current + 1),
-                      )
-                    }
-                    disabled={(workspace?.page ?? 1) >= (workspace?.totalPages ?? 1)}
-                    data-testid="products-workspace-pagination-next"
-                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
-                  >
-                    {messages.productsWorkspace.pagination.next}
-                  </button>
-                </div>
+                    {messages.productsWorkspace.pagination.endReached}
+                  </p>
+                )}
               </footer>
             </>
           )}
@@ -1344,28 +1460,19 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.category}
-              </span>
-              <select
-                data-testid="products-workspace-create-category-input"
-                value={onboardingForm.categoryId}
-                onChange={(event) =>
-                  setOnboardingForm((current) => ({
-                    ...current,
-                    categoryId: event.target.value,
-                  }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              >
-                {onboardingCategories.map((option) => (
-                  <option key={option} value={option}>
-                    {labelForCategory(option)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CategoryInputField
+              label={messages.productsWorkspace.fields.category}
+              inputTestId="products-workspace-create-category-input"
+              categoryCode={onboardingForm.categoryId}
+              knownCategoryCodes={onboardingCategories}
+              onCategoryCodeChange={(nextCategoryCode) =>
+                setOnboardingForm((current) => ({
+                  ...current,
+                  categoryId: nextCategoryCode,
+                }))
+              }
+              required
+            />
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.price}
@@ -1436,20 +1543,21 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="md:col-span-2 flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.image}
-              </span>
-              <input
-                data-testid="products-workspace-create-image-input"
-                value={onboardingForm.imageUrl}
-                onChange={(event) =>
-                  setOnboardingForm((current) => ({ ...current, imageUrl: event.target.value }))
-                }
-                placeholder={messages.common.placeholders.imageUrl}
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <ManagedProductImageField
+              className="md:col-span-2"
+              label={messages.productsWorkspace.fields.image}
+              previewAlt={onboardingForm.name.trim() || messages.productsWorkspace.fields.image}
+              imageUrl={onboardingForm.imageUrl}
+              imageFile={onboardingForm.imageFile}
+              urlInputTestId="products-workspace-create-image-input"
+              fileInputTestId="products-workspace-create-image-file-input"
+              onImageUrlChange={(value) =>
+                setOnboardingForm((current) => ({ ...current, imageUrl: value }))
+              }
+              onImageFileChange={(file) =>
+                setOnboardingForm((current) => ({ ...current, imageFile: file }))
+              }
+            />
             {onboardingFeedback ? (
               <p
                 className={[
@@ -1535,20 +1643,19 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.category}
-              </span>
-              <input
-                data-testid="products-workspace-edit-category-input"
-                required
-                value={editForm.categoryId}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, categoryId: event.target.value }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <CategoryInputField
+              label={messages.productsWorkspace.fields.category}
+              inputTestId="products-workspace-edit-category-input"
+              categoryCode={editForm.categoryId}
+              knownCategoryCodes={[
+                ...onboardingCategories,
+                ...((workspace?.items ?? []).map((item) => item.categoryId)),
+              ]}
+              onCategoryCodeChange={(nextCategoryCode) =>
+                setEditForm((current) => ({ ...current, categoryId: nextCategoryCode }))
+              }
+              required
+            />
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.price}
@@ -1599,19 +1706,22 @@ export function ProductsInventoryPanel(): JSX.Element {
                 className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
               />
             </label>
-            <label className="md:col-span-2 flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-700">
-                {messages.productsWorkspace.fields.image}
-              </span>
-              <input
-                data-testid="products-workspace-edit-image-input"
-                value={editForm.imageUrl}
-                onChange={(event) =>
-                  setEditForm((current) => ({ ...current, imageUrl: event.target.value }))
-                }
-                className="min-h-[3.4rem] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 outline-none"
-              />
-            </label>
+            <ManagedProductImageField
+              className="md:col-span-2"
+              label={messages.productsWorkspace.fields.image}
+              previewAlt={editForm.name.trim() || selectedProduct.name}
+              currentImageUrl={selectedProduct.imageUrl}
+              imageUrl={editForm.imageUrl}
+              imageFile={editForm.imageFile}
+              urlInputTestId="products-workspace-edit-image-input"
+              fileInputTestId="products-workspace-edit-image-file-input"
+              onImageUrlChange={(value) =>
+                setEditForm((current) => ({ ...current, imageUrl: value }))
+              }
+              onImageFileChange={(file) =>
+                setEditForm((current) => ({ ...current, imageFile: file }))
+              }
+            />
             <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
               <input
                 data-testid="products-workspace-edit-active-checkbox"

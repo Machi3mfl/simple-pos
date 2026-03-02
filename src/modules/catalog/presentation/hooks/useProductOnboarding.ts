@@ -12,6 +12,12 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
+import {
+  dedupeCategoryCodes,
+  defaultKioskCategoryCodes,
+  sortCategoryCodes,
+} from "@/shared/core/category/categoryNaming";
 
 export interface ProductOnboardingProduct {
   readonly id: string;
@@ -51,6 +57,7 @@ export interface ProductOnboardingFormState {
   readonly initialStock: string;
   readonly minStock: string;
   readonly imageUrl: string;
+  readonly imageFile: File | null;
 }
 
 interface UseProductOnboardingOptions {
@@ -71,18 +78,19 @@ interface UseProductOnboardingResult {
   readonly submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
-const defaultCategoryOptions = ["main", "drink", "snack", "dessert", "other"];
+const defaultCategoryOptions = defaultKioskCategoryCodes();
 
 function buildDefaultFormState(): ProductOnboardingFormState {
   return {
     name: "",
     sku: "",
-    categoryId: "main",
+    categoryId: defaultCategoryOptions[0] ?? "other",
     price: "10",
     cost: "",
     initialStock: "0",
     minStock: "0",
     imageUrl: "",
+    imageFile: null,
   };
 }
 
@@ -111,11 +119,10 @@ export function useProductOnboarding({
   const [feedback, setFeedback] = useState<ProductOnboardingFeedbackState | null>(null);
 
   const categories = useMemo(() => {
-    const categorySet = new Set<string>(defaultCategoryOptions);
-    for (const product of products) {
-      categorySet.add(product.categoryId);
-    }
-    return Array.from(categorySet.values());
+    return sortCategoryCodes(dedupeCategoryCodes([
+      ...defaultCategoryOptions,
+      ...products.map((product) => product.categoryId),
+    ]));
   }, [products]);
 
   const reloadProducts = useCallback(async (): Promise<void> => {
@@ -155,8 +162,8 @@ export function useProductOnboarding({
       return;
     }
 
-    if (!categories.includes(form.categoryId)) {
-      setForm((current) => ({ ...current, categoryId: categories[0] ?? "main" }));
+    if (form.categoryId.trim().length === 0) {
+      setForm((current) => ({ ...current, categoryId: categories[0] ?? defaultCategoryOptions[0] ?? "other" }));
     }
   }, [categories, form.categoryId]);
 
@@ -213,19 +220,21 @@ export function useProductOnboarding({
     try {
       const response = await fetch("/api/v1/products", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          sku: form.sku.trim() || undefined,
-          name: form.name.trim(),
-          categoryId: form.categoryId.trim(),
-          price: parsedPrice,
-          cost: parsedCost,
-          initialStock: parsedStock,
-          minStock: parsedMinStock,
-          imageUrl: form.imageUrl.trim() || undefined,
-        }),
+        body: buildProductMutationFormData(
+          {
+            sku: form.sku,
+            name: form.name,
+            categoryId: form.categoryId,
+            price: parsedPrice,
+            cost: parsedCost,
+            initialStock: parsedStock,
+            minStock: parsedMinStock,
+          },
+          {
+            imageUrl: form.imageUrl,
+            imageFile: form.imageFile,
+          },
+        ),
       });
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;

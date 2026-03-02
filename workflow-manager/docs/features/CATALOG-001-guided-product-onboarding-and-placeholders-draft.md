@@ -64,6 +64,8 @@ export interface BulkPriceUpdateDTO {
 - [x] Missing image never blocks product creation.
 - [x] Placeholder assignment is deterministic and test-covered.
 - [x] Created product is visible and usable in POS.
+- [x] Category entry accepts a human-readable label, persists a canonical code, and prevents duplicate category variants caused by punctuation/casing differences.
+- [x] Manual onboarding and product edit flows accept either direct file upload or an operator-provided image URL, and both end in managed Supabase Storage.
 - [x] Bulk price update supports percentage/fixed amount by scope with preview and validation.
 - [x] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
 
@@ -80,6 +82,11 @@ export interface BulkPriceUpdateDTO {
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Catalog`)
   - cross-panel refresh token in `PosLayout` keeps onboarding and bulk list synchronized
   - empty-scope guard in bulk UI blocks invalid requests and shows guided warning state
+- Category entry and display behavior:
+  - product onboarding and edit flows now use a shared `CategoryInputField`
+  - operator-facing labels stay human-readable (example: `Desayuno y merienda`)
+  - persisted category ids are canonical slug codes (example: `desayuno-y-merienda`)
+  - normalization removes duplicate variants caused by alternate separators, casing, or symbols
 - Bulk repricing API route:
   - `src/app/api/v1/products/price-batches/route.ts`
 - Repricing application use case:
@@ -95,10 +102,21 @@ export interface BulkPriceUpdateDTO {
   - `src/modules/catalog/presentation/dtos/create-product.dto.ts`
   - `src/modules/catalog/presentation/dtos/bulk-price-update.dto.ts`
   - `src/modules/catalog/presentation/dtos/product-response.dto.ts`
-- Placeholder strategy:
+- Shared category naming utilities:
+  - `src/shared/core/category/categoryNaming.ts`
+  - `src/modules/catalog/presentation/components/CategoryInputField.tsx`
+- Managed image policy:
   - deterministic SVG data URI by category when `imageUrl` is missing
-  - explicit `imageUrl` remains unchanged
+  - manual create/edit now use `ManagedProductImageField`
+  - operator-provided image URLs are downloaded server-side and stored in Supabase bucket `product-images`
+  - uploaded image files are stored in the same managed bucket
+  - sourced imports already followed the same managed-storage policy through `product-sourcing-images`
 - Test evidence:
   - `tests/e2e/catalog-onboarding-api.spec.ts`
   - `tests/e2e/catalog-bulk-price-update-api.spec.ts`
   - `tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts`
+  - `tests/e2e/products-workspace-ui.spec.ts`
+
+## Pending Follow-up
+
+- Optional extension: apply the same managed-image ingestion policy to `/api/v1/products/import` batch CSV rows that currently still accept raw `imageUrl` values.
