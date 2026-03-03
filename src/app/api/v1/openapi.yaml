@@ -626,6 +626,21 @@ paths:
         '404':
           $ref: '#/components/responses/ErrorResponse'
 
+  /receivables:
+    get:
+      tags: [AccountsReceivable]
+      operationId: listReceivablesSnapshot
+      summary: List customers with outstanding receivables snapshot
+      responses:
+        '200':
+          description: Receivables snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivablesSnapshotResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
   /debt-payments:
     post:
       tags: [AccountsReceivable]
@@ -1618,19 +1633,109 @@ components:
         occurredAt:
           type: string
           format: date-time
+        notes:
+          type: [string, 'null']
+
+    CustomerDebtOrderSummary:
+      type: object
+      required: [orderId, totalAmount, amountPaid, outstandingAmount, saleItems]
+      properties:
+        orderId:
+          type: string
+        totalAmount:
+          type: number
+        amountPaid:
+          type: number
+        outstandingAmount:
+          type: number
+        createdAt:
+          type: [string, 'null']
+          format: date-time
+        itemCount:
+          type: [integer, 'null']
+          minimum: 0
+        saleItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerDebtOrderLineItem'
+
+    CustomerDebtOrderLineItem:
+      type: object
+      required: [productId, quantity, unitPrice, lineTotal]
+      properties:
+        productId:
+          type: string
+        productName:
+          type: string
+        productImageUrl:
+          type: string
+          format: uri
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+        lineTotal:
+          type: number
 
     CustomerDebtSummaryResponse:
       type: object
-      required: [customerId, outstandingBalance, ledger]
+      required: [customerId, customerName, outstandingBalance, totalDebtAmount, totalPaidAmount, openOrderCount, lastActivityAt, orders, ledger]
       properties:
         customerId:
           type: string
+        customerName:
+          type: string
         outstandingBalance:
           type: number
+        totalDebtAmount:
+          type: number
+        totalPaidAmount:
+          type: number
+        openOrderCount:
+          type: integer
+          minimum: 0
+        lastActivityAt:
+          type: string
+          format: date-time
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerDebtOrderSummary'
         ledger:
           type: array
           items:
             $ref: '#/components/schemas/DebtLedgerEntry'
+
+    ReceivableSnapshotItem:
+      type: object
+      required: [customerId, customerName, outstandingBalance, totalDebtAmount, totalPaidAmount, openOrderCount, lastActivityAt]
+      properties:
+        customerId:
+          type: string
+        customerName:
+          type: string
+        outstandingBalance:
+          type: number
+        totalDebtAmount:
+          type: number
+        totalPaidAmount:
+          type: number
+        openOrderCount:
+          type: integer
+          minimum: 0
+        lastActivityAt:
+          type: string
+          format: date-time
+
+    ReceivablesSnapshotResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivableSnapshotItem'
 
     CreateDebtPaymentRequest:
       type: object

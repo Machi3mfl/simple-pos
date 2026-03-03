@@ -2,15 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
 import { createNewOnAccountCustomer } from "./support/checkout";
-
-function parseMoneyValue(raw: string): number {
-  const match = raw.match(/\$([0-9]+(?:\.[0-9]{1,2})?)/);
-  if (!match) {
-    throw new Error(`Could not parse money value from: ${raw}`);
-  }
-
-  return Number(match[1]);
-}
+import { openReceivableDetail } from "./support/receivables";
 
 async function createOnAccountSale(
   page: Page,
@@ -31,7 +23,7 @@ async function createOnAccountSale(
   await expect(page.getByTestId("checkout-feedback")).toContainText(input.customerName);
 }
 
-test("lists receivables by customer name and sorts candidates by outstanding balance", async ({
+test("lists receivables by customer name and sorts debtors by outstanding balance", async ({
   request,
   page,
 }) => {
@@ -64,32 +56,19 @@ test("lists receivables by customer name and sorts candidates by outstanding bal
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(
-    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+    page.getByRole("heading", { name: "Deudas y cobranzas" }),
   ).toBeVisible();
-  await page.getByTestId("debt-refresh-candidates-button").click();
 
-  const markerOptions = page
-    .locator('[data-testid="debt-customer-candidates-select"] option')
+  const markerCards = page
+    .locator('[data-testid^="debt-customer-card-"]')
     .filter({ hasText: marker });
-  await expect(markerOptions).toHaveCount(3);
+  await expect(markerCards).toHaveCount(3);
 
-  const optionTexts = await markerOptions.allTextContents();
-  for (const text of optionTexts) {
-    expect(text).toContain("• $");
-  }
+  const cardTexts = await markerCards.allTextContents();
+  expect(cardTexts[0]).toContain(highDebtCustomer);
+  expect(cardTexts[1]).toContain(mediumDebtCustomer);
+  expect(cardTexts[2]).toContain(lowDebtCustomer);
 
-  const balances = optionTexts.map((text) => parseMoneyValue(text));
-  expect(balances[0]).toBeGreaterThan(balances[1]);
-  expect(balances[1]).toBeGreaterThan(balances[2]);
-
-  const mediumCustomerOption = markerOptions.filter({ hasText: mediumDebtCustomer });
-  const mediumCustomerId = await mediumCustomerOption.first().getAttribute("value");
-  expect(mediumCustomerId).toBeTruthy();
-
-  await page
-    .getByTestId("debt-customer-candidates-select")
-    .selectOption(mediumCustomerId ?? "");
-  await page.getByTestId("debt-load-summary-button").click();
-  await expect(page.getByText(new RegExp(`Cliente ${mediumDebtCustomer}`))).toBeVisible();
+  await openReceivableDetail(page, mediumDebtCustomer);
   await expect(page.getByTestId("debt-outstanding-value")).not.toHaveText("$0.00");
 });

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { z } from "zod";
 
+import { receivablesSnapshotResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/receivables-snapshot-response.dto";
 import { customerDebtSummaryResponseDTOSchema } from "../../src/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
 import { salesHistoryResponseDTOSchema } from "../../src/modules/reporting/presentation/dtos/sales-history-response.dto";
 import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/stock-movement-response.dto";
@@ -134,6 +135,25 @@ test.describe("mock runtime critical scenarios", () => {
     expect(
       parsedDebtSummary.data.ledger.some(
         (entry) => entry.orderId === parsedSale.data.saleId && entry.entryType === "debt",
+      ),
+    ).toBe(true);
+
+    const receivablesResponse = await request.get("/api/v1/receivables");
+    expect(receivablesResponse.status()).toBe(200);
+    const receivablesBody = await receivablesResponse.json();
+    const parsedReceivables = receivablesSnapshotResponseDTOSchema.safeParse(receivablesBody);
+    expect(parsedReceivables.success).toBe(true);
+
+    if (!parsedReceivables.success) {
+      throw new Error("Expected valid receivables snapshot payload");
+    }
+
+    expect(
+      parsedReceivables.data.items.some(
+        (item) =>
+          item.customerId === parsedSale.data.customerId &&
+          item.customerName === customerName &&
+          item.outstandingBalance === parsedSale.data.total,
       ),
     ).toBe(true);
   });

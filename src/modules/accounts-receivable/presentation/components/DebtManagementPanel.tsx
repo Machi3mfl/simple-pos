@@ -1,7 +1,23 @@
 "use client";
 
+import {
+  CalendarDays,
+  Loader2,
+  Package,
+  RefreshCw,
+  ReceiptText,
+  Search,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
+import {
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
+} from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
@@ -10,24 +26,51 @@ import {
   getPendingOfflineSyncCount,
 } from "@/modules/sync/presentation/offline/offlineSyncQueue";
 
-interface SalesHistoryResponse {
-  readonly items: ReadonlyArray<{
-    readonly paymentMethod: "cash" | "on_account";
-    readonly customerId?: string;
-    readonly customerName?: string;
-  }>;
+interface ReceivableSnapshotItem {
+  readonly customerId: string;
+  readonly customerName: string;
+  readonly outstandingBalance: number;
+  readonly totalDebtAmount: number;
+  readonly totalPaidAmount: number;
+  readonly openOrderCount: number;
+  readonly lastActivityAt: string;
+}
+
+interface ReceivablesSnapshotResponse {
+  readonly items: readonly ReceivableSnapshotItem[];
 }
 
 interface CustomerDebtSummary {
   readonly customerId: string;
   readonly customerName: string;
   readonly outstandingBalance: number;
+  readonly totalDebtAmount: number;
+  readonly totalPaidAmount: number;
+  readonly openOrderCount: number;
+  readonly lastActivityAt: string;
+  readonly orders: ReadonlyArray<{
+    readonly orderId: string;
+    readonly totalAmount: number;
+    readonly amountPaid: number;
+    readonly outstandingAmount: number;
+    readonly createdAt?: string;
+    readonly itemCount?: number;
+    readonly saleItems: ReadonlyArray<{
+      readonly productId: string;
+      readonly productName?: string;
+      readonly productImageUrl?: string;
+      readonly quantity: number;
+      readonly unitPrice: number;
+      readonly lineTotal: number;
+    }>;
+  }>;
   readonly ledger: ReadonlyArray<{
     readonly entryId: string;
     readonly entryType: "debt" | "payment";
     readonly orderId?: string;
     readonly amount: number;
     readonly occurredAt: string;
+    readonly notes?: string;
   }>;
 }
 
@@ -46,11 +89,36 @@ interface DebtManagementPanelProps {
   readonly refreshToken?: number;
 }
 
-interface CustomerCandidate {
-  readonly customerId: string;
-  readonly customerName?: string;
-  readonly outstandingBalance?: number;
+interface ReceivablesMetricCardProps {
+  readonly label: string;
+  readonly value: string;
+  readonly testId?: string;
+  readonly tone: "neutral" | "emerald" | "amber" | "blue";
 }
+
+interface ReceivableAmountCardProps {
+  readonly label: string;
+  readonly value: string;
+  readonly valueClassName: string;
+  readonly testId?: string;
+}
+
+interface DebtDetailDialogProps {
+  readonly customer: ReceivableSnapshotItem;
+  readonly detail: CustomerDebtSummary | null;
+  readonly isLoading: boolean;
+  readonly paymentAmount: string;
+  readonly paymentNotes: string;
+  readonly isSubmitting: boolean;
+  readonly onPaymentAmountChange: (value: string) => void;
+  readonly onPaymentNotesChange: (value: string) => void;
+  readonly onSubmitPayment: (event: FormEvent<HTMLFormElement>) => void;
+  readonly onClose: () => void;
+}
+
+type PendingOrdersFilter = "all" | "single" | "multiple";
+type ReceivablesSortBy = "outstanding_desc" | "recent_desc" | "customer_asc";
+type FeedbackTone = "success" | "error" | "info";
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
@@ -65,118 +133,609 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+function parseMonetaryInput(rawValue: string): number {
+  const normalizedValue = rawValue.trim().replace(",", ".");
+  if (normalizedValue.length === 0) {
+    return Number.NaN;
+  }
+
+  const parsedValue = Number(normalizedValue);
+  return Number.isFinite(parsedValue) ? parsedValue : Number.NaN;
+}
+
+function formatCompactCurrency(
+  amount: number,
+  formatCurrency: (value: number) => string,
+): string {
+  const formatted = formatCurrency(amount);
+  return formatted.endsWith(".00") ? formatted.slice(0, -3) : formatted;
+}
+
+function toDateInputValue(isoValue?: string): string {
+  return isoValue ? isoValue.slice(0, 10) : "";
+}
+
+function paymentStatusBadgeClass(outstandingAmount: number, amountPaid: number): string {
+  if (outstandingAmount <= 0) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (amountPaid > 0) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  return "border-rose-200 bg-rose-50 text-rose-700";
+}
+
+function ReceivablesMetricCard({
+  label,
+  value,
+  testId,
+  tone,
+}: ReceivablesMetricCardProps): JSX.Element {
+  const toneClasses: Record<ReceivablesMetricCardProps["tone"], string> = {
+    neutral: "border-slate-200 bg-white text-slate-900",
+    blue: "border-blue-200 bg-blue-50 text-blue-900",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    amber: "border-amber-200 bg-amber-50 text-amber-900",
+  };
+  const labelToneClasses: Record<ReceivablesMetricCardProps["tone"], string> = {
+    neutral: "text-slate-500",
+    blue: "text-blue-700",
+    emerald: "text-emerald-700",
+    amber: "text-amber-700",
+  };
+
+  return (
+    <div
+      className={[
+        "rounded-2xl border px-4 py-3.5 shadow-[0_10px_20px_rgba(15,23,42,0.04)] md:px-5 md:py-4",
+        toneClasses[tone],
+      ].join(" ")}
+    >
+      <p
+        className={[
+          "text-xs font-semibold uppercase tracking-[0.14em]",
+          labelToneClasses[tone],
+        ].join(" ")}
+      >
+        {label}
+      </p>
+      <p
+        data-testid={testId}
+        className="mt-2 text-[2.05rem] leading-none font-bold tracking-tight md:text-[2.15rem]"
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ReceivableAmountCard({
+  label,
+  value,
+  valueClassName,
+  testId,
+}: ReceivableAmountCardProps): JSX.Element {
+  return (
+    <div className="rounded-[1.45rem] border border-slate-200 bg-slate-100 px-4 py-3 text-left shadow-[0_8px_18px_rgba(15,23,42,0.04)] lg:text-right">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </p>
+      <p
+        data-testid={testId}
+        className={["mt-2 text-[1.7rem] leading-none font-bold tracking-tight md:text-[1.85rem]", valueClassName].join(" ")}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function DebtDetailDialog({
+  customer,
+  detail,
+  isLoading,
+  paymentAmount,
+  paymentNotes,
+  isSubmitting,
+  onPaymentAmountChange,
+  onPaymentNotesChange,
+  onSubmitPayment,
+  onClose,
+}: DebtDetailDialogProps): JSX.Element {
+  const { messages, formatCurrency, formatDateTime } = useI18n();
+  const effectiveOutstanding = detail?.outstandingBalance ?? customer.outstandingBalance;
+  const effectiveTotalDebt = detail?.totalDebtAmount ?? customer.totalDebtAmount;
+  const effectiveTotalPaid = detail?.totalPaidAmount ?? customer.totalPaidAmount;
+  const effectiveOpenOrders = detail?.openOrderCount ?? customer.openOrderCount;
+  const effectiveLastActivityAt = detail?.lastActivityAt ?? customer.lastActivityAt;
+  const pendingAmount = parseMonetaryInput(paymentAmount);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4"
+      onClick={onClose}
+    >
+      <div className="flex min-h-full items-center justify-center">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="debt-detail-modal-title"
+          data-testid="debt-detail-modal"
+          className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[58rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-[#fbfbfc] shadow-[0_32px_80px_rgba(15,23,42,0.24)] md:max-h-[calc(100dvh-2rem)]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="shrink-0 border-b border-slate-200/80 px-5 py-4 md:px-6 md:py-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,1),rgba(254,243,199,0.96))] text-amber-700">
+                    <Wallet className="size-7" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        {messages.shell.nav.receivables}
+                      </p>
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[0.78rem] font-semibold text-amber-700">
+                        {effectiveOpenOrders} {messages.receivables.openOrdersMetric.toLowerCase()}
+                      </span>
+                    </div>
+                    <h3
+                      id="debt-detail-modal-title"
+                      className="mt-2 truncate text-[1.85rem] font-semibold tracking-tight text-slate-900 md:text-[2.1rem]"
+                    >
+                      {customer.customerName}
+                    </h3>
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                        <CalendarDays className="size-4 text-slate-400" aria-hidden />
+                        {messages.receivables.lastActivityLabel}:{" "}
+                        {formatDateTime(effectiveLastActivityAt)}
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                        <ReceiptText className="size-4 text-slate-400" aria-hidden />
+                        {effectiveOpenOrders}{" "}
+                        {messages.receivables.openOrdersMetric.toLowerCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.45rem] bg-slate-100 px-4 py-2.5 text-left lg:min-w-[13.5rem] lg:text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  {messages.common.labels.outstanding}
+                </p>
+                <p
+                  data-testid="debt-outstanding-value"
+                  className="mt-2 text-[1.85rem] leading-none font-bold tracking-tight text-amber-800 md:text-[1.95rem]"
+                >
+                  {formatCurrency(effectiveOutstanding)}
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <div className="min-h-0 overflow-y-auto px-5 py-4 md:px-6 md:py-5">
+            {isLoading ? (
+              <div className="flex min-h-56 items-center justify-center rounded-[1.8rem] border border-slate-200 bg-white">
+                <div className="flex items-center gap-3 text-slate-500">
+                  <Loader2 className="size-5 animate-spin" aria-hidden />
+                  <span className="text-sm font-semibold">
+                    {messages.common.states.loading}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <ReceivableAmountCard
+                    label={messages.receivables.debtIssuedLabel}
+                    value={formatCurrency(effectiveTotalDebt)}
+                    valueClassName="text-slate-900"
+                  />
+                  <ReceivableAmountCard
+                    label={messages.common.labels.collected}
+                    value={formatCurrency(effectiveTotalPaid)}
+                    valueClassName="text-emerald-800"
+                  />
+                  <ReceivableAmountCard
+                    label={messages.common.labels.outstanding}
+                    value={formatCurrency(effectiveOutstanding)}
+                    valueClassName="text-amber-800"
+                  />
+                </div>
+
+                <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {messages.receivables.registerPaymentTitle}
+                      </p>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {messages.receivables.registerPaymentHelp}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-500">
+                      {messages.receivables.summaryCustomer(customer.customerName)}
+                    </p>
+                  </div>
+                </div>
+
+                <section className="mt-4 rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
+                  <div className="border-b border-slate-200 px-4 py-4">
+                    <p className="text-[1.2rem] font-semibold tracking-tight text-slate-900">
+                      {messages.receivables.pendingOrdersTitle}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 p-4">
+                    {detail && detail.orders.length > 0 ? (
+                      detail.orders.map((order) => (
+                        <article
+                          key={order.orderId}
+                          data-testid={`debt-order-entry-${order.orderId}`}
+                          className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[1.05rem] font-semibold tracking-tight text-slate-900">
+                                  {order.createdAt
+                                    ? messages.receivables.orderTitle(
+                                        formatDateTime(order.createdAt),
+                                      )
+                                    : messages.common.paymentMethods.onAccountSale}
+                                </p>
+                                <span
+                                  className={[
+                                    "inline-flex rounded-full border px-3 py-1 text-[0.78rem] font-semibold",
+                                    paymentStatusBadgeClass(
+                                      order.outstandingAmount,
+                                      order.amountPaid,
+                                    ),
+                                  ].join(" ")}
+                                >
+                                  {order.outstandingAmount <= 0
+                                    ? messages.common.paymentStatuses.paid
+                                    : order.amountPaid > 0
+                                      ? messages.common.paymentStatuses.partial
+                                      : messages.common.paymentStatuses.pending}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                                {order.createdAt ? (
+                                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                                    <CalendarDays
+                                      className="size-4 text-slate-400"
+                                      aria-hidden
+                                    />
+                                    {formatDateTime(order.createdAt)}
+                                  </span>
+                                ) : null}
+                                {typeof order.itemCount === "number" ? (
+                                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                                    <ReceiptText
+                                      className="size-4 text-slate-400"
+                                      aria-hidden
+                                    />
+                                    {order.itemCount}{" "}
+                                    {messages.common.labels.items.toLowerCase()}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="grid gap-3 md:grid-cols-3 lg:min-w-[28rem]">
+                              <ReceivableAmountCard
+                                label={messages.receivables.debtIssuedLabel}
+                                value={formatCompactCurrency(order.totalAmount, formatCurrency)}
+                                valueClassName="text-slate-900"
+                              />
+                              <ReceivableAmountCard
+                                label={messages.common.labels.collected}
+                                value={formatCompactCurrency(order.amountPaid, formatCurrency)}
+                                valueClassName="text-emerald-800"
+                              />
+                              <ReceivableAmountCard
+                                label={messages.common.labels.outstanding}
+                                value={formatCompactCurrency(order.outstandingAmount, formatCurrency)}
+                                valueClassName="text-amber-800"
+                              />
+                            </div>
+                          </div>
+
+                          {order.saleItems.length > 0 ? (
+                            <ul className="mt-4 space-y-3 border-t border-slate-200/80 pt-4">
+                              {order.saleItems.map((item) => (
+                                <li
+                                  key={`${order.orderId}-${item.productId}`}
+                                  data-testid={`debt-order-item-${order.orderId}-${item.productId}`}
+                                  className="rounded-[1.35rem] border border-slate-200 bg-white px-4 py-4"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex size-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-[1.2rem] bg-slate-100">
+                                      {item.productImageUrl ? (
+                                        // eslint-disable-next-line @next/next/no-img-element -- Debt detail cards reuse stored product images and approved external URLs from catalog-managed products.
+                                        <img
+                                          src={item.productImageUrl}
+                                          alt={
+                                            item.productName ??
+                                            messages.common.fallbacks.unknownProduct
+                                          }
+                                          loading="lazy"
+                                          className="h-full w-full object-contain"
+                                        />
+                                      ) : (
+                                        <Package
+                                          className="size-7 text-slate-300"
+                                          aria-hidden
+                                        />
+                                      )}
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[1rem] font-semibold tracking-tight text-slate-900">
+                                        {item.productName ??
+                                          messages.common.fallbacks.unknownProduct}
+                                      </p>
+                                      <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600">
+                                          {item.quantity} x {formatCurrency(item.unitPrice)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right">
+                                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        {messages.common.labels.subtotal}
+                                      </p>
+                                      <p className="mt-2 text-[1.3rem] leading-none font-bold tracking-tight text-slate-900">
+                                        {formatCurrency(item.lineTotal)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </article>
+                      ))
+                    ) : (
+                      <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm font-medium text-slate-500">
+                        {messages.receivables.noPendingOrders}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="mt-4 rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
+                  <div className="border-b border-slate-200 px-4 py-4">
+                    <p className="text-[1.2rem] font-semibold tracking-tight text-slate-900">
+                      {messages.receivables.debtLedger}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-3 p-4">
+                    {detail && detail.ledger.length > 0 ? (
+                      detail.ledger.map((entry) => (
+                        <li
+                          key={entry.entryId}
+                          data-testid={`debt-ledger-entry-${entry.entryId}`}
+                          className={[
+                            "rounded-[1.35rem] border px-4 py-3",
+                            entry.entryType === "debt"
+                              ? "border-amber-200 bg-amber-50/80"
+                              : "border-emerald-200 bg-emerald-50/80",
+                          ].join(" ")}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p
+                                className={[
+                                  "text-sm font-semibold",
+                                  entry.entryType === "debt"
+                                    ? "text-amber-900"
+                                    : "text-emerald-900",
+                                ].join(" ")}
+                              >
+                                {messages.receivables.ledgerEntryType[entry.entryType]} •{" "}
+                                {formatCurrency(entry.amount)}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-600">
+                                {formatDateTime(entry.occurredAt)}
+                              </p>
+                              {entry.notes ? (
+                                <p className="mt-2 text-sm text-slate-700">{entry.notes}</p>
+                              ) : null}
+                            </div>
+                            {entry.orderId ? (
+                              <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">
+                                {messages.common.paymentMethods.onAccountSale}
+                              </span>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm font-medium text-slate-500">
+                        {messages.receivables.noLedgerEntries}
+                      </li>
+                    )}
+                  </ul>
+                </section>
+              </>
+            )}
+          </div>
+
+          <div className="shrink-0 border-t border-slate-200/80 bg-[#fbfbfc] px-5 py-4 md:px-6">
+            <form
+              className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)_auto_auto]"
+              onSubmit={onSubmitPayment}
+            >
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  {messages.common.labels.paymentAmount}
+                </span>
+                <input
+                  data-testid="debt-payment-amount-input"
+                  type="number"
+                  min="0.01"
+                  max={Number.isFinite(pendingAmount) ? effectiveOutstanding.toFixed(2) : undefined}
+                  step="0.01"
+                  placeholder="0.00"
+                  value={paymentAmount}
+                  onChange={(event) => onPaymentAmountChange(event.target.value)}
+                  disabled={isSubmitting || isLoading || effectiveOutstanding <= 0}
+                  className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-700">
+                  {messages.common.labels.notesOptional}
+                </span>
+                <input
+                  data-testid="debt-payment-notes-input"
+                  value={paymentNotes}
+                  onChange={(event) => onPaymentNotesChange(event.target.value)}
+                  disabled={isSubmitting || isLoading}
+                  className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="mt-auto min-h-[3.4rem] rounded-2xl border border-slate-300 px-6 text-base font-semibold text-slate-700"
+              >
+                {messages.common.actions.cancel}
+              </button>
+
+              <button
+                data-testid="debt-register-payment-button"
+                type="submit"
+                disabled={isSubmitting || isLoading || effectiveOutstanding <= 0}
+                className="mt-auto min-h-[3.4rem] rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-[0_16px_28px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
+              >
+                {isSubmitting
+                  ? messages.common.states.registering
+                  : messages.common.actions.registerPayment}
+              </button>
+            </form>
+          </div>
+
+          <FloatingModalCloseButton
+            onClick={onClose}
+            testId="debt-detail-modal-close-button"
+            ariaLabel={messages.common.actions.close}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DebtManagementPanel({
   refreshToken,
 }: DebtManagementPanelProps): JSX.Element {
   const { messages, formatCurrency, formatDateTime } = useI18n();
-  const [candidateCustomers, setCandidateCustomers] = useState<readonly CustomerCandidate[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [manualCustomerId, setManualCustomerId] = useState<string>("");
-  const [summary, setSummary] = useState<CustomerDebtSummary | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<string>("1");
+  const [receivables, setReceivables] = useState<readonly ReceivableSnapshotItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activityStart, setActivityStart] = useState<string>("");
+  const [activityEnd, setActivityEnd] = useState<string>("");
+  const [pendingOrdersFilter, setPendingOrdersFilter] =
+    useState<PendingOrdersFilter>("all");
+  const [sortBy, setSortBy] = useState<ReceivablesSortBy>("outstanding_desc");
+  const [activeCustomer, setActiveCustomer] = useState<ReceivableSnapshotItem | null>(null);
+  const [activeCustomerDetail, setActiveCustomerDetail] =
+    useState<CustomerDebtSummary | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentNotes, setPaymentNotes] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
 
-  const targetCustomerId = useMemo(() => {
-    const manualValue = manualCustomerId.trim();
-    if (manualValue.length > 0) {
-      return manualValue;
-    }
+  const publishFeedback = useCallback(
+    ({
+      tone,
+      message,
+      title,
+    }: {
+      readonly tone: FeedbackTone;
+      readonly message: string;
+      readonly title?: string;
+    }): void => {
+      setIsError(tone === "error");
+      setFeedback(message);
 
-    return selectedCustomerId;
-  }, [manualCustomerId, selectedCustomerId]);
+      const payload = {
+        title,
+        description: message,
+      };
 
-  const loadCustomerCandidates = useCallback(async (): Promise<void> => {
-    try {
-      const { response, data } = await fetchJsonNoStore<SalesHistoryResponse>(
-        "/api/v1/reports/sales-history?paymentMethod=on_account",
-      );
-      const payload = data;
-
-      if (!response.ok || !payload) {
+      if (tone === "error") {
+        showErrorToast(payload);
         return;
       }
 
-      const candidateById = new Map<string, CustomerCandidate>();
-      for (const item of payload.items) {
-        if (item.paymentMethod !== "on_account" || !item.customerId) {
-          continue;
-        }
-
-        const existing = candidateById.get(item.customerId);
-        if (!existing) {
-          candidateById.set(item.customerId, {
-            customerId: item.customerId,
-            customerName: item.customerName,
-          });
-          continue;
-        }
-
-        if (!existing.customerName && item.customerName) {
-          candidateById.set(item.customerId, {
-            customerId: item.customerId,
-            customerName: item.customerName,
-          });
-        }
+      if (tone === "success") {
+        showSuccessToast(payload);
+        return;
       }
 
-      const customers = Array.from(candidateById.values());
-      const customersWithDebt = (
-        await Promise.all(
-          customers.map(async (customer) => {
-            const { response: debtResponse, data: debtData } = await fetchJsonNoStore<
-              CustomerDebtSummary | ApiErrorPayload
-            >(`/api/v1/customers/${encodeURIComponent(customer.customerId)}/debt`);
+      showInfoToast(payload);
+    },
+    [],
+  );
 
-            if (!debtResponse.ok || !debtData) {
-              return null;
-            }
-
-            const summary = debtData as CustomerDebtSummary;
-            return {
-              customerId: summary.customerId,
-              customerName: summary.customerName || customer.customerName,
-              outstandingBalance: summary.outstandingBalance,
-            } satisfies CustomerCandidate;
-          }),
-        )
-      )
-        .filter((candidate) => candidate !== null)
-        .filter(
-          (candidate) =>
-            typeof candidate.outstandingBalance === "number" &&
-            candidate.outstandingBalance > 0,
-        )
-        .sort(
-          (left, right) => (right.outstandingBalance ?? 0) - (left.outstandingBalance ?? 0),
-        );
-
-      const ids = customersWithDebt.map((customer) => customer.customerId);
-      setCandidateCustomers(customersWithDebt);
-      setSelectedCustomerId((current) => {
-        if (current && ids.includes(current)) {
-          return current;
-        }
-
-        return ids[0] ?? "";
-      });
-    } catch {
-      // non-blocking for this panel
-    }
+  const refreshPendingSyncCount = useCallback((): void => {
+    setPendingSyncCount(getPendingOfflineSyncCount());
   }, []);
 
-  const loadSummary = useCallback(
+  const loadReceivablesSnapshot = useCallback(async (): Promise<readonly ReceivableSnapshotItem[]> => {
+    setIsLoading(true);
+
+    try {
+      const { response, data } = await fetchJsonNoStore<
+        ReceivablesSnapshotResponse | ApiErrorPayload
+      >("/api/v1/receivables");
+
+      if (!response.ok || !data) {
+        throw new Error(resolveApiMessage(data, messages.receivables.loadSnapshotError));
+      }
+
+      const items = (data as ReceivablesSnapshotResponse).items;
+      setReceivables(items);
+      return items;
+    } catch (error: unknown) {
+      publishFeedback({
+        tone: "error",
+        title: "No se pudo cargar deudas",
+        message:
+          error instanceof Error ? error.message : messages.receivables.loadSnapshotError,
+      });
+      setReceivables([]);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages.receivables.loadSnapshotError, publishFeedback]);
+
+  const loadCustomerDetail = useCallback(
     async (
       customerId: string,
-      options: { readonly clearFeedback?: boolean } = {},
-    ): Promise<void> => {
-      const clearFeedback = options.clearFeedback ?? true;
-      setIsLoading(true);
-      if (clearFeedback) {
+      options: { readonly preserveFeedback?: boolean } = {},
+    ): Promise<CustomerDebtSummary | null> => {
+      setIsDetailLoading(true);
+      if (!options.preserveFeedback) {
         setFeedback(null);
       }
 
@@ -184,51 +743,90 @@ export function DebtManagementPanel({
         const { response, data } = await fetchJsonNoStore<CustomerDebtSummary | ApiErrorPayload>(
           `/api/v1/customers/${encodeURIComponent(customerId)}/debt`,
         );
-        const payload = data;
 
-        if (!response.ok || !payload) {
-          setIsError(true);
-          setFeedback(resolveApiMessage(payload, messages.receivables.loadSummaryError));
-          setSummary(null);
-          return;
+        if (!response.ok || !data) {
+          throw new Error(resolveApiMessage(data, messages.receivables.loadSummaryError));
         }
 
-        setSummary(payload as CustomerDebtSummary);
-        setIsError(false);
-      } catch {
-        setIsError(true);
-        setFeedback(messages.receivables.loadSummaryError);
-        setSummary(null);
+        const detail = data as CustomerDebtSummary;
+        setActiveCustomerDetail(detail);
+        return detail;
+      } catch (error: unknown) {
+        publishFeedback({
+          tone: "error",
+          title: "No se pudo cargar el detalle",
+          message:
+            error instanceof Error ? error.message : messages.receivables.loadSummaryError,
+        });
+        setActiveCustomerDetail(null);
+        return null;
       } finally {
-        setIsLoading(false);
+        setIsDetailLoading(false);
       }
     },
-    [messages.receivables.loadSummaryError],
+    [messages.receivables.loadSummaryError, publishFeedback],
   );
-
-  const refreshPendingSyncCount = useCallback((): void => {
-    setPendingSyncCount(getPendingOfflineSyncCount());
-  }, []);
 
   const retryOfflineSync = useCallback(async () => {
     const result = await flushOfflineSyncQueue();
     refreshPendingSyncCount();
 
     if (result.synced > 0 && result.failed === 0 && result.pending === 0) {
-      setIsError(false);
-      setFeedback(messages.common.feedback.offlineSyncSuccess);
+      publishFeedback({
+        tone: "success",
+        title: "Sincronización completada",
+        message: messages.common.feedback.offlineSyncSuccess,
+      });
+
+      await loadReceivablesSnapshot();
+      if (activeCustomer) {
+        await loadCustomerDetail(activeCustomer.customerId, { preserveFeedback: true });
+      }
       return;
     }
 
     if (result.failed > 0 || result.pending > 0) {
-      setIsError(true);
-      setFeedback(messages.common.feedback.offlineSyncPending);
+      publishFeedback({
+        tone: "error",
+        title: "Sincronización pendiente",
+        message: messages.common.feedback.offlineSyncPending,
+      });
     }
-  }, [messages.common.feedback.offlineSyncPending, messages.common.feedback.offlineSyncSuccess, refreshPendingSyncCount]);
+  }, [
+    activeCustomer,
+    loadCustomerDetail,
+    loadReceivablesSnapshot,
+    messages.common.feedback.offlineSyncPending,
+    messages.common.feedback.offlineSyncSuccess,
+    publishFeedback,
+    refreshPendingSyncCount,
+  ]);
+
+  const handleOpenCustomer = useCallback(
+    (customer: ReceivableSnapshotItem): void => {
+      setActiveCustomer(customer);
+      setActiveCustomerDetail(null);
+      setPaymentAmount("");
+      setPaymentNotes("");
+      void loadCustomerDetail(customer.customerId);
+    },
+    [loadCustomerDetail],
+  );
+
+  const handleCloseCustomer = useCallback((): void => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setActiveCustomer(null);
+    setActiveCustomerDetail(null);
+    setPaymentAmount("");
+    setPaymentNotes("");
+  }, [isSubmitting]);
 
   useEffect(() => {
-    void loadCustomerCandidates();
-  }, [loadCustomerCandidates, refreshToken]);
+    void loadReceivablesSnapshot();
+  }, [loadReceivablesSnapshot, refreshToken]);
 
   useEffect(() => {
     refreshPendingSyncCount();
@@ -242,40 +840,125 @@ export function DebtManagementPanel({
     };
   }, [refreshPendingSyncCount, retryOfflineSync]);
 
-  async function handleLoadSummary(): Promise<void> {
-    if (!targetCustomerId) {
-      setIsError(true);
-      setFeedback(messages.receivables.selectCustomerFirst);
+  useEffect(() => {
+    if (!activeCustomer) {
       return;
     }
 
-    await loadSummary(targetCustomerId);
-  }
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape" && !isSubmitting) {
+        handleCloseCustomer();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeCustomer, handleCloseCustomer, isSubmitting]);
+
+  const visibleReceivables = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase("es");
+    const filtered = receivables.filter((item) => {
+      if (
+        normalizedQuery.length > 0 &&
+        !item.customerName.toLocaleLowerCase("es").includes(normalizedQuery)
+      ) {
+        return false;
+      }
+
+      const activityDate = toDateInputValue(item.lastActivityAt);
+      if (activityStart && activityDate < activityStart) {
+        return false;
+      }
+
+      if (activityEnd && activityDate > activityEnd) {
+        return false;
+      }
+
+      if (pendingOrdersFilter === "single" && item.openOrderCount !== 1) {
+        return false;
+      }
+
+      if (pendingOrdersFilter === "multiple" && item.openOrderCount < 2) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (sortBy === "customer_asc") {
+        return left.customerName.localeCompare(right.customerName, "es");
+      }
+
+      if (sortBy === "recent_desc") {
+        return (
+          new Date(right.lastActivityAt).getTime() - new Date(left.lastActivityAt).getTime()
+        );
+      }
+
+      if (right.outstandingBalance !== left.outstandingBalance) {
+        return right.outstandingBalance - left.outstandingBalance;
+      }
+
+      return left.customerName.localeCompare(right.customerName, "es");
+    });
+  }, [activityEnd, activityStart, pendingOrdersFilter, receivables, searchQuery, sortBy]);
+
+  const totalOutstanding = useMemo(
+    () => visibleReceivables.reduce((sum, item) => sum + item.outstandingBalance, 0),
+    [visibleReceivables],
+  );
+  const totalOpenOrders = useMemo(
+    () => visibleReceivables.reduce((sum, item) => sum + item.openOrderCount, 0),
+    [visibleReceivables],
+  );
+  const averageOutstanding = useMemo(() => {
+    if (visibleReceivables.length === 0) {
+      return 0;
+    }
+
+    return Number((totalOutstanding / visibleReceivables.length).toFixed(2));
+  }, [totalOutstanding, visibleReceivables.length]);
 
   async function handleRegisterPayment(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    if (!targetCustomerId) {
-      setIsError(true);
-      setFeedback(messages.receivables.selectCustomerFirst);
+    if (!activeCustomer) {
+      publishFeedback({
+        tone: "error",
+        title: "Falta seleccionar un cliente",
+        message: messages.receivables.selectCustomerFirst,
+      });
       return;
     }
 
-    const parsedAmount = Number(paymentAmount);
-    const paymentPayload = {
-      customerId: targetCustomerId,
-      amount: parsedAmount,
-      paymentMethod: "cash" as const,
-      notes: paymentNotes.trim() || undefined,
-    };
-
+    const parsedAmount = parseMonetaryInput(paymentAmount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setIsError(true);
-      setFeedback(messages.receivables.invalidPaymentAmount);
+      publishFeedback({
+        tone: "error",
+        title: "Monto inválido",
+        message: messages.receivables.invalidPaymentAmount,
+      });
       return;
     }
 
     setIsSubmitting(true);
+
+    const paymentPayload = {
+      customerId: activeCustomer.customerId,
+      amount: Number(parsedAmount.toFixed(2)),
+      paymentMethod: "cash" as const,
+      notes: paymentNotes.trim() || undefined,
+    };
 
     try {
       const response = await fetch("/api/v1/debt-payments", {
@@ -289,229 +972,333 @@ export function DebtManagementPanel({
       const payload = (await response.json()) as DebtPaymentResponse | ApiErrorPayload;
 
       if (!response.ok) {
-        setIsError(true);
-        setFeedback(resolveApiMessage(payload, messages.receivables.registerPaymentError));
+        publishFeedback({
+          tone: "error",
+          title: "No se pudo registrar el pago",
+          message: resolveApiMessage(payload, messages.receivables.registerPaymentError),
+        });
         return;
       }
 
-      setIsError(false);
-      setFeedback(
-        messages.receivables.registerPaymentSuccess(
+      publishFeedback({
+        tone: "success",
+        title: "Pago registrado",
+        message: messages.receivables.registerPaymentSuccess(
           formatCurrency((payload as DebtPaymentResponse).amount),
         ),
-      );
-      setPaymentAmount("1");
+      });
+      setPaymentAmount("");
       setPaymentNotes("");
+
+      const updatedItems = await loadReceivablesSnapshot();
+      const updatedCustomer =
+        updatedItems.find((item) => item.customerId === activeCustomer.customerId) ??
+        activeCustomer;
+      setActiveCustomer(updatedCustomer);
+      await loadCustomerDetail(activeCustomer.customerId, { preserveFeedback: true });
       refreshPendingSyncCount();
-      await loadSummary(targetCustomerId, { clearFeedback: false });
-      await loadCustomerCandidates();
     } catch {
       enqueueOfflineSyncEvent({
         eventType: "debt_payment_registered",
         payload: paymentPayload,
         idempotencyKey: `debt-payment-offline-${crypto.randomUUID()}`,
       });
-
       refreshPendingSyncCount();
-      setIsError(false);
-      setFeedback(messages.receivables.saveOfflineSuccess);
-      setPaymentAmount("1");
+      setPaymentAmount("");
       setPaymentNotes("");
+      publishFeedback({
+        tone: "info",
+        title: "Pago guardado offline",
+        message: messages.receivables.saveOfflineSuccess,
+      });
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
-      <header>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-          {messages.receivables.title}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {messages.receivables.subtitle}
-        </p>
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] lg:p-6">
+      <header className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-[52rem]">
+            <h2 className="text-[2.4rem] font-semibold leading-[0.94] tracking-tight text-slate-900 sm:text-[2.8rem]">
+              {messages.receivables.title}
+            </h2>
+            <p className="mt-3 max-w-[48rem] text-[1.05rem] leading-7 text-slate-500">
+              {messages.receivables.subtitle}
+            </p>
+          </div>
+
+          <button
+            data-testid="debt-refresh-candidates-button"
+            type="button"
+            onClick={() => {
+              void loadReceivablesSnapshot();
+            }}
+            disabled={isLoading}
+            className="inline-flex min-h-[3.85rem] items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[1rem] font-semibold text-white shadow-[0_16px_24px_rgba(30,98,227,0.32)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
+          >
+            <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+            {isLoading ? messages.common.states.refreshing : messages.common.actions.refresh}
+          </button>
+        </div>
+
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.75fr)]">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {messages.common.labels.customer}
+            </span>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400"
+                aria-hidden
+              />
+              <input
+                data-testid="debt-search-input"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={messages.receivables.searchPlaceholder}
+                className="min-h-[3.85rem] w-full rounded-2xl border border-slate-300 bg-white pl-12 pr-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {messages.receivables.lastActivityFromLabel}
+            </span>
+            <input
+              data-testid="debt-activity-start-input"
+              type="date"
+              value={activityStart}
+              onChange={(event) => setActivityStart(event.target.value)}
+              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {messages.receivables.lastActivityToLabel}
+            </span>
+            <input
+              data-testid="debt-activity-end-input"
+              type="date"
+              value={activityEnd}
+              onChange={(event) => setActivityEnd(event.target.value)}
+              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {messages.receivables.pendingOrdersFilterLabel}
+            </span>
+            <select
+              data-testid="debt-open-orders-filter"
+              value={pendingOrdersFilter}
+              onChange={(event) =>
+                setPendingOrdersFilter(event.target.value as PendingOrdersFilter)
+              }
+              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+            >
+              <option value="all">{messages.receivables.pendingOrdersFilterOption.all}</option>
+              <option value="single">
+                {messages.receivables.pendingOrdersFilterOption.single}
+              </option>
+              <option value="multiple">
+                {messages.receivables.pendingOrdersFilterOption.multiple}
+              </option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-700">
+              {messages.receivables.sortByLabel}
+            </span>
+            <select
+              data-testid="debt-sort-select"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as ReceivablesSortBy)}
+              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+            >
+              <option value="outstanding_desc">
+                {messages.receivables.sortByOption.outstanding}
+              </option>
+              <option value="recent_desc">{messages.receivables.sortByOption.recent}</option>
+              <option value="customer_asc">
+                {messages.receivables.sortByOption.customer}
+              </option>
+            </select>
+          </label>
+        </div>
       </header>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">
-            {messages.receivables.customerCandidates}
-          </span>
-          <select
-            data-testid="debt-customer-candidates-select"
-            value={selectedCustomerId}
-            onChange={(event) => setSelectedCustomerId(event.target.value)}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
+      <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <ReceivablesMetricCard
+          label={messages.receivables.debtorsMetric}
+          value={String(visibleReceivables.length)}
+          testId="debt-summary-total-customers"
+          tone="neutral"
+        />
+        <ReceivablesMetricCard
+          label={messages.receivables.moneyInStreetMetric}
+          value={formatCurrency(totalOutstanding)}
+          testId="debt-summary-total-outstanding"
+          tone="amber"
+        />
+        <ReceivablesMetricCard
+          label={messages.receivables.openOrdersMetric}
+          value={String(totalOpenOrders)}
+          testId="debt-summary-open-orders"
+          tone="blue"
+        />
+        <ReceivablesMetricCard
+          label={messages.receivables.averageBalanceMetric}
+          value={formatCurrency(averageOutstanding)}
+          testId="debt-summary-average-outstanding"
+          tone="emerald"
+        />
+      </section>
+
+      {pendingSyncCount > 0 ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-[1.6rem] border border-amber-200 bg-amber-50 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-amber-900">
+              {messages.receivables.pendingSyncTitle}
+            </p>
+            <p className="mt-1 text-sm text-amber-900/80">
+              {messages.receivables.pendingSyncDescription(pendingSyncCount)}
+            </p>
+          </div>
+          <button
+            data-testid="debt-retry-offline-sync-button"
+            type="button"
+            onClick={() => {
+              void retryOfflineSync();
+            }}
+            className="min-h-11 rounded-2xl border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-900"
           >
-            {candidateCustomers.length === 0 ? (
-              <option value="">{messages.receivables.noOnAccountCustomers}</option>
-            ) : null}
-            {candidateCustomers.map((customer) => (
-              <option key={customer.customerId} value={customer.customerId}>
-                {customer.customerName ?? messages.common.fallbacks.unnamedCustomer}
-                {typeof customer.outstandingBalance === "number"
-                  ? ` • ${formatCurrency(customer.outstandingBalance)}`
-                  : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">
-            {messages.receivables.manualCustomerReference}
-          </span>
-          <input
-            data-testid="debt-manual-customer-id-input"
-            value={manualCustomerId}
-            onChange={(event) => setManualCustomerId(event.target.value)}
-            placeholder={messages.common.placeholders.advancedLookup}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
-          />
-        </label>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          data-testid="debt-refresh-candidates-button"
-          type="button"
-          onClick={() => {
-            void loadCustomerCandidates();
-          }}
-          className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-        >
-          {messages.common.actions.refreshCandidates}
-        </button>
-        <button
-          data-testid="debt-load-summary-button"
-          type="button"
-          onClick={() => {
-            void handleLoadSummary();
-          }}
-          disabled={isLoading}
-          className="min-h-11 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
-        >
-          {isLoading ? messages.common.states.loading : messages.common.actions.loadDebtSummary}
-        </button>
-      </div>
-
-      {summary ? (
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-          <p className="text-xs font-semibold text-slate-500">
-            {messages.receivables.summaryCustomer(summary.customerName)}
-          </p>
-          <p className="text-xs font-semibold text-slate-500">
-            {messages.common.labels.outstanding}
-          </p>
-          <p data-testid="debt-outstanding-value" className="text-lg font-semibold text-slate-900">
-            {formatCurrency(summary.outstandingBalance)}
-          </p>
+            {messages.common.actions.retryOfflineSync}
+          </button>
         </div>
       ) : null}
 
-      <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleRegisterPayment}>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">
-            {messages.common.labels.paymentAmount}
-          </span>
-          <input
-            data-testid="debt-payment-amount-input"
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={paymentAmount}
-            onChange={(event) => setPaymentAmount(event.target.value)}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-slate-600">
-            {messages.common.labels.notesOptional}
-          </span>
-          <input
-            data-testid="debt-payment-notes-input"
-            value={paymentNotes}
-            onChange={(event) => setPaymentNotes(event.target.value)}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
-          />
-        </label>
-
-        <div className="md:col-span-2">
-          <button
-            data-testid="debt-register-payment-button"
-            type="submit"
-            disabled={isSubmitting}
-            className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_10px_18px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
-          >
-            {isSubmitting ? messages.common.states.registering : messages.common.actions.registerPayment}
-          </button>
+      <section className="mt-5 rounded-[2rem] border border-slate-200 bg-white shadow-[0_12px_24px_rgba(15,23,42,0.05)]">
+        <div className="border-b border-slate-200 px-4 py-4 lg:px-5">
+          <p className="text-[1.4rem] font-semibold tracking-tight text-slate-900">
+            {messages.receivables.customerListTitle}
+          </p>
         </div>
-      </form>
+
+        <ul className="max-h-[40rem] space-y-4 overflow-y-auto p-4 [scrollbar-gutter:stable] lg:p-5">
+          {visibleReceivables.map((customer) => (
+            <li key={customer.customerId}>
+              <button
+                type="button"
+                data-testid={`debt-customer-card-${customer.customerId}`}
+                onClick={() => handleOpenCustomer(customer)}
+                className="w-full rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.95))] px-4 py-4 text-left shadow-[0_16px_30px_rgba(15,23,42,0.06)] transition hover:border-blue-300 hover:shadow-[0_18px_32px_rgba(15,23,42,0.1)] md:px-5 md:py-5"
+              >
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,1),rgba(254,243,199,0.96))] text-amber-700">
+                        <Users className="size-7" aria-hidden />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[1.35rem] font-semibold leading-tight tracking-tight text-slate-900 md:text-[1.5rem]">
+                          {customer.customerName}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                            <CalendarDays className="size-4 text-slate-400" aria-hidden />
+                            {messages.receivables.lastActivityLabel}:{" "}
+                            {formatDateTime(customer.lastActivityAt)}
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600">
+                            <ReceiptText className="size-4 text-slate-400" aria-hidden />
+                            {customer.openOrderCount}{" "}
+                            {messages.receivables.openOrdersMetric.toLowerCase()}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              {messages.receivables.debtIssuedLabel}
+                            </p>
+                            <p className="mt-1 text-[1.05rem] font-semibold tracking-tight text-slate-900">
+                              {formatCompactCurrency(customer.totalDebtAmount, formatCurrency)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              {messages.common.labels.collected}
+                            </p>
+                            <p className="mt-1 text-[1.05rem] font-semibold tracking-tight text-emerald-800">
+                              {formatCompactCurrency(customer.totalPaidAmount, formatCurrency)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full xl:w-auto xl:min-w-[13rem]">
+                    <ReceivableAmountCard
+                      label={messages.common.labels.outstanding}
+                      value={formatCompactCurrency(customer.outstandingBalance, formatCurrency)}
+                      valueClassName="text-amber-800"
+                      testId={`debt-customer-card-outstanding-${customer.customerId}`}
+                    />
+                  </div>
+                </div>
+              </button>
+            </li>
+          ))}
+
+          {visibleReceivables.length === 0 ? (
+            <li className="rounded-[1.8rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+              <Wallet className="mx-auto size-10 text-slate-300" aria-hidden />
+              <p className="mt-4 text-[1.1rem] font-semibold text-slate-700">
+                {receivables.length === 0
+                  ? messages.receivables.noDebtors
+                  : messages.receivables.noDebtorsForFilters}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                {messages.receivables.createDebtHint}
+              </p>
+            </li>
+          ) : null}
+        </ul>
+      </section>
 
       {feedback ? (
         <p
           data-testid="debt-feedback"
-          className={[
-            "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
-            isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
-          ].join(" ")}
+          aria-live={isError ? "assertive" : "polite"}
+          className="sr-only"
         >
           {feedback}
         </p>
       ) : null}
 
-      {pendingSyncCount > 0 ? (
-        <button
-          data-testid="debt-retry-offline-sync-button"
-          type="button"
-          onClick={() => {
-            void retryOfflineSync();
-          }}
-          className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-        >
-          {messages.common.actions.retryOfflineSync} ({pendingSyncCount})
-        </button>
+      {activeCustomer ? (
+        <DebtDetailDialog
+          customer={activeCustomer}
+          detail={activeCustomerDetail}
+          isLoading={isDetailLoading}
+          paymentAmount={paymentAmount}
+          paymentNotes={paymentNotes}
+          isSubmitting={isSubmitting}
+          onPaymentAmountChange={setPaymentAmount}
+          onPaymentNotesChange={setPaymentNotes}
+          onSubmitPayment={handleRegisterPayment}
+          onClose={handleCloseCustomer}
+        />
       ) : null}
-
-      <div className="mt-4 rounded-xl border border-slate-200">
-        <div className="border-b border-slate-200 px-3 py-2">
-          <p className="text-sm font-semibold text-slate-700">
-            {messages.receivables.debtLedger}
-          </p>
-        </div>
-        <ul className="max-h-72 space-y-1 overflow-y-auto p-2">
-          {summary?.ledger.map((entry) => (
-            <li
-              key={entry.entryId}
-              data-testid={`debt-ledger-entry-${entry.entryId}`}
-              className={[
-                "rounded-lg px-2 py-2 text-xs",
-                entry.entryType === "debt"
-                  ? "bg-amber-50 text-amber-800"
-                  : "bg-emerald-50 text-emerald-800",
-              ].join(" ")}
-            >
-              <p className="font-semibold">
-                {messages.receivables.ledgerEntryType[entry.entryType]} •{" "}
-                {formatCurrency(entry.amount)}
-              </p>
-              <p className="mt-1">{formatDateTime(entry.occurredAt)}</p>
-            </li>
-          ))}
-
-          {!summary || summary.ledger.length === 0 ? (
-            <li className="px-2 py-2 text-xs text-slate-500">
-              {messages.receivables.noLedgerEntries}
-            </li>
-          ) : null}
-        </ul>
-      </div>
-
-      <p className="mt-3 text-xs text-slate-500">
-        {messages.receivables.createDebtHint}
-      </p>
     </article>
   );
 }

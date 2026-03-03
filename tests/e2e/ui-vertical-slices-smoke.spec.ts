@@ -14,9 +14,7 @@ test("navigates all vertical slice UIs from side rail", async ({ page }) => {
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(page).toHaveURL(/\/receivables$/);
-  await expect(
-    page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deudas y cobranzas" })).toBeVisible();
 
   await page.getByTestId("nav-item-reporting").click();
   await expect(page).toHaveURL(/\/reporting$/);

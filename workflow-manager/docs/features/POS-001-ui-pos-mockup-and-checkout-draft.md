@@ -143,6 +143,14 @@ curl -X POST /api/v1/sales \
   - sale cards now show clearer payment-method iconography and stronger total/collected/outstanding hierarchy, with the three amounts moved to the upper-right area using one shared visual treatment, compact amount formatting that hides `.00`, and no inline customer strip on the card itself
   - order-level metric cards were tightened to content height across the summary row, sale list, and sale-detail modal so more information fits on screen without changing the overall visual language
   - clicking a sale card opens a detail modal with the purchased items, their stored product photos, quantities, and line totals, keeping the same modal language already used in checkout and products
+- Receivables UX updates:
+  - the `/receivables` workspace now follows the same visual language as `/sales` and `/orders`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
+  - the top area exposes four snapshot metrics: debtor count, total outstanding balance, open orders, and average outstanding balance
+  - debtors are now explored through a scrollable card list with filters for customer name, last-activity date range, open-order count, and sorting by debt/recent activity/name
+  - opening a debtor card launches a centered detail modal with the customer snapshot, order-level debt breakdown, full debt ledger, optional payment notes, and direct payment registration from the same context
+  - each pending order inside that receivables modal now renders its purchased items with stored product image, quantity x unit price, and subtotal, reusing the same visual language as the `/orders` sale-detail modal
+  - receivables, orders, and checkout now share the same floating close affordance in the upper-right overlay corner for modal consistency across the POS
+  - the receivables backend now also exposes `GET /api/v1/receivables`, a dedicated snapshot route used by the redesigned list without reusing the older customer lookup flow
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`
   - navigation, catalog, checkout, orders, and support workspaces consume a centralized dictionary instead of embedded strings

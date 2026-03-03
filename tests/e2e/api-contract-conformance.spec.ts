@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createDebtPaymentDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
 import { debtPaymentResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
+import { receivablesSnapshotResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/receivables-snapshot-response.dto";
 import {
   bulkPriceUpdateDTOSchema,
 } from "../../src/modules/catalog/presentation/dtos/bulk-price-update.dto";
@@ -141,6 +142,30 @@ test.describe("API contract conformance", () => {
       customerId: "customer-001",
       customerName: "Carlos Perez",
       outstandingBalance: 1000,
+      totalDebtAmount: 3000,
+      totalPaidAmount: 2000,
+      openOrderCount: 1,
+      lastActivityAt: "2026-02-27T12:10:00.000Z",
+      orders: [
+        {
+          orderId: "sale-001",
+          totalAmount: 3000,
+          amountPaid: 2000,
+          outstandingAmount: 1000,
+          createdAt: "2026-02-27T12:00:00.000Z",
+          itemCount: 2,
+          saleItems: [
+            {
+              productId: "product-001",
+              productName: "Yerba",
+              productImageUrl: "https://example.com/product-001.png",
+              quantity: 2,
+              unitPrice: 1500,
+              lineTotal: 3000,
+            },
+          ],
+        },
+      ],
       ledger: [
         {
           entryId: "entry-001",
@@ -158,6 +183,21 @@ test.describe("API contract conformance", () => {
       ],
     });
     expect(validCustomerDebtSummary.success).toBe(true);
+
+    const validReceivablesSnapshot = receivablesSnapshotResponseDTOSchema.safeParse({
+      items: [
+        {
+          customerId: "customer-001",
+          customerName: "Carlos Perez",
+          outstandingBalance: 1000,
+          totalDebtAmount: 3000,
+          totalPaidAmount: 2000,
+          openOrderCount: 1,
+          lastActivityAt: "2026-02-27T12:10:00.000Z",
+        },
+      ],
+    });
+    expect(validReceivablesSnapshot.success).toBe(true);
 
     const validTopProductsResponse = topProductsResponseDTOSchema.safeParse({
       items: [

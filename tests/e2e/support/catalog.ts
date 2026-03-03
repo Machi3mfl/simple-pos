@@ -8,6 +8,7 @@ interface CreateCatalogProductInput {
   readonly price?: number;
   readonly initialStock?: number;
   readonly cost?: number;
+  readonly imageUrl?: string;
 }
 
 export async function createCatalogProduct(
@@ -21,6 +22,7 @@ export async function createCatalogProduct(
       price: input.price ?? 10,
       cost: input.cost ?? 5,
       initialStock: input.initialStock ?? 10,
+      imageUrl: input.imageUrl,
     },
   });
 

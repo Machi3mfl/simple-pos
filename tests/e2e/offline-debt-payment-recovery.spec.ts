@@ -3,10 +3,7 @@ import { expect, test } from "@playwright/test";
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
 import { createNewOnAccountCustomer } from "./support/checkout";
-
-function parseMoneyValue(raw: string): number {
-  return Number(raw.replace(/[^0-9.-]/g, ""));
-}
+import { openReceivableDetail, parseMoneyValue } from "./support/receivables";
 
 test.describe("offline debt payment recovery", () => {
   test("queues debt payment during outage and syncs it after manual retry", async ({
@@ -54,17 +51,7 @@ test.describe("offline debt payment recovery", () => {
     );
 
     await page.getByTestId("nav-item-receivables").click();
-    await page.getByTestId("debt-refresh-candidates-button").click();
-
-    const customerOption = page
-      .locator('[data-testid="debt-customer-candidates-select"] option')
-      .filter({ hasText: customerName })
-      .first();
-    await expect(customerOption).toHaveCount(1);
-    const customerId = await customerOption.getAttribute("value");
-    expect(customerId).toBeTruthy();
-    await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
-    await page.getByTestId("debt-load-summary-button").click();
+    await openReceivableDetail(page, customerName);
 
     const outstandingBeforeRaw =
       (await page.getByTestId("debt-outstanding-value").textContent()) ?? "$0";
@@ -78,6 +65,8 @@ test.describe("offline debt payment recovery", () => {
       "Pago de deuda guardado sin conexión. Pendiente de sincronización.",
     );
     await expect(page.getByTestId("debt-retry-offline-sync-button")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("debt-detail-modal")).toHaveCount(0);
 
     const pendingBeforeRetry = await page.evaluate((key) => {
       const rawQueue = window.localStorage.getItem(key) ?? "[]";

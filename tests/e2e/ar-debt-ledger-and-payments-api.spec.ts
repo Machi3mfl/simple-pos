@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { z } from "zod";
 
 import { debtPaymentResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
+import { receivablesSnapshotResponseDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/receivables-snapshot-response.dto";
 import { saleResponseDTOSchema } from "../../src/modules/sales/presentation/dtos/sale-response.dto";
 import { customerDebtSummaryResponseDTOSchema } from "../../src/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
 import { createCatalogProduct } from "./support/catalog";
@@ -31,6 +32,7 @@ test.describe("accounts receivable debt flows", () => {
   test("creates debt per order and reduces outstanding with partial/full payments", async ({
     request,
   }) => {
+    const customerName = uniqueCustomerName();
     const firstProduct = await createCatalogProduct(request, {
       name: `AR Product A ${Date.now()}-${Math.floor(Math.random() * 10_000)}`,
       price: 10,
@@ -47,7 +49,7 @@ test.describe("accounts receivable debt flows", () => {
           { productId: secondProduct.id, quantity: 1 },
         ],
         paymentMethod: "on_account",
-        customerName: uniqueCustomerName(),
+        customerName,
         createCustomerIfMissing: true,
         initialPaymentAmount: 12,
       },
@@ -83,6 +85,36 @@ test.describe("accounts receivable debt flows", () => {
     }
 
     expect(initialDebtSummary.data.outstandingBalance).toBe(18);
+    expect(initialDebtSummary.data.totalDebtAmount).toBe(30);
+    expect(initialDebtSummary.data.totalPaidAmount).toBe(12);
+    expect(initialDebtSummary.data.openOrderCount).toBe(1);
+    expect(initialDebtSummary.data.orders).toEqual([
+      expect.objectContaining({
+        orderId: saleId,
+        totalAmount: 30,
+        amountPaid: 12,
+        outstandingAmount: 18,
+        itemCount: 3,
+        saleItems: [
+          expect.objectContaining({
+            productId: firstProduct.id,
+            productName: firstProduct.name,
+            quantity: 2,
+            unitPrice: 10,
+            lineTotal: 20,
+            productImageUrl: expect.any(String),
+          }),
+          expect.objectContaining({
+            productId: secondProduct.id,
+            productName: secondProduct.name,
+            quantity: 1,
+            unitPrice: 10,
+            lineTotal: 10,
+            productImageUrl: expect.any(String),
+          }),
+        ],
+      }),
+    ]);
     expect(initialDebtSummary.data.ledger.some((entry) => entry.orderId === saleId)).toBe(
       true,
     );
@@ -95,12 +127,35 @@ test.describe("accounts receivable debt flows", () => {
       ),
     ).toBe(true);
 
+    const receivablesSnapshotResponse = await request.get("/api/v1/receivables");
+    expect(receivablesSnapshotResponse.status()).toBe(200);
+    const receivablesSnapshotBody = await receivablesSnapshotResponse.json();
+    const receivablesSnapshot =
+      receivablesSnapshotResponseDTOSchema.safeParse(receivablesSnapshotBody);
+    expect(receivablesSnapshot.success).toBe(true);
+
+    if (!receivablesSnapshot.success) {
+      throw new Error("Expected valid receivables snapshot payload");
+    }
+
+    expect(receivablesSnapshot.data.items).toContainEqual(
+      expect.objectContaining({
+        customerId,
+        customerName,
+        outstandingBalance: 18,
+        totalDebtAmount: 30,
+        totalPaidAmount: 12,
+        openOrderCount: 1,
+      }),
+    );
+
     const firstPayment = await request.post("/api/v1/debt-payments", {
       data: {
         customerId,
         orderId: saleId,
         amount: 8,
         paymentMethod: "cash",
+        notes: "Cobro parcial caja mañana",
       },
     });
     expect(firstPayment.status()).toBe(201);
@@ -120,8 +175,19 @@ test.describe("accounts receivable debt flows", () => {
     }
 
     expect(afterFirstPaymentSummary.data.outstandingBalance).toBe(10);
+    expect(afterFirstPaymentSummary.data.totalDebtAmount).toBe(30);
+    expect(afterFirstPaymentSummary.data.totalPaidAmount).toBe(20);
+    expect(afterFirstPaymentSummary.data.openOrderCount).toBe(1);
     expect(
       afterFirstPaymentSummary.data.ledger.some((entry) => entry.entryType === "payment"),
+    ).toBe(true);
+    expect(
+      afterFirstPaymentSummary.data.ledger.some(
+        (entry) =>
+          entry.entryType === "payment" &&
+          entry.amount === 8 &&
+          entry.notes === "Cobro parcial caja mañana",
+      ),
     ).toBe(true);
 
     const secondPayment = await request.post("/api/v1/debt-payments", {
@@ -145,6 +211,10 @@ test.describe("accounts receivable debt flows", () => {
     }
 
     expect(afterSecondPaymentSummary.data.outstandingBalance).toBe(0);
+    expect(afterSecondPaymentSummary.data.totalDebtAmount).toBe(30);
+    expect(afterSecondPaymentSummary.data.totalPaidAmount).toBe(30);
+    expect(afterSecondPaymentSummary.data.openOrderCount).toBe(0);
+    expect(afterSecondPaymentSummary.data.orders).toEqual([]);
 
     const overpayment = await request.post("/api/v1/debt-payments", {
       data: {

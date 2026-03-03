@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
 import { createNewOnAccountCustomer, fillCashReceivedWithExactTotal } from "./support/checkout";
+import { openReceivableDetail } from "./support/receivables";
 
 function uniqueMarker(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -49,20 +50,11 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     await page.getByTestId("nav-item-receivables").click();
     await expect(page).toHaveURL(/\/receivables$/);
     await expect(
-      page.getByRole("heading", { name: "Gestión de deudas de clientes" }),
+      page.getByRole("heading", { name: "Deudas y cobranzas" }),
     ).toBeVisible();
-    await page.getByTestId("debt-refresh-candidates-button").click();
-    const customerOption = page
-      .locator('[data-testid="debt-customer-candidates-select"] option')
-      .filter({ hasText: customerName })
-      .first();
-    await expect(customerOption).toHaveCount(1);
-    const customerId = await customerOption.getAttribute("value");
-    expect(customerId).toBeTruthy();
-    await page.getByTestId("debt-customer-candidates-select").selectOption(customerId ?? "");
-    await page.getByTestId("debt-load-summary-button").click();
-    await expect(page.getByText(new RegExp(`Cliente ${customerName}`))).toBeVisible();
+    await openReceivableDetail(page, customerName);
     await expect(page.getByTestId("debt-outstanding-value")).not.toHaveText("$0.00");
+    await page.getByTestId("debt-detail-modal-close-button").click();
 
     await page.getByTestId("nav-item-reporting").click();
     await expect(page).toHaveURL(/\/reporting$/);

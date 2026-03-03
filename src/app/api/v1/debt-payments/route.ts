@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import {
   CustomerNotFoundForDebtError,
   DebtOrderNotFoundError,
@@ -8,13 +7,9 @@ import {
   DebtPaymentExceedsOutstandingError,
   AccountsReceivableDomainError,
 } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
-import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
-import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
+import { createAccountsReceivableRuntime } from "@/modules/accounts-receivable/infrastructure/runtime/accountsReceivableRuntime";
 import { createDebtPaymentDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
 import { debtPaymentResponseDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
-import { RegisterDebtPaymentUseCase } from "@/modules/accounts-receivable/application/use-cases/RegisterDebtPaymentUseCase";
-import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
-import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -29,25 +24,6 @@ interface ApiErrorResponse {
   readonly details?: ApiErrorDetail[];
 }
 
-function createDebtPaymentsRuntime(): {
-  registerDebtPaymentUseCase: RegisterDebtPaymentUseCase;
-} {
-  const supabaseClient = getSupabaseServerClient();
-  const customerRepository: CustomerRepository = new SupabaseCustomerRepository(
-    supabaseClient,
-  );
-  const debtLedgerRepository: DebtLedgerRepository = new SupabaseDebtLedgerRepository(
-    supabaseClient,
-  );
-
-  return {
-    registerDebtPaymentUseCase: new RegisterDebtPaymentUseCase(
-      debtLedgerRepository,
-      customerRepository,
-    ),
-  };
-}
-
 function errorResponse(
   status: number,
   body: ApiErrorResponse,
@@ -56,7 +32,7 @@ function errorResponse(
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const { registerDebtPaymentUseCase } = createDebtPaymentsRuntime();
+  const { registerDebtPaymentUseCase } = createAccountsReceivableRuntime();
   let payload: unknown;
 
   try {
