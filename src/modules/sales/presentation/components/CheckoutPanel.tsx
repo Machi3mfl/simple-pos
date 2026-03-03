@@ -9,7 +9,6 @@ import {
   UserRoundCheck,
   UserRoundPlus,
   Users,
-  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -27,6 +26,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -1291,15 +1291,11 @@ export function CheckoutPanel({
               </div>
             </div>
 
-            <button
-              type="button"
+            <FloatingModalCloseButton
               onClick={closePaymentSheet}
               disabled={isSubmitting}
-              className="absolute right-0 top-0 flex size-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.14)] transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 md:size-12"
-              aria-label={messages.common.actions.close}
-            >
-              <X size={20} />
-            </button>
+              ariaLabel={messages.common.actions.close}
+            />
           </div>
         </div>
       ) : null}

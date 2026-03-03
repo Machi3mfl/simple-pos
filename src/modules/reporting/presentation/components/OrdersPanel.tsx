@@ -7,11 +7,11 @@ import {
   ReceiptText,
   RefreshCw,
   Wallet,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
@@ -368,14 +368,10 @@ function OrdersDialog({ sale, onClose }: OrdersDialogProps): JSX.Element {
             </section>
           </div>
 
-          <button
-            type="button"
+          <FloatingModalCloseButton
             onClick={onClose}
-            className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 md:right-5 md:top-5"
-            aria-label={messages.common.actions.close}
-          >
-            <X size={18} />
-          </button>
+            ariaLabel={messages.common.actions.close}
+          />
         </div>
       </div>
     </div>
