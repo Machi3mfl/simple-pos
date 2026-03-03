@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { createCatalogProduct } from "./support/catalog";
+
 function uniqueMarker(): string {
   return `profit-ui-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
 }
@@ -8,9 +10,13 @@ function parseMoney(raw: string): number {
   return Number(raw.replace(/[^0-9.-]/g, ""));
 }
 
-test("captures outbound inventory cost in profit summary from UI flow", async ({ page }) => {
+test("captures outbound inventory cost in profit summary from UI flow", async ({
+  page,
+  request,
+}) => {
   const marker = uniqueMarker();
   const productName = `Profit Cost ${marker}`;
+  const productSku = `PFT-${marker.slice(-6)}`;
 
   await page.goto("/cash-register");
   await page.getByTestId("nav-item-reporting").click();
@@ -25,20 +31,18 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   const beforeCost = parseMoney(beforeCostText);
   const beforeProfit = parseMoney(beforeProfitText);
 
-  await page.getByTestId("nav-item-products").click();
-  await page.getByTestId("products-workspace-open-create-button").click();
-  await page.getByTestId("products-workspace-create-name-input").fill(productName);
-  await page.getByTestId("products-workspace-create-sku-input").fill(`PFT-${marker.slice(-6)}`);
-  await page.getByTestId("products-workspace-create-category-input").fill("Snacks");
-  await page.getByTestId("products-workspace-create-price-input").fill("25");
-  await page.getByTestId("products-workspace-create-cost-input").fill("7");
-  await page.getByTestId("products-workspace-create-stock-input").fill("0");
-  await page.getByTestId("products-workspace-create-min-stock-input").fill("2");
-  await page.getByTestId("products-workspace-create-submit-button").click();
-  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
-    `Producto creado: ${productName}`,
-  );
+  await createCatalogProduct(request, {
+    name: productName,
+    sku: productSku,
+    categoryId: "snack",
+    price: 25,
+    cost: 7,
+    initialStock: 0,
+    minStock: 2,
+  });
 
+  await page.getByTestId("nav-item-products").click();
+  await page.getByTestId("products-workspace-search-input").fill(productSku);
   const productCard = page
     .locator('[data-testid^="products-workspace-card-"]')
     .filter({ hasText: productName })
@@ -65,7 +69,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   );
 
   await page.getByTestId("products-workspace-dialog-close").click();
-  await expect(page.getByTestId("products-workspace-dialog-close")).toHaveCount(0);
+  await expect(page.getByTestId("products-workspace-stock-mode-outbound")).toHaveCount(0);
   await page.getByTestId("nav-item-reporting").click();
   await page.getByLabel("Hasta").fill(tomorrow);
   await page.getByTestId("reporting-apply-filters-button").click();

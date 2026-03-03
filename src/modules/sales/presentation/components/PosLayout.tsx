@@ -143,8 +143,8 @@ export function PosLayout({
   );
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
-      { id: "cash-register", label: messages.shell.nav.sales, icon: ShoppingCart },
-      { id: "orders", label: messages.shell.nav.orders, icon: ReceiptText },
+      { id: "cash-register", label: messages.shell.nav.cashRegister, icon: ShoppingCart },
+      { id: "sales", label: messages.shell.nav.sales, icon: ReceiptText },
       { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
@@ -322,7 +322,7 @@ export function PosLayout({
       );
     }
 
-    if (currentWorkspace === "orders") {
+    if (currentWorkspace === "sales") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
           <OrdersPanel refreshToken={salesRefreshToken} />

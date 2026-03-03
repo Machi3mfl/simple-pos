@@ -37,7 +37,7 @@ async function createSale(
   return (await response.json()) as SaleResponse;
 }
 
-test("shows a snapshot list of all recorded sales in Orders workspace", async ({
+test("shows a snapshot list of all recorded sales in Sales workspace", async ({
   request,
   page,
 }) => {
@@ -50,7 +50,7 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
   const productName = `Producto Pedidos ${marker}`;
   const customerName = `Cliente Pedidos ${marker}`;
 
-  await page.goto("/orders");
+  await page.goto("/sales");
 
   await expect(page.getByRole("heading", { name: "Listado de ventas" })).toBeVisible();
   const refreshButton = page.getByTestId("orders-refresh-button");

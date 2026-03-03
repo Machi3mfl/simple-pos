@@ -22,7 +22,7 @@ test("renders core POS layout sections and controls", async ({ page }) => {
   await page.goto("/cash-register");
 
   await expect(page.getByTestId("nav-item-cash-register")).toBeVisible();
-  await expect(page.getByTestId("nav-item-orders")).toBeVisible();
+  await expect(page.getByTestId("nav-item-sales")).toBeVisible();
   await expect(page.getByTestId("nav-item-products")).toBeVisible();
   await expect(page.getByTestId("nav-item-receivables")).toBeVisible();
   await expect(page.getByTestId("nav-item-reporting")).toBeVisible();

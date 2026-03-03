@@ -33,8 +33,8 @@ export function PosWorkspaceShell({
   const router = useRouter();
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
-      { id: "cash-register", label: messages.shell.nav.sales, icon: ShoppingCart },
-      { id: "orders", label: messages.shell.nav.orders, icon: ReceiptText },
+      { id: "cash-register", label: messages.shell.nav.cashRegister, icon: ShoppingCart },
+      { id: "sales", label: messages.shell.nav.sales, icon: ReceiptText },
       { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },

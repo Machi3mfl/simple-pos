@@ -235,7 +235,7 @@ function OrdersDialog({ sale, onClose }: OrdersDialogProps): JSX.Element {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        {messages.shell.nav.orders}
+                        {messages.shell.nav.sales}
                       </p>
                       <span
                         className={[
@@ -522,7 +522,7 @@ export function OrdersPanel({
 
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <OrdersSummaryMetricCard
-          label={messages.shell.nav.orders}
+          label={messages.shell.nav.sales}
           value={String(visibleSales.length)}
           testId="orders-total-count"
           tone="neutral"

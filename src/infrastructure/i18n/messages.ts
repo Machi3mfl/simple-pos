@@ -8,8 +8,8 @@ const spanishMessages = {
   shell: {
     cashierRole: "Cajera",
     nav: {
-      sales: "Caja",
-      orders: "Pedidos",
+      cashRegister: "Caja",
+      sales: "Ventas",
       products: "Productos",
       catalog: "Catálogo",
       inventory: "Inventario",
@@ -217,7 +217,7 @@ const spanishMessages = {
   },
   productsWorkspace: {
     title: "Productos e inventario",
-    searchPlaceholder: "Buscar por nombre, SKU o código",
+    searchPlaceholder: "Buscar por nombre, SKU o EAN",
     listTitle: "Listado de productos",
     detailTitle: "Ficha del producto",
     movementHistoryTitle: "Movimientos recientes",
@@ -265,6 +265,7 @@ const spanishMessages = {
       bulkPrices: "Actualizar precios",
       bulkProducts: "Carga masiva",
       bulkStock: "Stock masivo",
+      more: "Más acciones",
       addStock: "Agregar stock",
       adjustStock: "Ajustar stock",
       editProduct: "Editar producto",
@@ -281,9 +282,9 @@ const spanishMessages = {
     },
     bulk: {
       productsPasteHint:
-        "Pegá filas con este orden: `name, sku, categoryId, price, cost, initialStock, minStock, imageUrl`.",
+        "Pegá filas con este orden: `name, sku, categoryId, price, cost, initialStock, minStock, imageUrl, ean`.",
       productsPlaceholder:
-        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl\nCoca 1L,BEB-101,bebidas-gaseosas,2500,1200,18,6,https://...\nAlfajor,GOL-010,alfajores,1500,700,24,8,",
+        "name,sku,categoryId,price,cost,initialStock,minStock,imageUrl,ean\nCoca 1L,BEB-101,bebidas-gaseosas,2500,1200,18,6,https://...,7790895067570\nAlfajor,GOL-010,alfajores,1500,700,24,8,,77976307",
       stockPasteHint:
         "Pegá filas con este orden: `sku, movementType, quantity, unitCost, reason`.",
       stockPlaceholder:
@@ -326,6 +327,8 @@ const spanishMessages = {
       averageCost: "Costo promedio",
       minStock: "Stock mínimo",
       sku: "SKU",
+      ean: "EAN",
+      noEan: "Sin EAN",
       supplier: "Proveedor",
       lastMovement: "Último movimiento",
       noMovement: "Sin movimientos",
@@ -510,7 +513,7 @@ const spanishMessages = {
     noPendingOrders: "Este cliente no tiene pedidos pendientes.",
     debtLedger: "Libro de deuda",
     createDebtHint:
-      "Para generar deuda, hacé el checkout con el método cuenta corriente desde Ventas.",
+      "Para generar deuda, hacé el checkout con el método cuenta corriente desde Caja.",
     loadSnapshotError: "No se pudo cargar el snapshot de deudas.",
     loadSummaryError: "No se pudo cargar el resumen de deuda.",
     selectCustomerFirst: "Seleccioná un cliente primero.",
@@ -526,19 +529,77 @@ const spanishMessages = {
   },
   reporting: {
     title: "Historial y analítica de ventas",
-    subtitle: "UC-004: explorá historial de ventas, productos más vendidos y ganancia.",
+    subtitle:
+      "Leé el período con contexto ejecutivo: ventas, rentabilidad, inventario y crédito para tomar decisiones de negocio con una sola vista.",
+    periodSnapshotTitle: "Período seleccionado",
+    currentStateTitle: "Estado actual del negocio",
+    momentumTitle: "Ritmo y composición",
+    salesCountMetric: "Ventas período",
+    marginMetric: "Margen bruto",
+    collectedMetric: "Cobrado período",
+    averageTicketMetric: "Ticket promedio",
+    currentCreditMetric: "Saldo créditos",
+    stockValueMetric: "Valor de stock",
+    debtorsMetric: "Deudores activos",
+    openOrdersMetric: "Pedidos abiertos",
+    inventoryRiskMetric: "Riesgo stock",
+    dailyTrendTitle: "Evolución diaria",
+    dailyTrendDescription:
+      "Seguimiento diario de facturación, cobrado y saldo abierto para detectar fricción comercial o presión de crédito.",
+    paymentMixTitle: "Mix de cobro",
+    paymentMixDescription:
+      "Cómo se reparte la facturación entre efectivo y cuenta corriente dentro del período filtrado.",
+    inventoryHealthTitle: "Salud del inventario",
+    inventoryHealthDescription:
+      "Disponibilidad actual y alertas de stock que pueden afectar ventas o reposición.",
+    executiveInsightsTitle: "Lectura rápida",
+    executiveInsightsDescription:
+      "Señales accionables para precio, crédito, concentración comercial y reposición.",
+    recentSalesTitle: "Últimas ventas del período",
+    recentSalesDescription:
+      "Bajá del resumen al detalle operativo con los tickets más recientes del filtro aplicado.",
     salesHistory: "Historial de ventas",
     topProducts: "Productos más vendidos",
+    topProductsDescription:
+      "Productos que hoy empujan la facturación y marcan el pulso comercial del negocio.",
     noSalesInRange: "No hay ventas en el rango seleccionado.",
     noTopProducts: "Todavía no hay datos de productos más vendidos.",
+    noTrendData: "Todavía no hay ventas para graficar en este período.",
+    noPaymentMixData: "Todavía no hay ventas para analizar el mix de cobro.",
+    noInventoryHealthData: "Todavía no hay datos de inventario para resumir.",
+    noRecentSales: "Todavía no hay ventas para revisar en detalle.",
+    noInsights: "Cargá ventas para generar señales ejecutivas.",
     loadSalesError: "No se pudo cargar el historial de ventas.",
     loadTopProductsError: "No se pudieron cargar los productos más vendidos.",
     loadProfitError: "No se pudo cargar el resumen de ganancia.",
+    loadProductsSnapshotError: "No se pudo cargar el snapshot de productos.",
+    loadReceivablesSnapshotError: "No se pudo cargar el snapshot de deudas.",
     loadReportingError: "No se pudieron cargar los datos del reporte.",
     invalidPeriodRange: "La fecha desde debe ser anterior o igual a la fecha hasta.",
     quantitySold: (count: number): string => `cantidad ${count}`,
     revenueLabel: (amount: string): string => `Facturación ${amount}`,
     customerLabel: (customerName: string): string => `Cliente ${customerName}`,
+    paymentMixRevenue: (amount: string): string => `Facturación ${amount}`,
+    paymentMixOrders: (count: number): string =>
+      count === 1 ? "1 venta" : `${count} ventas`,
+    inventoryHealthValue: (count: number): string =>
+      count === 1 ? "1 producto" : `${count} productos`,
+    insightCreditHealthy: (share: string, amount: string): string =>
+      `${share} de la facturación del período sigue abierta en crédito (${amount}). Nivel saludable para sostener caja.`,
+    insightCreditRisk: (share: string, amount: string): string =>
+      `${share} de la facturación del período quedó en crédito (${amount}). Conviene revisar cobranza y límites por cliente.`,
+    insightInventoryRisk: (count: number): string =>
+      count === 1
+        ? "Hay 1 producto en alerta de stock. Podría cortar ventas si no se repone a tiempo."
+        : `Hay ${count} productos en alerta de stock. Priorizar reposición ayuda a no perder facturación.`,
+    insightInventoryHealthy: "El inventario activo no muestra alertas críticas de stock en este momento.",
+    insightTopProductConcentration: (productName: string, share: string): string =>
+      `${productName} explica ${share} de la facturación del período. Revisá dependencia comercial y margen real.`,
+    insightTopProductDiversified: (productName: string, share: string): string =>
+      `${productName} lidera con ${share} de la facturación del período. La mezcla comercial sigue diversificada.`,
+    trendLegendRevenue: "Facturación",
+    trendLegendCollected: "Cobrado",
+    trendLegendOutstanding: "Pendiente",
   },
   sync: {
     title: "Cola offline y sincronización",
