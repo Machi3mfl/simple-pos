@@ -97,6 +97,13 @@ Delivered on `2026-03-01`:
 - `POST /api/v1/stock-movements/import`
 - real `/products` workspace with listing, filters, detail modal, create, edit, archive, individual stock operations, and paste-based batch flows
 
+Follow-up refinements delivered on `2026-03-03`:
+
+- `products.ean` is now persisted in the base catalog model and backfilled from `imported_product_sources` when available
+- sourcing imports propagate `EAN` into the canonical product record instead of leaving it only in trace metadata
+- the `/products` list search now matches `name`, `SKU`, and `EAN`
+- the product detail modal exposes `EAN` while the list cards stay visually compact
+
 Scope note:
 
 - bulk loading was delivered in paste/import form with partial per-row validation

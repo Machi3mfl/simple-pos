@@ -81,3 +81,6 @@ The workspace now makes that decision explicit in the bulk import dialogs by war
 - Guided onboarding, bulk repricing, individual stock movements, and bulk imports are all operational from `/products`
 - `/catalog` and `/inventory` are no longer used by the application runtime or UI regression suite
 - The rail, smoke suite, and real-backend UI module suite now validate the converged route model
+- The primary CTA `Nuevo producto` now opens `/products/sourcing`, so single-product onboarding follows the external-sourcing-assisted path instead of the older manual modal
+- Secondary admin actions were compacted behind a three-dots menu, leaving `Nuevo producto` and `Actualizar precios` as the visible toolbar actions
+- `EAN` is now part of the converged workspace contract: it is persisted on `products`, searchable from the `/products` list, and only displayed inside the detail modal to preserve browsing density

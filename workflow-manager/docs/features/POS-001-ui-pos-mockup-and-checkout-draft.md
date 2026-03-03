@@ -82,11 +82,11 @@ curl -X POST /api/v1/sales \
 - [x] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [x] Product cards, category chips, and checkout action preserve large-target touch usability.
 - [x] Side rail navigation opens each module UI surface while preserving `Caja` layout baseline.
-- [x] Side rail exposes an `Orders` workspace with a list snapshot of recorded sales.
+- [x] Side rail exposes a `Sales` workspace with a list snapshot of recorded sales.
 
 ## Current Output
 
-- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/cash-register`, `/orders`, `/products`, `/receivables`, `/reporting`, `/sync`)
+- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/cash-register`, `/sales`, `/products`, `/receivables`, `/reporting`, `/sync`)
 - `Products` is the single operational workspace for product and inventory administration
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
@@ -95,16 +95,16 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Integrated side-rail workspaces in `PosLayout`:
   - `Caja`: POS catalog + cart + checkout
-  - `Orders`: all recorded sales shown as a list snapshot
+  - `Ventas`: all recorded sales shown as a list snapshot
   - `Products`: unified real workspace for products and inventory operations
   - `Receivables`: debt management UI
-  - `Reporting`: reporting/history UI
+  - `Reporting`: executive dashboard that combines sales history, profit, stock health, and current credit exposure
   - `Sync`: offline queue/sync UI
 - Legacy direct routes outside the rail:
   - `Catalog`: onboarding + bulk price update UI
   - `Inventory`: stock movement UI
 - Root route redirect to POS demo: `src/app/page.tsx` -> `/cash-register`
-- Legacy compatibility route: `/sales` now redirects to `/cash-register`
+- Legacy compatibility route: `/orders` now redirects to `/sales`
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
   - Category and search filtering in catalog panel
@@ -114,6 +114,9 @@ curl -X POST /api/v1/sales \
   - Product list now sorts alphabetically in the sales view and exposes an A-Z quick-jump rail with animated scrolling that tracks the current visible letter while scrolling
   - Product card click adds/increments cart lines
   - Product cards clamp the title to two lines, keep availability + price pinned to the bottom edge, tighten subtitle-to-footer spacing for denser browsing, and show current stock inside the availability badge
+  - In `/products`, `Nuevo producto` now routes directly to `/products/sourcing`; the old standalone `Buscar afuera` CTA was removed and sourcing became the primary single-product onboarding path
+  - The `/products` action rail was compacted so only `Nuevo producto` and `Actualizar precios` remain visible, while `Carga masiva` and `Stock masivo` live under a three-dots overflow menu
+  - Product detail in `/products` now gives `EAN` visibility without polluting the card grid, and workspace search also matches by `EAN`
   - The catalog scroll area now exposes a floating "back to top" action once the operator has moved down the product list
   - Cart quantity controls (`+` / `-`) update totals in real time
   - Order-list items now prioritize the full product title on the first row, show the real product image beside quantity controls on the second row, and expose a dedicated delete action with a red trash-can icon
@@ -138,23 +141,29 @@ curl -X POST /api/v1/sales \
   - the on-account path now uses a guided customer selector built as a shadcn autocomplete dropdown, showing recent customers and live matches directly under the input, with explicit "create new customer" action and a second warning step when there are similar names to reduce duplicate debt ledgers
   - server-side customer lookup now forces uncached Supabase reads inside App Router so newly created on-account customers appear immediately in recent matches and exact-name search
 - Orders UX updates:
-  - the `/orders` workspace now uses the same card scale, spacing, rounded surfaces, and emphasized totals as `/cash-register` and `/products`, with larger summary metrics and more visual sales cards
+  - the `/sales` workspace now uses the same card scale, spacing, rounded surfaces, and emphasized totals as `/cash-register` and `/products`, with larger summary metrics and more visual sales cards
   - sale IDs remain available in automation selectors but are no longer rendered as visible card content for operators
-  - `/orders` no longer registers payments directly; debt settlement remains in `/receivables`, while `orders` stays focused on snapshot and visual review
+  - `/sales` no longer registers payments directly; debt settlement remains in `/receivables`, while this sales-history workspace stays focused on snapshot and visual review
   - sale cards now show clearer payment-method iconography and stronger total/collected/outstanding hierarchy, with the three amounts moved to the upper-right area using one shared visual treatment, compact amount formatting that hides `.00`, and no inline customer strip on the card itself
   - order-level metric cards were tightened to content height across the summary row, sale list, and sale-detail modal so more information fits on screen without changing the overall visual language
   - clicking a sale card opens a detail modal with the purchased items, their stored product photos, quantities, and line totals, keeping the same modal language already used in checkout and products
 - Receivables UX updates:
-  - the `/receivables` workspace now follows the same visual language as `/cash-register` and `/orders`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
+  - the `/receivables` workspace now follows the same visual language as `/cash-register` and `/sales`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
   - the top area exposes four snapshot metrics: debtor count, total outstanding balance, open orders, and average outstanding balance
   - debtors are now explored through a scrollable card list with filters for customer name, last-activity date range, open-order count, and sorting by debt/recent activity/name
   - opening a debtor card launches a centered detail modal with the customer snapshot, order-level debt breakdown, full debt ledger, optional payment notes, and direct payment registration from the same context
-  - each pending order inside that receivables modal now renders its purchased items with stored product image, quantity x unit price, and subtotal, reusing the same visual language as the `/orders` sale-detail modal
-  - receivables, orders, and checkout now share the same floating close affordance in the upper-right overlay corner for modal consistency across the POS
+  - each pending order inside that receivables modal now renders its purchased items with stored product image, quantity x unit price, and subtotal, reusing the same visual language as the `/sales` sale-detail modal
+  - receivables, sales-history, and checkout now share the same floating close affordance in the upper-right overlay corner for modal consistency across the POS
   - the receivables backend now also exposes `GET /api/v1/receivables`, a dedicated snapshot route used by the redesigned list without reusing the older customer lookup flow
+- Reporting UX updates:
+  - the `/reporting` workspace now follows the same rounded-card system, spacing rhythm, and strong typographic hierarchy already used in `/products`, `/sales`, and `/receivables`
+  - the screen is now split between executive filters and a business snapshot so leadership can compare the selected period with the live operating position from a single surface
+  - reporting combines signals from sales, receivables, and products to surface facturación, costo, profit, margen bruto, ticket promedio, saldo de créditos, stock valorizado, deudores, and pedidos abiertos
+  - the dashboard now includes shadcn-style charts for daily revenue/collections/outstanding trend, payment-method mix, inventory health, and top-product concentration
+  - an executive insight section summarizes credit exposure, inventory risk, and revenue concentration so the workspace acts as a decision-support snapshot instead of only a sales-history list
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`
-  - navigation, catalog, checkout, orders, and support workspaces consume a centralized dictionary instead of embedded strings
+  - navigation, catalog, checkout, sales-history, and support workspaces consume a centralized dictionary instead of embedded strings
   - category labels, payment methods, movement types, and debt status labels are resolved through shared translation helpers
 - Mock E2E coverage:
   - `tests/e2e/pos-checkout-smoke.spec.ts`

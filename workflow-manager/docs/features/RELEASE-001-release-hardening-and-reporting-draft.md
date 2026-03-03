@@ -62,10 +62,14 @@ export interface SaleFilters {
   - `src/modules/reporting/presentation/components/OrdersPanel.tsx`
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Reporting`)
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Orders`)
+  - `Reporting` now behaves as an executive dashboard instead of a simple history table, combining real sales, receivables, and product-workspace signals into one decision-support snapshot
+  - the UI now exposes CEO-facing metric cards for sales count, revenue, cost, profit, gross margin, collected amount, current credit balance, stock value, debtor count, and open orders
+  - the workspace now uses shadcn-style charts for daily trend, payment mix, inventory health, and top-product concentration
 - Reporting API routes added:
   - `src/app/api/v1/reports/top-products/route.ts`
   - `src/app/api/v1/reports/profit-summary/route.ts`
   - `src/app/api/v1/reports/sales-history/route.ts`
+  - `ReportingPanel` also consumes `GET /api/v1/products/workspace` and `GET /api/v1/receivables` to enrich the executive snapshot with live inventory and credit exposure
 - Reporting use cases:
   - `GetTopProductsReportUseCase`
   - `GetProfitSummaryReportUseCase`
@@ -87,7 +91,7 @@ export interface SaleFilters {
   - `src/app/api/v1/openapi.yaml` (`/reports/sales-history`, `SalesHistoryResponse`)
   - `src/app/api/v1/openapi.yaml` (`/sales`, `/debt-payments`, `SaleResponse`, `DebtPaymentResponse`)
   - reporting DTOs now use Zod schemas.
-- Orders workspace now reuses `sales-history` as an operational snapshot and can register per-order partial payments without leaving the list.
+- Orders workspace now reuses `sales-history` as an operational snapshot focused on visual review and detail drill-down; debt settlement remains in `/receivables`.
 - Quality gates revalidated (`2026-02-28`):
   - `npm run lint` ✅
   - `npm run build` ✅
@@ -95,6 +99,7 @@ export interface SaleFilters {
 - Test evidence:
   - `tests/e2e/reporting-sales-history-and-profit-api.spec.ts`
   - `tests/e2e/reporting-ui-filters-and-metrics.spec.ts`
+  - `tests/e2e/reporting-ui-profit-cost-basis.spec.ts`
   - `tests/e2e/orders-ui-sales-snapshot.spec.ts`
   - `tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts`
   - `tests/e2e/api-contract-conformance.spec.ts`
