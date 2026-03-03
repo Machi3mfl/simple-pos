@@ -562,11 +562,9 @@ export function ProductsInventoryMockPanel(): JSX.Element {
               const statusTone = resolveStatusTone(status);
 
               const statusText =
-                status === "in_stock"
-                  ? messages.productsWorkspace.status.inStock
-                  : status === "low_stock"
-                    ? messages.productsWorkspace.status.lowStock
-                    : status === "out_of_stock"
+                status === "in_stock" || status === "low_stock"
+                  ? `${messages.productsWorkspace.status.inStock} ${product.stock}`
+                  : status === "out_of_stock"
                       ? messages.productsWorkspace.status.outOfStock
                       : messages.productsWorkspace.status.inactive;
 
@@ -602,26 +600,7 @@ export function ProductsInventoryMockPanel(): JSX.Element {
                     </p>
                   </div>
 
-                  <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                      <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                        {messages.productsWorkspace.fields.currentStockShort}
-                      </p>
-                      <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                        {product.stock}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1.5">
-                      <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                        {messages.productsWorkspace.fields.minStockShort}
-                      </p>
-                      <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                        {product.minStock}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-2.5 flex items-center justify-between gap-3">
+                  <div className="mt-2 flex items-center justify-between gap-3">
                     <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
                       {formatCurrency(product.price)}
                     </span>

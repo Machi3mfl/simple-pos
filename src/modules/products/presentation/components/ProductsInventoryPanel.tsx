@@ -1115,11 +1115,9 @@ export function ProductsInventoryPanel(): JSX.Element {
                           : "border-slate-200 bg-slate-100 text-slate-600";
 
                   const statusText =
-                    product.stockState === "with_stock"
-                      ? messages.productsWorkspace.status.inStock
-                      : product.stockState === "low_stock"
-                        ? messages.productsWorkspace.status.lowStock
-                        : product.stockState === "out_of_stock"
+                    product.stockState === "with_stock" || product.stockState === "low_stock"
+                      ? `${messages.productsWorkspace.status.inStock} ${product.stock}`
+                      : product.stockState === "out_of_stock"
                           ? messages.productsWorkspace.status.outOfStock
                           : messages.productsWorkspace.status.inactive;
 
@@ -1132,7 +1130,7 @@ export function ProductsInventoryPanel(): JSX.Element {
                         setOpenDialog("detail");
                       }}
                       testId={`products-workspace-card-${product.id}`}
-                      contentClassName="min-h-[24.25rem] gap-4 p-5"
+                      contentClassName="min-h-[20.5rem] gap-3 p-5"
                       headerRight={
                         <span
                           className={[
@@ -1156,31 +1154,11 @@ export function ProductsInventoryPanel(): JSX.Element {
                           <Package size={44} className="text-slate-400" />
                         )
                       }
-                      mediaClassName="h-[8.5rem] rounded-[1.45rem] bg-transparent p-0 lg:h-[9rem]"
+                      mediaClassName="h-[7.6rem] rounded-[1.45rem] bg-transparent p-0 lg:h-[8.2rem]"
                       title={product.name}
                       subtitle={`${labelForCategory(product.categoryId)} • ${product.sku}`}
                       titleClassName="text-[1.16rem] leading-[1.08]"
                       subtitleClassName="text-[0.82rem] leading-tight"
-                      details={
-                        <div className="grid grid-cols-2 gap-1.5 rounded-[1.25rem] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                              {messages.productsWorkspace.fields.currentStockShort}
-                            </p>
-                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                              {product.stock}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[0.52rem] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                              {messages.productsWorkspace.fields.minStockShort}
-                            </p>
-                            <p className="text-[0.92rem] font-bold tracking-tight text-slate-900">
-                              {product.minStock}
-                            </p>
-                          </div>
-                        </div>
-                      }
                       footer={
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[1.35rem] leading-none font-bold tracking-tight text-slate-900">
