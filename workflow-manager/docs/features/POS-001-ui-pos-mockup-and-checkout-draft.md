@@ -133,7 +133,7 @@ curl -X POST /api/v1/sales \
   - the checkout modal emphasizes total, method selection, cash received/change due, and remaining on-account balance
   - the checkout modal now stays pinned inside the viewport with internal scroll, a fixed action footer, and a stable customer-search area so the sheet no longer jumps while the operator types
   - checkout feedback now uses a reusable shadcn toast mounted globally in `src/app/layout.tsx`, with floating success/error/info variants, iconography, POS-aligned colors, and a 10-second visibility window instead of the old inline green status block
-  - the on-account path now uses a guided customer selector with recent customers, live matches, explicit "create new customer" action, and a second warning step when there are similar names to reduce duplicate debt ledgers
+  - the on-account path now uses a guided customer selector built as a shadcn autocomplete dropdown, showing recent customers and live matches directly under the input, with explicit "create new customer" action and a second warning step when there are similar names to reduce duplicate debt ledgers
   - server-side customer lookup now forces uncached Supabase reads inside App Router so newly created on-account customers appear immediately in recent matches and exact-name search
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`

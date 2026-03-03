@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  ChevronRight,
+  Check,
+  Loader2,
   Plus,
   Search,
   Trash2,
@@ -9,8 +10,25 @@ import {
   UserRoundPlus,
   Users,
 } from "lucide-react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import type { CustomerSearchResponseDTO } from "@/modules/customers/presentation/dtos/customer-search-response.dto";
 import {
   normalizeCustomerName,
@@ -130,6 +148,9 @@ export function CheckoutPanel({
   const [pendingNewCustomerName, setPendingNewCustomerName] = useState<string | null>(null);
   const [isCustomerSearchLoading, setIsCustomerSearchLoading] = useState<boolean>(false);
   const [customerLookupError, setCustomerLookupError] = useState<string | null>(null);
+  const [isCustomerAutocompleteOpen, setIsCustomerAutocompleteOpen] =
+    useState<boolean>(false);
+  const customerInputRef = useRef<HTMLInputElement | null>(null);
   const deferredCustomerQuery = useDeferredValue(customerName);
 
   const itemCount = useMemo(
@@ -235,6 +256,8 @@ export function CheckoutPanel({
     !hasExactCustomerMatch &&
     !isCustomerSearchLoading &&
     !customerLookupError;
+  const isCustomerAutocompleteVisible =
+    isCustomerAutocompleteOpen && pendingNewCustomerName === null;
   const activeCustomerName = useMemo(() => {
     if (!selectedOnAccountCustomer) {
       return "";
@@ -253,6 +276,7 @@ export function CheckoutPanel({
     setSelectedOnAccountCustomer(null);
     setPendingNewCustomerName(null);
     setCustomerLookupError(null);
+    setIsCustomerAutocompleteOpen(false);
   }, []);
 
   const publishFeedback = useCallback(
@@ -301,6 +325,7 @@ export function CheckoutPanel({
     setCustomerName(customer.name);
     setPendingNewCustomerName(null);
     setCustomerLookupError(null);
+    setIsCustomerAutocompleteOpen(false);
   }, []);
 
   const confirmNewCustomer = useCallback((draftName: string): void => {
@@ -312,13 +337,39 @@ export function CheckoutPanel({
     setCustomerName(trimmedName);
     setPendingNewCustomerName(null);
     setCustomerLookupError(null);
+    setIsCustomerAutocompleteOpen(false);
   }, []);
 
   const changeSelectedCustomer = useCallback((): void => {
     setSelectedOnAccountCustomer(null);
     setPendingNewCustomerName(null);
     setCustomerName("");
+    setIsCustomerAutocompleteOpen(true);
+    window.requestAnimationFrame(() => {
+      customerInputRef.current?.focus();
+    });
   }, []);
+
+  const handleCustomerNameChange = useCallback((nextValue: string): void => {
+    setCustomerName(nextValue);
+    setPendingNewCustomerName(null);
+    setCustomerLookupError(null);
+    setIsCustomerAutocompleteOpen(true);
+  }, []);
+
+  const handleCreateCustomerRequest = useCallback((): void => {
+    if (trimmedCustomerQuery.length === 0) {
+      return;
+    }
+
+    if (visibleCustomerOptions.length > 0) {
+      setPendingNewCustomerName(trimmedCustomerQuery);
+      setIsCustomerAutocompleteOpen(false);
+      return;
+    }
+
+    confirmNewCustomer(trimmedCustomerQuery);
+  }, [confirmNewCustomer, trimmedCustomerQuery, visibleCustomerOptions.length]);
 
   const retryOfflineSync = useCallback(async () => {
     const result = await flushOfflineSyncQueue();
@@ -387,9 +438,23 @@ export function CheckoutPanel({
   }, [isPaymentSheetOpen, isSubmitting]);
 
   useEffect(() => {
+    if (
+      isPaymentSheetOpen &&
+      paymentMethod === "on_account" &&
+      !selectedOnAccountCustomer
+    ) {
+      return;
+    }
+
+    setIsCustomerAutocompleteOpen(false);
+  }, [isPaymentSheetOpen, paymentMethod, selectedOnAccountCustomer]);
+
+  useEffect(() => {
     if (pendingNewCustomerName === null) {
       return;
     }
+
+    setIsCustomerAutocompleteOpen(false);
 
     if (pendingNewCustomerName !== trimmedCustomerQuery) {
       setPendingNewCustomerName(null);
@@ -971,135 +1036,180 @@ export function CheckoutPanel({
                           <span className="text-sm font-semibold text-slate-700">
                             {messages.sales.checkout.customerNameLabel}
                           </span>
-                          <div className="relative mt-2">
-                            <Search
-                              className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400"
-                              aria-hidden
-                            />
-                            <input
-                              data-testid="checkout-customer-name-input"
-                              type="text"
-                              placeholder={messages.sales.checkout.customerSearchPlaceholder}
-                              value={customerName}
-                              onChange={(event) => setCustomerName(event.target.value)}
-                              disabled={isSubmitting}
-                              className="min-h-[3.9rem] w-full rounded-2xl border border-slate-300 pl-12 pr-4 text-lg text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
-                            />
-                          </div>
+                          <Popover
+                            open={isCustomerAutocompleteVisible}
+                            onOpenChange={(open) => {
+                              if (pendingNewCustomerName !== null) {
+                                return;
+                              }
+
+                              setIsCustomerAutocompleteOpen(open);
+                            }}
+                          >
+                            <div className="relative mt-2">
+                              <Search
+                                className="pointer-events-none absolute left-4 top-1/2 z-10 size-5 -translate-y-1/2 text-slate-400"
+                                aria-hidden
+                              />
+                              <PopoverTrigger asChild>
+                                <Input
+                                  ref={customerInputRef}
+                                  data-testid="checkout-customer-name-input"
+                                  type="text"
+                                  placeholder={messages.sales.checkout.customerSearchPlaceholder}
+                                  value={customerName}
+                                  onFocus={() => setIsCustomerAutocompleteOpen(true)}
+                                  onClick={() => setIsCustomerAutocompleteOpen(true)}
+                                  onChange={(event) =>
+                                    handleCustomerNameChange(event.target.value)
+                                  }
+                                  disabled={isSubmitting}
+                                  className="min-h-[3.9rem] rounded-2xl border-slate-300 bg-white pl-12 pr-4 text-lg text-slate-800 shadow-none transition focus-visible:border-blue-400 focus-visible:ring-0 disabled:bg-slate-100 disabled:text-slate-400"
+                                />
+                              </PopoverTrigger>
+                            </div>
+
+                            <PopoverContent
+                              data-testid="checkout-customer-lookup-panel"
+                              align="start"
+                              sideOffset={10}
+                              onOpenAutoFocus={(event) => event.preventDefault()}
+                              className="w-[var(--radix-popover-trigger-width)] max-w-[min(30rem,calc(100vw-2rem))] rounded-[1.6rem] border border-slate-200 bg-white/95 p-0 shadow-[0_22px_38px_rgba(15,23,42,0.16)] backdrop-blur"
+                            >
+                              <Command shouldFilter={false} className="bg-transparent">
+                                <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                                  <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">
+                                    {customerLookupPanelTitle}
+                                  </p>
+                                  {isCustomerSearchLoading ? (
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+                                      <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                                      {messages.common.states.loading}
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                <CommandList
+                                  data-testid="checkout-customer-options-scroll-area"
+                                  className="max-h-60 p-2 [scrollbar-gutter:stable]"
+                                >
+                                  {visibleCustomerOptions.length > 0 ? (
+                                    <CommandGroup className="p-1">
+                                      {visibleCustomerOptions.map((customer) => {
+                                        const isExactMatch =
+                                          normalizedCustomerQuery.length > 0 &&
+                                          normalizeCustomerName(customer.name) ===
+                                            normalizedCustomerQuery;
+
+                                        return (
+                                          <CommandItem
+                                            key={customer.id}
+                                            value={`${customer.id}-${customer.name}`}
+                                            data-testid={`checkout-customer-option-${customer.id}`}
+                                            onSelect={() => selectExistingCustomer(customer)}
+                                            className="min-h-[3.6rem] rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left shadow-[0_8px_18px_rgba(15,23,42,0.05)] data-[selected=true]:border-blue-300 data-[selected=true]:bg-blue-50/70"
+                                          >
+                                            <span className="flex min-w-0 flex-1 items-center gap-3">
+                                              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
+                                                <Users className="size-5" aria-hidden />
+                                              </span>
+                                              <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-[1.02rem] font-semibold text-slate-900">
+                                                  {customer.name}
+                                                </span>
+                                              </span>
+                                            </span>
+                                            <Check
+                                              className={cn(
+                                                "size-4 shrink-0 text-emerald-600 transition-opacity",
+                                                isExactMatch ? "opacity-100" : "opacity-0",
+                                              )}
+                                              aria-hidden
+                                            />
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  ) : (
+                                    <div
+                                      className={cn(
+                                        "mx-2 my-2 flex min-h-[6.5rem] items-center justify-center rounded-2xl px-4 text-center text-sm",
+                                        customerLookupError
+                                          ? "bg-rose-50 text-rose-700"
+                                          : "bg-slate-50 text-slate-500",
+                                      )}
+                                    >
+                                      {customerLookupEmptyMessage}
+                                    </div>
+                                  )}
+
+                                  {shouldShowCreateCustomerAction && !pendingNewCustomerName ? (
+                                    <>
+                                      <CommandSeparator className="mx-3" />
+                                      <CommandGroup className="p-2 pt-2">
+                                        <CommandItem
+                                          data-testid="checkout-customer-create-button"
+                                          value={`create-${trimmedCustomerQuery}`}
+                                          onSelect={handleCreateCustomerRequest}
+                                          className="min-h-[3.35rem] rounded-2xl border border-dashed border-blue-300 bg-blue-50 px-3 py-3 text-blue-700 data-[selected=true]:bg-blue-100 data-[selected=true]:text-blue-800"
+                                        >
+                                          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                                            <Plus className="size-4" aria-hidden />
+                                          </span>
+                                          <span className="min-w-0 flex-1 text-[0.98rem] font-semibold">
+                                            {messages.sales.checkout.createNewCustomerButton(
+                                              trimmedCustomerQuery,
+                                            )}
+                                          </span>
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    </>
+                                  ) : null}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </label>
 
                         <p className="mt-2 text-sm text-slate-500">
                           {messages.sales.checkout.customerSearchHint}
                         </p>
 
-                        <div
-                          data-testid="checkout-customer-lookup-panel"
-                          className="mt-3 rounded-[1.6rem] border border-slate-200 bg-white/80 px-3 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">
-                              {customerLookupPanelTitle}
+                        {pendingNewCustomerName ? (
+                          <div className="mt-3 rounded-[1.6rem] border border-amber-200 bg-amber-50 px-4 py-4">
+                            <p className="text-sm font-semibold text-amber-900">
+                              {messages.sales.checkout.customerSimilarWarningTitle}
                             </p>
-                            {isCustomerSearchLoading ? (
-                              <span className="text-xs font-semibold text-slate-400">
-                                {messages.common.states.loading}
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div
-                            data-testid="checkout-customer-options-scroll-area"
-                            className="mt-3 max-h-56 min-h-[7.75rem] overflow-y-auto pr-1 [scrollbar-gutter:stable]"
-                          >
-                            {visibleCustomerOptions.length > 0 ? (
-                              <div className="grid gap-2">
-                                {visibleCustomerOptions.map((customer) => (
-                                  <button
-                                    key={customer.id}
-                                    type="button"
-                                    data-testid={`checkout-customer-option-${customer.id}`}
-                                    onClick={() => selectExistingCustomer(customer)}
-                                    className="flex min-h-[3.35rem] items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-left shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-blue-300"
-                                  >
-                                    <span className="flex items-center gap-3">
-                                      <span className="flex size-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
-                                        <Users className="size-5" aria-hidden />
-                                      </span>
-                                      <span className="text-[1.02rem] font-semibold text-slate-900">
-                                        {customer.name}
-                                      </span>
-                                    </span>
-                                    <ChevronRight className="size-5 text-slate-400" aria-hidden />
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div
-                                className={[
-                                  "flex min-h-[7.75rem] items-center justify-center rounded-2xl px-4 text-center text-sm",
-                                  customerLookupError
-                                    ? "bg-rose-50 text-rose-700"
-                                    : "bg-slate-50 text-slate-500",
-                                ].join(" ")}
-                              >
-                                {customerLookupEmptyMessage}
-                              </div>
-                            )}
-                          </div>
-
-                          {shouldShowCreateCustomerAction ? (
-                            pendingNewCustomerName ? (
-                              <div className="mt-3 rounded-[1.6rem] border border-amber-200 bg-amber-50 px-4 py-4">
-                                <p className="text-sm font-semibold text-amber-900">
-                                  {messages.sales.checkout.customerSimilarWarningTitle}
-                                </p>
-                                <p className="mt-1 text-sm text-amber-900/80">
-                                  {messages.sales.checkout.customerSimilarWarningDescription(
-                                    pendingNewCustomerName,
-                                  )}
-                                </p>
-                                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                                  <button
-                                    data-testid="checkout-customer-create-confirm-button"
-                                    type="button"
-                                    onClick={() => confirmNewCustomer(pendingNewCustomerName)}
-                                    className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white shadow-[0_12px_20px_rgba(245,158,11,0.28)]"
-                                  >
-                                    {messages.sales.checkout.confirmCreateCustomerButton(
-                                      pendingNewCustomerName,
-                                    )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setPendingNewCustomerName(null)}
-                                    className="min-h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-                                  >
-                                    {messages.common.actions.cancel}
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
+                            <p className="mt-1 text-sm text-amber-900/80">
+                              {messages.sales.checkout.customerSimilarWarningDescription(
+                                pendingNewCustomerName,
+                              )}
+                            </p>
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                               <button
-                                data-testid="checkout-customer-create-button"
+                                data-testid="checkout-customer-create-confirm-button"
                                 type="button"
-                                onClick={() => {
-                                  if (visibleCustomerOptions.length > 0) {
-                                    setPendingNewCustomerName(trimmedCustomerQuery);
-                                    return;
-                                  }
-
-                                  confirmNewCustomer(trimmedCustomerQuery);
-                                }}
-                                className="mt-3 flex min-h-[3.35rem] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300 bg-blue-50 px-4 text-[0.98rem] font-semibold text-blue-700"
+                                onClick={() => confirmNewCustomer(pendingNewCustomerName)}
+                                className="min-h-11 rounded-2xl bg-amber-500 px-4 text-sm font-semibold text-white shadow-[0_12px_20px_rgba(245,158,11,0.28)]"
                               >
-                                <Plus className="size-4" aria-hidden />
-                                {messages.sales.checkout.createNewCustomerButton(
-                                  trimmedCustomerQuery,
+                                {messages.sales.checkout.confirmCreateCustomerButton(
+                                  pendingNewCustomerName,
                                 )}
                               </button>
-                            )
-                          ) : null}
-                        </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingNewCustomerName(null);
+                                  setIsCustomerAutocompleteOpen(true);
+                                  customerInputRef.current?.focus();
+                                }}
+                                className="min-h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
+                              >
+                                {messages.common.actions.cancel}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     )}
 
