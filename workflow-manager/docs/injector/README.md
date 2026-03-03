@@ -42,6 +42,7 @@ Nota: `Sincronizacion` usa `localStorage` del navegador. Este injector siembra b
 - Los productos se crean a traves de `POST /api/v1/product-sourcing/import`.
 - Las imagenes se descargan desde `sourceImageUrl` y quedan guardadas en Supabase Storage (`product-sourcing-images`).
 - Las ventas se crean via `POST /api/v1/sales`.
+- Las ventas en cuenta corriente confirman `createCustomerIfMissing` cuando el dataset referencia un cliente por nombre y todavia no existe.
 - Los movimientos de stock de salida se crean via `POST /api/v1/stock-movements`.
 - Los pagos de deuda se crean via `POST /api/v1/debt-payments`.
 - El cleanup usa Supabase REST para limpiar el entorno de desarrollo completo antes de regenerar la demo.

@@ -438,6 +438,7 @@ async function syncStaticProductFields(env, productRecord, importedSource) {
   await patchRows(env, "products", [["id", `eq.${product.id}`]], {
     name: productRecord.name,
     category_id: productRecord.categoryId,
+    ean: productRecord.ean,
     price: productRecord.price,
     cost: productRecord.cost,
     min_stock: productRecord.minStock,
@@ -654,6 +655,11 @@ async function injectSales(env, productDataset, salesDataset, debtPaymentDataset
   logInfo(`Injecting ${salesDataset.length} demo sales.`);
 
   for (const saleRecord of salesDataset) {
+    const requiresExplicitCustomerCreation =
+      saleRecord.paymentMethod === "on_account" &&
+      typeof saleRecord.customerName === "string" &&
+      saleRecord.customerName.trim().length > 0;
+
     const payload = {
       items: saleRecord.items.map((line) => ({
         productId: productIdByKey.get(line.productRef),
@@ -664,6 +670,7 @@ async function injectSales(env, productDataset, salesDataset, debtPaymentDataset
       ...(saleRecord.paymentMethod === "on_account"
         ? { initialPaymentAmount: saleRecord.initialPaymentAmount ?? 0 }
         : {}),
+      ...(requiresExplicitCustomerCreation ? { createCustomerIfMissing: true } : {}),
     };
 
     const { response, data, text } = await requestApp(env, "POST", "/api/v1/sales", {
