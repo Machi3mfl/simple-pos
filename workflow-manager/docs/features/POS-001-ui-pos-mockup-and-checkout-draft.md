@@ -132,6 +132,7 @@ curl -X POST /api/v1/sales \
   - `Go to checkout` now opens a large checkout modal so payment becomes a focused final step
   - the checkout modal emphasizes total, method selection, cash received/change due, and remaining on-account balance
   - the checkout modal now stays pinned inside the viewport with internal scroll, a fixed action footer, and a stable customer-search area so the sheet no longer jumps while the operator types
+  - the checkout modal now uses the same centered shell language as the order-detail modal, including a top-right close icon, so modal interactions stay visually consistent across POS flows
   - checkout feedback now uses a reusable shadcn toast mounted globally in `src/app/layout.tsx`, with floating success/error/info variants, iconography, POS-aligned colors, and a 10-second visibility window instead of the old inline green status block
   - the on-account path now uses a guided customer selector built as a shadcn autocomplete dropdown, showing recent customers and live matches directly under the input, with explicit "create new customer" action and a second warning step when there are similar names to reduce duplicate debt ledgers
   - server-side customer lookup now forces uncached Supabase reads inside App Router so newly created on-account customers appear immediately in recent matches and exact-name search

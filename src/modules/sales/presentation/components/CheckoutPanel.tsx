@@ -9,6 +9,7 @@ import {
   UserRoundCheck,
   UserRoundPlus,
   Users,
+  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -371,6 +372,14 @@ export function CheckoutPanel({
     confirmNewCustomer(trimmedCustomerQuery);
   }, [confirmNewCustomer, trimmedCustomerQuery, visibleCustomerOptions.length]);
 
+  const closePaymentSheet = useCallback((): void => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsPaymentSheetOpen(false);
+  }, [isSubmitting]);
+
   const retryOfflineSync = useCallback(async () => {
     const result = await flushOfflineSyncQueue();
     refreshPendingSyncCount();
@@ -424,8 +433,8 @@ export function CheckoutPanel({
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape" && !isSubmitting) {
-        setIsPaymentSheetOpen(false);
+      if (event.key === "Escape") {
+        closePaymentSheet();
       }
     };
 
@@ -435,7 +444,7 @@ export function CheckoutPanel({
       document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isPaymentSheetOpen, isSubmitting]);
+  }, [closePaymentSheet, isPaymentSheetOpen]);
 
   useEffect(() => {
     if (
@@ -856,20 +865,16 @@ export function CheckoutPanel({
 
       {isPaymentSheetOpen ? (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 backdrop-blur-[2px]"
-          onClick={() => {
-            if (!isSubmitting) {
-              setIsPaymentSheetOpen(false);
-            }
-          }}
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4"
+          onClick={closePaymentSheet}
         >
-          <div className="flex min-h-full items-start justify-center p-3 sm:p-4 lg:p-6">
+          <div className="relative flex min-h-full items-center justify-center">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="checkout-modal-title"
               data-testid="checkout-payment-modal"
-              className="flex w-full max-w-[34rem] max-h-[calc(100dvh-3rem)] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-[#fbfbfc] shadow-[0_24px_60px_rgba(15,23,42,0.22)]"
+              className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[34rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-[#fbfbfc] shadow-[0_32px_80px_rgba(15,23,42,0.24)] md:max-h-[calc(100dvh-2rem)]"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="shrink-0 border-b border-slate-200/80 px-5 py-4 lg:px-6 lg:py-5">
@@ -1265,7 +1270,7 @@ export function CheckoutPanel({
                   <button
                     data-testid="checkout-cancel-payment-button"
                     type="button"
-                    onClick={() => setIsPaymentSheetOpen(false)}
+                    onClick={closePaymentSheet}
                     disabled={isSubmitting}
                     className="min-h-[3.5rem] rounded-2xl border border-slate-300 px-6 text-base font-semibold text-slate-700"
                   >
@@ -1285,6 +1290,16 @@ export function CheckoutPanel({
                 </div>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={closePaymentSheet}
+              disabled={isSubmitting}
+              className="absolute right-0 top-0 flex size-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.14)] transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 md:size-12"
+              aria-label={messages.common.actions.close}
+            >
+              <X size={20} />
+            </button>
           </div>
         </div>
       ) : null}

@@ -82,6 +82,7 @@ test("keeps the checkout modal inside the viewport and stable while customer loo
   const customerInput = page.getByTestId("checkout-customer-name-input");
   const scrollArea = page.getByTestId("checkout-customer-options-scroll-area");
   const confirmButton = page.getByTestId("checkout-confirm-payment-button");
+  const closeButton = page.getByRole("button", { name: "Cerrar" });
   const viewport = page.viewportSize();
 
   expect(viewport).toBeTruthy();
@@ -91,6 +92,7 @@ test("keeps the checkout modal inside the viewport and stable while customer loo
 
   await expect(modal).toBeVisible();
   await expect(confirmButton).toBeVisible();
+  await expect(closeButton).toBeVisible();
 
   const initialBox = await modal.boundingBox();
   expect(initialBox).not.toBeNull();
