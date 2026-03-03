@@ -173,6 +173,7 @@ export async function parseCreateProductRequest(
   const imageSource = await resolveImageSource(formData);
   const payload = {
     sku: parseOptionalStringField(formData, "sku"),
+    ean: parseOptionalStringField(formData, "ean"),
     name: parseOptionalStringField(formData, "name"),
     categoryId: parseOptionalStringField(formData, "categoryId"),
     price: parseOptionalNumberField(formData, "price"),
@@ -234,6 +235,7 @@ export async function parseUpdateProductRequest(
   const imageSource = await resolveImageSource(formData);
   const payload = {
     sku: parseOptionalStringField(formData, "sku"),
+    ean: parseOptionalStringField(formData, "ean"),
     name: parseOptionalStringField(formData, "name"),
     categoryId: parseOptionalStringField(formData, "categoryId"),
     price: parseOptionalNumberField(formData, "price"),

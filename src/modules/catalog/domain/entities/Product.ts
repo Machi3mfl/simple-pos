@@ -1,5 +1,6 @@
 import {
   InvalidCategoryIdError,
+  InvalidProductEanError,
   InvalidInitialStockError,
   InvalidProductMinStockError,
   InvalidProductNameError,
@@ -14,6 +15,7 @@ import { normalizeCategoryCode } from "@/shared/core/category/categoryNaming";
 interface CreateProductProps {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -27,6 +29,7 @@ interface CreateProductProps {
 interface CreateNewProductProps {
   readonly id: string;
   readonly sku?: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -38,6 +41,7 @@ interface CreateNewProductProps {
 
 interface UpdateProductDetailsProps {
   readonly sku?: string;
+  readonly ean?: string;
   readonly name?: string;
   readonly categoryId?: string;
   readonly price?: number;
@@ -66,9 +70,27 @@ function validateMinStock(value: number): number {
   return value;
 }
 
+function validateEan(value?: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalizedEan = value.trim();
+  if (normalizedEan.length === 0) {
+    return undefined;
+  }
+
+  if (!/^[0-9]{8,18}$/.test(normalizedEan)) {
+    throw new InvalidProductEanError();
+  }
+
+  return normalizedEan;
+}
+
 export class Product {
   private readonly id: string;
   private readonly sku: string;
+  private readonly ean?: string;
   private readonly name: string;
   private readonly categoryId: string;
   private readonly price: number;
@@ -81,6 +103,7 @@ export class Product {
   private constructor(props: CreateProductProps) {
     this.id = props.id;
     this.sku = props.sku;
+    this.ean = props.ean;
     this.name = props.name;
     this.categoryId = props.categoryId;
     this.price = props.price;
@@ -119,11 +142,13 @@ export class Product {
     }
 
     const sku = validateSku(resolveProductSku(categoryId, props.id, props.sku));
+    const ean = validateEan(props.ean);
     const minStock = validateMinStock(props.minStock ?? 0);
 
     return new Product({
       id: props.id,
       sku,
+      ean,
       name,
       categoryId,
       price: Number(props.price.toFixed(2)),
@@ -148,6 +173,7 @@ export class Product {
     return new Product({
       id: this.id,
       sku: this.sku,
+      ean: this.ean,
       name: this.name,
       categoryId: this.categoryId,
       price: Number(nextPrice.toFixed(2)),
@@ -238,11 +264,13 @@ export class Product {
 
     const nextMinStock = validateMinStock(props.minStock ?? this.minStock);
     const nextSku = validateSku(resolveProductSku(nextCategoryId, this.id, props.sku ?? this.sku));
+    const nextEan = props.ean !== undefined ? validateEan(props.ean) : this.ean;
     const nextImageUrl = props.imageUrl?.trim() || this.imageUrl;
 
     return new Product({
       id: this.id,
       sku: nextSku,
+      ean: nextEan,
       name: nextName,
       categoryId: nextCategoryId,
       price: Number(nextPrice.toFixed(2)),
@@ -258,6 +286,7 @@ export class Product {
     return new Product({
       id: this.id,
       sku: this.sku,
+      ean: this.ean,
       name: this.name,
       categoryId: this.categoryId,
       price: this.price,
@@ -272,6 +301,7 @@ export class Product {
   toPrimitives(): {
     readonly id: string;
     readonly sku: string;
+    readonly ean?: string;
     readonly name: string;
     readonly categoryId: string;
     readonly price: number;
@@ -284,6 +314,7 @@ export class Product {
     return {
       id: this.id,
       sku: this.sku,
+      ean: this.ean,
       name: this.name,
       categoryId: this.categoryId,
       price: this.price,

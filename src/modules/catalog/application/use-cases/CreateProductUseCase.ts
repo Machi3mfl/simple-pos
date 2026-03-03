@@ -8,6 +8,7 @@ import { resolveCatalogPlaceholderImage } from "../../domain/services/ResolveCat
 
 export interface CreateProductUseCaseInput {
   readonly sku?: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -20,6 +21,7 @@ export interface CreateProductUseCaseInput {
 export interface CreateProductUseCaseOutput {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -42,6 +44,7 @@ export class CreateProductUseCase {
     const product = Product.createNew({
       id: crypto.randomUUID(),
       sku: input.sku,
+      ean: input.ean,
       name: input.name,
       categoryId: input.categoryId,
       price: input.price,

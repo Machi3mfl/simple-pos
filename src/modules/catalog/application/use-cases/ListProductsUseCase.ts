@@ -8,6 +8,7 @@ export interface ListProductsUseCaseInput extends ListProductsFilters {}
 export interface ListProductsUseCaseOutputItem {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;

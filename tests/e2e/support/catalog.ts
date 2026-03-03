@@ -5,23 +5,29 @@ import { productResponseDTOSchema } from "../../../src/modules/catalog/presentat
 interface CreateCatalogProductInput {
   readonly name: string;
   readonly categoryId?: string;
+  readonly sku?: string;
+  readonly ean?: string;
   readonly price?: number;
   readonly initialStock?: number;
   readonly cost?: number;
+  readonly minStock?: number;
   readonly imageUrl?: string;
 }
 
 export async function createCatalogProduct(
   request: APIRequestContext,
   input: CreateCatalogProductInput,
-): Promise<{ readonly id: string; readonly name: string }> {
+): Promise<{ readonly id: string; readonly name: string; readonly sku: string; readonly ean?: string }> {
   const response = await request.post("/api/v1/products", {
     data: {
       name: input.name,
+      sku: input.sku,
+      ean: input.ean,
       categoryId: input.categoryId ?? "snack",
       price: input.price ?? 10,
       cost: input.cost ?? 5,
       initialStock: input.initialStock ?? 10,
+      minStock: input.minStock ?? 0,
       imageUrl: input.imageUrl,
     },
   });
@@ -38,6 +44,8 @@ export async function createCatalogProduct(
   return {
     id: parsed.data.item.id,
     name: parsed.data.item.name,
+    sku: parsed.data.item.sku,
+    ean: parsed.data.item.ean,
   };
 }
 

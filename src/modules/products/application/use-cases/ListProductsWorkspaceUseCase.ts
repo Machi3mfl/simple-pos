@@ -25,6 +25,7 @@ export interface ListProductsWorkspaceUseCaseInput {
 export interface ProductsWorkspaceItem {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -135,6 +136,7 @@ export class ListProductsWorkspaceUseCase {
       return {
         id: base.id,
         sku: base.sku,
+        ean: base.ean,
         name: base.name,
         categoryId: base.categoryId,
         price: base.price,

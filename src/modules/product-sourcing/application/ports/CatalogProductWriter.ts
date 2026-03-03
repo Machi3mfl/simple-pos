@@ -3,6 +3,7 @@ import type { ExternalCatalogProviderId } from "../../domain/entities/ExternalCa
 export interface CatalogProductRecord {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -16,6 +17,7 @@ export interface CatalogProductRecord {
 export interface CreateCatalogProductFromExternalCandidateInput {
   readonly providerId: ExternalCatalogProviderId;
   readonly sourceProductId: string;
+  readonly ean?: string | null;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;

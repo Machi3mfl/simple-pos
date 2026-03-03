@@ -267,6 +267,7 @@ test.describe("API contract conformance", () => {
 
     const validCreateProduct = createProductDTOSchema.safeParse({
       name: "Product Example",
+      ean: "7790895067570",
       categoryId: "snack",
       price: 10,
       cost: 4,

@@ -61,6 +61,13 @@ export class InvalidProductMinStockError extends ProductDomainError {
   }
 }
 
+export class InvalidProductEanError extends ProductDomainError {
+  constructor() {
+    super("El EAN debe contener solo números y tener entre 8 y 18 dígitos.");
+    this.name = "InvalidProductEanError";
+  }
+}
+
 export class ProductNotFoundError extends ProductDomainError {
   constructor(productId: string) {
     super(`No se encontró el producto ${productId}.`);

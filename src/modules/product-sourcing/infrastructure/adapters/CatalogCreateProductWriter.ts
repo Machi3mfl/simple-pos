@@ -31,6 +31,7 @@ export class CatalogCreateProductWriter implements CatalogProductWriter {
 
     return this.createProductUseCase.execute({
       sku,
+      ean: input.ean ?? undefined,
       name: input.name,
       categoryId: input.categoryId,
       price: input.price,

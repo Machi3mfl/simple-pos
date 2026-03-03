@@ -41,6 +41,10 @@ paths:
       summary: List products
       parameters:
         - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
           name: categoryId
           schema:
             type: string
@@ -711,6 +715,8 @@ components:
           type: string
         sku:
           type: string
+        ean:
+          type: string
         name:
           type: string
         categoryId:
@@ -1005,6 +1011,8 @@ components:
       properties:
         sku:
           type: string
+        ean:
+          type: string
         name:
           type: string
         categoryId:
@@ -1030,6 +1038,8 @@ components:
       required: [name, categoryId, price, initialStock]
       properties:
         sku:
+          type: string
+        ean:
           type: string
         name:
           type: string
@@ -1061,6 +1071,8 @@ components:
       properties:
         sku:
           type: string
+        ean:
+          type: string
         name:
           type: string
         categoryId:
@@ -1084,6 +1096,8 @@ components:
       minProperties: 1
       properties:
         sku:
+          type: string
+        ean:
           type: string
         name:
           type: string
@@ -1117,6 +1131,8 @@ components:
         id:
           type: string
         sku:
+          type: string
+        ean:
           type: string
         name:
           type: string

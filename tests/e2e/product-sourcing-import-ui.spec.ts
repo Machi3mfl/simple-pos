@@ -51,7 +51,7 @@ test.describe("product sourcing UI assisted import", () => {
 
     await page.goto("/cash-register");
     await page.getByTestId("nav-item-products").click();
-    await page.getByTestId("products-workspace-open-sourcing-link").click();
+    await page.getByTestId("products-workspace-open-create-button").click();
 
     await expect(page).toHaveURL(/\/products\/sourcing$/);
     await page.getByTestId("product-sourcing-search-input").fill("cola externa");

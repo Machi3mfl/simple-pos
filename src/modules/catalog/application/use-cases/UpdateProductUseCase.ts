@@ -4,6 +4,7 @@ import type { ProductRepository } from "../../domain/repositories/ProductReposit
 export interface UpdateProductUseCaseInput {
   readonly productId: string;
   readonly sku?: string;
+  readonly ean?: string;
   readonly name?: string;
   readonly categoryId?: string;
   readonly price?: number;
@@ -16,6 +17,7 @@ export interface UpdateProductUseCaseInput {
 export interface UpdateProductUseCaseOutput {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -37,6 +39,7 @@ export class UpdateProductUseCase {
 
     const updatedProduct = currentProduct.updateDetails({
       sku: input.sku,
+      ean: input.ean,
       name: input.name,
       categoryId: input.categoryId,
       price: input.price,

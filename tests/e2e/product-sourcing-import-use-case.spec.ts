@@ -34,6 +34,7 @@ class InMemoryCatalogProductWriter implements CatalogProductWriter {
     const created: CatalogProductRecord = {
       id: `product-${input.sourceProductId}`,
       sku,
+      ean: input.ean ?? undefined,
       name: input.name,
       categoryId: input.categoryId,
       price: input.price,
@@ -162,6 +163,7 @@ test.describe("product sourcing import use case", () => {
     expect(result.importedCount).toBe(1);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.item.imageUrl).toContain("https://storage.local/");
+    expect(result.items[0]?.item.ean).toBe("7790895067570");
     expect(assetStore.persisted).toHaveLength(1);
     expect(assetStore.persisted[0]?.desiredObjectKey).toContain("carrefour/393964/primary");
 

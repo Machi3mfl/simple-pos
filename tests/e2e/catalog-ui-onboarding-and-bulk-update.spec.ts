@@ -1,24 +1,31 @@
 import { expect, test } from "@playwright/test";
 
+import { createCatalogProduct } from "./support/catalog";
+
 test("creates product and reprices it from Products UI, then verifies Sales integration", async ({
   page,
+  request,
 }) => {
   const uniqueProductName = `E2E Catalog ${Date.now()}`;
+  const uniqueProductSku = `E2E-${Date.now().toString().slice(-6)}`;
 
   await page.goto("/products");
   await expect(page.getByRole("heading", { name: "Productos e inventario" })).toBeVisible();
 
-  await page.getByTestId("products-workspace-open-create-button").click();
-  await page.getByTestId("products-workspace-create-name-input").fill(uniqueProductName);
-  await page.getByTestId("products-workspace-create-category-input").fill("Postres");
-  await page.getByTestId("products-workspace-create-price-input").fill("40");
-  await page.getByTestId("products-workspace-create-cost-input").fill("18");
-  await page.getByTestId("products-workspace-create-stock-input").fill("5");
-  await page.getByTestId("products-workspace-create-submit-button").click();
+  await createCatalogProduct(request, {
+    name: uniqueProductName,
+    sku: uniqueProductSku,
+    categoryId: "postres",
+    price: 40,
+    cost: 18,
+    initialStock: 5,
+  });
 
-  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
-    `Producto creado: ${uniqueProductName}`,
-  );
+  await page.goto("/products");
+  await page.getByTestId("products-workspace-search-input").fill(uniqueProductSku);
+  await expect(
+    page.locator('[data-testid^="products-workspace-card-"]').filter({ hasText: uniqueProductName }).first(),
+  ).toBeVisible();
 
   await page.getByTestId("products-workspace-open-bulk-prices-button").click();
   await page.getByTestId("bulk-scope-select").selectOption("selection");

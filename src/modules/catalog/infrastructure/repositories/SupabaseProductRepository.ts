@@ -9,6 +9,7 @@ import type {
 interface ProductRow {
   id: string;
   sku: string;
+  ean: string | null;
   name: string;
   category_id: string;
   price: number;
@@ -38,6 +39,7 @@ function mapRowToProduct(row: ProductRow): Product {
   return Product.rehydrate({
     id: row.id,
     sku: row.sku,
+    ean: row.ean ?? undefined,
     name: row.name,
     categoryId: row.category_id,
     price: toNumber(row.price),
@@ -54,6 +56,7 @@ function mapProductToRow(product: Product): ProductRow {
   return {
     id: primitives.id,
     sku: primitives.sku,
+    ean: primitives.ean ?? null,
     name: primitives.name,
     category_id: primitives.categoryId,
     price: primitives.price,
@@ -104,7 +107,9 @@ export class SupabaseProductRepository implements ProductRepository {
     if (filters?.q) {
       const normalizedQuery = filters.q.trim();
       if (normalizedQuery.length > 0) {
-        query = query.or(`name.ilike.%${normalizedQuery}%,sku.ilike.%${normalizedQuery}%`);
+        query = query.or(
+          `name.ilike.%${normalizedQuery}%,sku.ilike.%${normalizedQuery}%,ean.ilike.%${normalizedQuery}%`,
+        );
       }
     }
 

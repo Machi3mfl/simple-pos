@@ -5,6 +5,7 @@ import {
   Archive,
   ArrowUpDown,
   Boxes,
+  MoreHorizontal,
   Package,
   PackagePlus,
   Pencil,
@@ -25,6 +26,7 @@ import {
 } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
@@ -61,6 +63,7 @@ interface ApiErrorPayload {
 interface WorkspaceProductItem {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -91,6 +94,7 @@ interface WorkspaceProductsResponse {
 interface ProductApiItem {
   readonly id: string;
   readonly sku: string;
+  readonly ean?: string;
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
@@ -233,39 +237,6 @@ function Dialog({ title, onClose, children }: DialogProps): JSX.Element {
   );
 }
 
-function ProductImage({
-  imageUrl,
-  name,
-  className,
-  imageClassName,
-}: {
-  readonly imageUrl?: string;
-  readonly name: string;
-  readonly className?: string;
-  readonly imageClassName?: string;
-}): JSX.Element {
-  return (
-    <div
-      className={[
-        "mx-auto flex items-center justify-center rounded-full bg-slate-100",
-        className ?? "size-[4.6rem] lg:size-[5.1rem]",
-      ].join(" ")}
-    >
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Operators can use arbitrary external image URLs, so next/image domain allowlists would block valid product photos here.
-        <img
-          src={imageUrl}
-          alt={name}
-          loading="lazy"
-          className={imageClassName ?? "h-[72%] w-[72%] object-contain"}
-        />
-      ) : (
-        <Package size={32} className="text-slate-400" />
-      )}
-    </div>
-  );
-}
-
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
     typeof payload === "object" &&
@@ -330,6 +301,7 @@ export function ProductsInventoryPanel(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [movementHistory, setMovementHistory] = useState<readonly StockMovementItem[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(false);
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState<boolean>(false);
   const [editForm, setEditForm] = useState<EditProductFormState>(defaultEditFormState);
   const [stockForm, setStockForm] = useState<StockFormState>(defaultStockFormState("inbound"));
   const [bulkProductsInput, setBulkProductsInput] = useState<string>("");
@@ -341,7 +313,6 @@ export function ProductsInventoryPanel(): JSX.Element {
     feedback: onboardingFeedback,
     form: onboardingForm,
     isSubmitting: isSubmittingCreate,
-    resetForm: resetProductOnboarding,
     setForm: setOnboardingForm,
     submit: submitProductOnboarding,
   } = useProductOnboarding({
@@ -737,6 +708,7 @@ export function ProductsInventoryPanel(): JSX.Element {
       initialStock: Number(columns[5] ?? 0),
       minStock: Number(columns[6] ?? 0),
       imageUrl: columns[7] || undefined,
+      ean: columns[8] || undefined,
     }));
 
     setIsSubmitting(true);
@@ -908,59 +880,72 @@ export function ProductsInventoryPanel(): JSX.Element {
           <div className="px-5 py-4 lg:px-6 lg:py-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <h1 className="text-[2.4rem] leading-none font-semibold tracking-tight text-slate-950 lg:text-[2.85rem]">
+                <h1 className="text-[2.4rem] leading-none font-semibold tracking-tight text-slate-950 lg:text-[2.85rem] xl:whitespace-nowrap">
                   {messages.productsWorkspace.title}
                 </h1>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 xl:w-[60rem] xl:grid-cols-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetProductOnboarding();
-                    setOpenDialog("create");
-                  }}
+              <div className="flex flex-wrap gap-2 xl:max-w-[39rem] xl:justify-end">
+                <Link
+                  href="/products/sourcing"
                   data-testid="products-workspace-open-create-button"
-                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-base font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
+                  className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                   {messages.productsWorkspace.actions.newProduct}
-                </button>
+                </Link>
                 <button
                   type="button"
                   onClick={() => setOpenDialog("bulkPrices")}
                   data-testid="products-workspace-open-bulk-prices-button"
-                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                  className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800"
                 >
-                  <ArrowUpDown size={20} />
+                  <ArrowUpDown size={18} />
                   {messages.productsWorkspace.actions.bulkPrices}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenDialog("bulkProducts")}
-                  data-testid="products-workspace-open-bulk-products-button"
-                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                >
-                  <Upload size={20} />
-                  {messages.productsWorkspace.actions.bulkProducts}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenDialog("bulkStock")}
-                  data-testid="products-workspace-open-bulk-stock-button"
-                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                >
-                  <PackagePlus size={20} />
-                  {messages.productsWorkspace.actions.bulkStock}
-                </button>
-                <Link
-                  href="/products/sourcing"
-                  data-testid="products-workspace-open-sourcing-link"
-                  className="flex min-h-[4.25rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                >
-                  <Search size={20} />
-                  Buscar afuera
-                </Link>
+                <Popover open={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      data-testid="products-workspace-open-more-actions-button"
+                      className="flex min-h-[4rem] min-w-[4rem] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800"
+                      aria-label={messages.productsWorkspace.actions.more}
+                    >
+                      <MoreHorizontal size={20} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    className="w-[15rem] rounded-[1.5rem] border border-slate-200 bg-white p-2 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreActionsOpen(false);
+                          setOpenDialog("bulkProducts");
+                        }}
+                        data-testid="products-workspace-open-bulk-products-button"
+                        className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                      >
+                        <Upload size={18} />
+                        {messages.productsWorkspace.actions.bulkProducts}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreActionsOpen(false);
+                          setOpenDialog("bulkStock");
+                        }}
+                        data-testid="products-workspace-open-bulk-stock-button"
+                        className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                      >
+                        <PackagePlus size={18} />
+                        {messages.productsWorkspace.actions.bulkStock}
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -1224,14 +1209,19 @@ export function ProductsInventoryPanel(): JSX.Element {
         <Dialog title={messages.productsWorkspace.dialogs.detailTitle} onClose={() => setOpenDialog(null)}>
           <div className="grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
             <div className="space-y-3">
-              <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4">
-                <div className="flex min-h-[12rem] items-center justify-center rounded-[1.5rem] bg-white">
-                  <ProductImage
-                    imageUrl={selectedProduct.imageUrl}
-                    name={selectedProduct.name}
-                    className="size-32"
-                    imageClassName="h-[78%] w-[78%] object-contain"
-                  />
+              <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white">
+                <div className="flex h-[18rem] items-center justify-center bg-slate-50">
+                  {selectedProduct.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Operators can work with arbitrary sourced product images that are not constrained to next/image allowlists.
+                    <img
+                      src={selectedProduct.imageUrl}
+                      alt={selectedProduct.name}
+                      loading="lazy"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <Package size={56} className="text-slate-400" />
+                  )}
                 </div>
               </div>
 
@@ -1292,13 +1282,21 @@ export function ProductsInventoryPanel(): JSX.Element {
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                     {messages.productsWorkspace.detail.sku}
                   </p>
                   <p className="mt-1 text-base font-semibold text-slate-900">
                     {selectedProduct.sku}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    {messages.productsWorkspace.detail.ean}
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-slate-900">
+                    {selectedProduct.ean ?? messages.productsWorkspace.detail.noEan}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">

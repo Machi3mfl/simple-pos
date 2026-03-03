@@ -1,23 +1,22 @@
 import { expect, test } from "@playwright/test";
 
-test("registers inventory movement from UI and shows validation feedback", async ({ page }) => {
+import { createCatalogProduct } from "./support/catalog";
+
+test("registers inventory movement from UI and shows validation feedback", async ({
+  page,
+  request,
+}) => {
   const uniqueProductName = `Inventory Seed ${Date.now()}`;
   const uniqueProductSku = `INV-${Date.now().toString().slice(-6)}`;
 
-  await page.goto("/products");
-  await expect(page.getByRole("heading", { name: "Productos e inventario" })).toBeVisible();
-
-  await page.getByTestId("products-workspace-open-create-button").click();
-  await page.getByTestId("products-workspace-create-name-input").fill(uniqueProductName);
-  await page.getByTestId("products-workspace-create-sku-input").fill(uniqueProductSku);
-  await page.getByTestId("products-workspace-create-category-input").fill("Platos");
-  await page.getByTestId("products-workspace-create-price-input").fill("10");
-  await page.getByTestId("products-workspace-create-cost-input").fill("4");
-  await page.getByTestId("products-workspace-create-stock-input").fill("5");
-  await page.getByTestId("products-workspace-create-submit-button").click();
-  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
-    `Producto creado: ${uniqueProductName}`,
-  );
+  await createCatalogProduct(request, {
+    name: uniqueProductName,
+    sku: uniqueProductSku,
+    categoryId: "platos",
+    price: 10,
+    cost: 4,
+    initialStock: 5,
+  });
 
   await page.goto("/products");
   await page.getByTestId("products-workspace-search-input").fill(uniqueProductSku);

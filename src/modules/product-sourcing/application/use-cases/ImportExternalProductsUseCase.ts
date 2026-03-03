@@ -135,6 +135,7 @@ export class ImportExternalProductsUseCase {
         const createdProduct = await this.catalogProductWriter.createFromExternalCandidate({
           providerId: item.providerId,
           sourceProductId: normalizedSourceProductId,
+          ean: item.ean ?? null,
           name: item.name,
           categoryId: item.categoryId,
           price: item.price,

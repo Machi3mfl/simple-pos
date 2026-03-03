@@ -11,6 +11,7 @@ export const productsWorkspaceItemDTOSchema = z
   .object({
     id: z.string().min(1),
     sku: z.string().min(1),
+    ean: z.string().regex(/^[0-9]{8,18}$/).optional(),
     name: z.string().min(1),
     categoryId: z.string().min(1),
     price: z.number().nonnegative(),

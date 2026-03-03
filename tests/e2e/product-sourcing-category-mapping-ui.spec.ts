@@ -11,7 +11,7 @@ test.describe("product sourcing UI category mapping reuse", () => {
   }) => {
     await page.goto("/cash-register");
     await page.getByTestId("nav-item-products").click();
-    await page.getByTestId("products-workspace-open-sourcing-link").click();
+    await page.getByTestId("products-workspace-open-create-button").click();
 
     await expect(page).toHaveURL(/\/products\/sourcing$/);
 

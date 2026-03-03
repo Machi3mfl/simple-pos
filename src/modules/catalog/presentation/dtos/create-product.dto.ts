@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createProductDTOSchema = z
   .object({
     sku: z.string().trim().min(1).max(40).optional(),
+    ean: z.string().trim().regex(/^[0-9]{8,18}$/).optional(),
     name: z.string().trim().min(2).max(120),
     categoryId: z.string().trim().min(1).max(80),
     price: z.number().positive(),

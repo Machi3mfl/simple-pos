@@ -34,6 +34,7 @@ test.describe("products workspace api", () => {
       data: {
         name: `Workspace Product ${marker}`,
         sku: `WRK-${marker.slice(-6)}`,
+        ean: `7790${marker.replace(/-/g, "").slice(-8)}`,
         categoryId: "snack",
         price: 100,
         cost: 40,
@@ -92,6 +93,15 @@ test.describe("products workspace api", () => {
     );
     expect(stockedItem?.stock).toBe(6);
     expect(stockedItem?.stockState).toBe("with_stock");
+    expect(stockedItem?.ean).toBe(stockedParsed.item.ean);
+
+    const eanWorkspaceResponse = await request.get(
+      `/api/v1/products/workspace?q=${encodeURIComponent(stockedParsed.item.ean ?? "")}&activeOnly=true`,
+    );
+    expect(eanWorkspaceResponse.status()).toBe(200);
+    const eanWorkspaceBody = await eanWorkspaceResponse.json();
+    const eanWorkspaceParsed = productsWorkspaceResponseDTOSchema.parse(eanWorkspaceBody);
+    expect(eanWorkspaceParsed.items.some((item) => item.id === stockedParsed.item.id)).toBe(true);
   });
 
   test("updates and archives products through patch endpoint", async ({ request }) => {
@@ -115,6 +125,7 @@ test.describe("products workspace api", () => {
     const patchResponse = await request.patch(`/api/v1/products/${createParsed.item.id}`, {
       data: {
         name: `Patch Product Updated ${marker}`,
+        ean: `7791${marker.replace(/-/g, "").slice(-8)}`,
         price: 110,
         minStock: 5,
       },
@@ -125,6 +136,7 @@ test.describe("products workspace api", () => {
     const patchParsed = productResponseDTOSchema.parse(patchBody);
     expect(patchParsed.item.name).toContain("Updated");
     expect(patchParsed.item.minStock).toBe(5);
+    expect(patchParsed.item.ean).toBe(`7791${marker.replace(/-/g, "").slice(-8)}`);
 
     const archiveResponse = await request.patch(`/api/v1/products/${createParsed.item.id}`, {
       data: {

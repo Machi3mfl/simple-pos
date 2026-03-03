@@ -82,9 +82,11 @@ test.describe("catalog onboarding api", () => {
   test("copies explicit imageUrl into managed Supabase Storage and supports list filters", async ({
     request,
   }) => {
+    const ean = `7790${Date.now().toString().slice(-8)}`;
     const createResponse = await request.post("/api/v1/products", {
       data: {
         name: "Alfajor Premium",
+        ean,
         categoryId: "snack",
         price: 4.25,
         cost: 2,
@@ -105,8 +107,11 @@ test.describe("catalog onboarding api", () => {
     expect(createParsed.data.item.imageUrl).toContain(
       "/storage/v1/object/public/product-images/",
     );
+    expect(createParsed.data.item.ean).toBe(ean);
 
-    const listResponse = await request.get("/api/v1/products?categoryId=snack&activeOnly=true");
+    const listResponse = await request.get(
+      `/api/v1/products?categoryId=snack&activeOnly=true&q=${ean}`,
+    );
     expect(listResponse.status()).toBe(200);
     const listBody = await listResponse.json();
     const listParsed = productListResponseDTOSchema.safeParse(listBody);
@@ -144,6 +149,7 @@ test.describe("catalog onboarding api", () => {
     const updateResponse = await request.patch(`/api/v1/products/${createParsed.data.item.id}`, {
       multipart: {
         name: "Bizcochos de prueba editados",
+        ean: "7790895000997",
         imageFile: {
           name: "bizcochos.png",
           mimeType: "image/png",
@@ -162,6 +168,7 @@ test.describe("catalog onboarding api", () => {
     }
 
     expect(updateParsed.data.item.name).toBe("Bizcochos de prueba editados");
+    expect(updateParsed.data.item.ean).toBe("7790895000997");
     expect(updateParsed.data.item.imageUrl).toContain(
       "/storage/v1/object/public/product-images/",
     );

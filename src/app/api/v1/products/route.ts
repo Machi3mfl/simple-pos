@@ -53,6 +53,7 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const categoryIdRaw = url.searchParams.get("categoryId");
   const activeOnlyRaw = url.searchParams.get("activeOnly");
+  const queryRaw = url.searchParams.get("q");
   const activeOnly = parseActiveOnlyParam(activeOnlyRaw);
 
   if (activeOnlyRaw !== null && activeOnly === undefined) {
@@ -69,9 +70,11 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const categoryId = categoryIdRaw?.trim() || undefined;
+  const q = queryRaw?.trim() || undefined;
   const items = await listProductsUseCase.execute({
     categoryId,
     activeOnly,
+    q,
   });
 
   const responseBody = { items };
