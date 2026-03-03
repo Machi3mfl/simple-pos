@@ -36,7 +36,7 @@ test("keeps the totals card fixed while the order item list scrolls independentl
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   for (let index = 1; index <= 12; index += 1) {
     await page.getByTestId(`product-card-catalog-product-${String(index).padStart(3, "0")}`).click();

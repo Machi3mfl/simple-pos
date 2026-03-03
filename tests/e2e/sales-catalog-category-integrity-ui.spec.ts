@@ -57,7 +57,7 @@ test("collapses legacy snack category aliases into a single sales chip", async (
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   const snacksChip = page.locator('button[title="Snacks"]');
   await expect(snacksChip).toHaveCount(1);

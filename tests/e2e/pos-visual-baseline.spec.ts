@@ -20,9 +20,9 @@ async function mockProductsList(page: Page): Promise<void> {
 test("renders tablet three-zone layout baseline", async ({ page }) => {
   await mockProductsList(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
-  await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Caja" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
 
@@ -37,9 +37,9 @@ test.describe("responsive layout baseline", () => {
   test("renders compact-tablet layout baseline", async ({ page }) => {
     await mockProductsList(page);
 
-    await page.goto("/sales");
+    await page.goto("/cash-register");
 
-    await expect(page.getByRole("button", { name: "Sales" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Caja" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
 

@@ -34,7 +34,7 @@ test("lists receivables by customer name and sorts debtors by outstanding balanc
   const highDebtCustomer = `${marker} High`;
   await createCatalogProduct(request, { name: productName });
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
 

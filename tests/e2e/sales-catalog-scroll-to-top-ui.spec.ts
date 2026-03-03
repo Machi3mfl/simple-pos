@@ -39,7 +39,7 @@ test("shows a floating scroll-to-top control after catalog scrolling and returns
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByTestId("sales-catalog-infinite-scroll-sentinel").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("product-card-catalog-product-024")).toBeVisible();
   await page.getByTestId("product-card-catalog-product-024").scrollIntoViewIfNeeded();

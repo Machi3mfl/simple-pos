@@ -8,7 +8,7 @@ const spanishMessages = {
   shell: {
     cashierRole: "Cajera",
     nav: {
-      sales: "Ventas",
+      sales: "Caja",
       orders: "Pedidos",
       products: "Productos",
       catalog: "Catálogo",

@@ -365,13 +365,13 @@ Goal: move `New product` from the mock into the real circuit.
 
 - [x] Creating a product from `/products` makes it visible after reload
 - [x] The product appears with consistent stock
-- [x] The product also becomes available in `/sales` if active
+- [x] The product also becomes available in `/cash-register` if active
 
 #### Tests
 
 - API contract: `POST /api/v1/products`
 - Real UI E2E: create from `/products`
-- Cross-module E2E: product created in `/products` is visible in `/sales`
+- Cross-module E2E: product created in `/products` is visible in `/cash-register`
 
 ---
 
@@ -438,14 +438,14 @@ Goal: close the minimum operational CRUD.
 
 - [x] Editing a product persists and refreshes correctly
 - [x] Archiving hides the product under `Active only`
-- [x] `/sales` stops offering the archived product
+- [x] `/cash-register` stops offering the archived product
 
 #### Tests
 
 - Unit: `UpdateProductUseCase`
 - API contract: `PATCH /api/v1/products/:id`
 - Real UI E2E: edit + archive
-- Cross-module E2E: archived product no longer appears in `/sales`
+- Cross-module E2E: archived product no longer appears in `/cash-register`
 
 ---
 
@@ -505,10 +505,10 @@ Functional parity that had to close before retiring the legacy routes:
 Minimum circuits:
 
 1. Product creation in `/products`
-2. Product visible in `/sales`
+2. Product visible in `/cash-register`
 3. Stock add from `/products`
 4. Stock and movements persist after reload
-5. Edit and archive impact both filters and `/sales`
+5. Edit and archive impact both filters and `/cash-register`
 
 #### Acceptance Criteria
 
@@ -555,8 +555,8 @@ Minimum circuits:
 
 ### Cross-Module Real
 
-- product created in `/products` is visible in `/sales`
-- archived product disappears from `/sales`
+- product created in `/products` is visible in `/cash-register`
+- archived product disappears from `/cash-register`
 
 Note:
 

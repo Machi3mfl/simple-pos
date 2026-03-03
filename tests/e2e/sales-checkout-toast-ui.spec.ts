@@ -78,7 +78,7 @@ test.beforeEach(async ({ page }) => {
 test("shows floating checkout toast variants and keeps them visible for 10 seconds", async ({
   page,
 }) => {
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   await page.getByTestId("product-card-product-001").click();
   await page.getByTestId("checkout-open-payment-button").click();

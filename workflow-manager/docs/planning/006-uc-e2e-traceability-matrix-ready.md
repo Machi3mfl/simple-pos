@@ -46,13 +46,15 @@ Since `2026-03-01`, `/products` is no longer a UI-only mock: [tests/e2e/products
 
 Since `2026-03-01`, the UI suite no longer exercises `/catalog` or `/inventory`; the converged runtime is validated directly through `/products`.
 
-Since `2026-03-01`, sourcing is also part of the vertical-slice story: [tests/e2e/product-sourcing-import-ui.spec.ts](../../../tests/e2e/product-sourcing-import-ui.spec.ts) validates `/products -> /products/sourcing -> import -> /products -> /sales` against Supabase with mocked external search results, and asserts that the imported product image is served from managed Supabase storage instead of the original external hotlink.
+Since `2026-03-01`, sourcing is also part of the vertical-slice story: [tests/e2e/product-sourcing-import-ui.spec.ts](../../../tests/e2e/product-sourcing-import-ui.spec.ts) validates `/products -> /products/sourcing -> import -> /products -> /cash-register` against Supabase with mocked external search results, and asserts that the imported product image is served from managed Supabase storage instead of the original external hotlink.
 
 Since `2026-03-02`, checkout success/error feedback also has explicit UI validation through [tests/e2e/sales-checkout-toast-ui.spec.ts](../../../tests/e2e/sales-checkout-toast-ui.spec.ts), covering the floating shadcn toast styling path and the 10-second visibility requirement.
 
 Since `2026-03-02`, the `on_account` checkout path requires explicit customer selection or explicit confirmed customer creation, now surfaced through a shadcn autocomplete dropdown for recent/live customer matches, and this behavior is exercised by the existing UI flows in [tests/e2e/pos-checkout-smoke.spec.ts](../../../tests/e2e/pos-checkout-smoke.spec.ts), [tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts](../../../tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts), and [tests/e2e/sales-ui-checkout-history-and-debt.spec.ts](../../../tests/e2e/sales-ui-checkout-history-and-debt.spec.ts).
 
-Since `2026-03-02`, the real-backend regression set also validates that `/api/v1/customers` immediately surfaces newly created on-account customers and that the `/sales` catalog collapses legacy `snack`/`snacks` aliases into a single visible category chip.
+Since `2026-03-02`, the real-backend regression set also validates that `/api/v1/customers` immediately surfaces newly created on-account customers and that the `/cash-register` catalog collapses legacy `snack`/`snacks` aliases into a single visible category chip.
+
+Since `2026-03-03`, the canonical checkout workspace route is `/cash-register`; `/sales` remains only as a legacy redirect so old bookmarks still land on the same POS surface.
 
 Since `2026-03-03`, [tests/e2e/orders-ui-sales-snapshot.spec.ts](../../../tests/e2e/orders-ui-sales-snapshot.spec.ts) validates the redesigned `/orders` snapshot flow through clickable sale cards and the new detail modal backed by `sales-history.saleItems`; direct payment registration is no longer performed from `/orders`.
 

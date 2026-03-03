@@ -49,7 +49,7 @@ test.describe("product sourcing UI assisted import", () => {
       });
     });
 
-    await page.goto("/sales");
+    await page.goto("/cash-register");
     await page.getByTestId("nav-item-products").click();
     await page.getByTestId("products-workspace-open-sourcing-link").click();
 
@@ -97,7 +97,7 @@ test.describe("product sourcing UI assisted import", () => {
       /\/storage\/v1\/object\/public\/product-sourcing-images\//,
     );
 
-    await page.getByTestId("nav-item-sales").click();
+    await page.getByTestId("nav-item-cash-register").click();
     await page.getByLabel("Buscar en el menú").fill(importedName);
     const salesCard = page
       .locator('[data-testid^="product-card-"]')

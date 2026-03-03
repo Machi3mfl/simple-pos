@@ -23,8 +23,8 @@ test.describe("sales UI checkout reflection across history and debt", () => {
     const customerName = `UI Flow ${marker}`;
     await createCatalogProduct(request, { name: productName });
 
-    await page.goto("/sales");
-    await expect(page).toHaveURL(/\/sales$/);
+    await page.goto("/cash-register");
+    await expect(page).toHaveURL(/\/cash-register$/);
     await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
     await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
 

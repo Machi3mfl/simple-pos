@@ -657,10 +657,10 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
   - persistent recent import history sourced from `imported_product_sources` and internal catalog names/SKUs,
   - managed image persistence plus source trace recording during each successful import,
-  - reuse of the same shared infinite-scroll primitives now adopted across `/sales`, `/products`, and `/products/sourcing`,
+  - reuse of the same shared infinite-scroll primitives now adopted across `/cash-register`, `/products`, and `/products/sourcing`,
   - and navigation back to `/products` to verify imported products in the live workspace.
 - Real-backend UI proof:
-  - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /sales` and asserts the imported product card now renders from the managed storage URL.
+  - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /cash-register` and asserts the imported product card now renders from the managed storage URL.
   - `tests/e2e/product-sourcing-import-ui.spec.ts` also verifies a partial import batch where one item succeeds and another is rejected as already imported, keeping the failed item actionable from the same screen.
   - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active and that infinite scroll appends later provider pages without losing the current selection.
   - `tests/e2e/product-sourcing-resume-state-ui.spec.ts` verifies that a sourcing session survives a full page reload without re-running the initial search and restores the draft fields exactly as the operator left them.
@@ -726,7 +726,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
 - client-side durable failed-import queue recovery, filtering, retry, and dismiss flows across sessions,
 - screen-level validation for debounced search behavior and rapid thumbnail recognition,
 - responsive UI validation for tablet/mobile sourcing interaction,
-- real product visibility after batch import in `/products` and `/sales`,
+- real product visibility after batch import in `/products` and `/cash-register`,
 - optional live provider smoke checks behind an explicit env flag, not in the stable CI gate.
 
 ---

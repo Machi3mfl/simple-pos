@@ -18,7 +18,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   const bulkProductName = `Bulk UI ${marker}`;
   const bulkProductSku = `BUI-${marker.slice(-6)}`;
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByTestId("nav-item-products").click();
 
   await page.getByTestId("products-workspace-open-create-button").click();
@@ -49,7 +49,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   );
   const createdImageSrc = await singleCardImage.getAttribute("src");
 
-  await page.getByTestId("nav-item-sales").click();
+  await page.getByTestId("nav-item-cash-register").click();
   await page.getByLabel("Buscar en el menú").fill(singleProductName);
   const salesCard = page
     .locator('[data-testid^="product-card-"]')
@@ -151,7 +151,7 @@ test("creates, edits, stocks and bulk imports products from the Products workspa
   );
   await expect(bulkCard).toContainText("$65.00");
 
-  await page.getByTestId("nav-item-sales").click();
+  await page.getByTestId("nav-item-cash-register").click();
   await page.getByLabel("Buscar en el menú").fill(bulkProductName);
   const bulkSalesCard = page
     .locator('[data-testid^="product-card-"]')

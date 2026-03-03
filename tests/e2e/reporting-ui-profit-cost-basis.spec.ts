@@ -12,7 +12,7 @@ test("captures outbound inventory cost in profit summary from UI flow", async ({
   const marker = uniqueMarker();
   const productName = `Profit Cost ${marker}`;
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByTestId("nav-item-reporting").click();
 
   const tomorrow = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().slice(0, 10);

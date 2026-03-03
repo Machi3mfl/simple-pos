@@ -39,7 +39,7 @@ test("reveals more sales catalog products when reaching the infinite-scroll sent
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   await expect(page.locator('[data-testid^="product-card-"]')).toHaveCount(12);
   await expect(page.getByTestId("sales-catalog-infinite-scroll-status")).toContainText(

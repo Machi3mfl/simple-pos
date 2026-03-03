@@ -22,7 +22,7 @@ test("removes a cart item from the order list using the dedicated trash action",
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await expect(page.getByTestId("product-card-product-001")).toContainText("Disponible 30");
   await page.getByTestId("product-card-product-001").click();
 

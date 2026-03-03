@@ -9,7 +9,7 @@ test.describe("product sourcing UI category mapping reuse", () => {
   test("reuses the confirmed category mapping in a later search from the same external path", async ({
     page,
   }) => {
-    await page.goto("/sales");
+    await page.goto("/cash-register");
     await page.getByTestId("nav-item-products").click();
     await page.getByTestId("products-workspace-open-sourcing-link").click();
 

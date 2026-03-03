@@ -73,7 +73,7 @@ test("keeps the checkout modal inside the viewport and stable while customer loo
   await mockCatalog(page);
   await mockCustomers(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByTestId("product-card-checkout-modal-product-001").click();
   await page.getByTestId("checkout-open-payment-button").click();
   await page.getByTestId("checkout-payment-on-account-button").click();

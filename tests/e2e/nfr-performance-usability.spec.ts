@@ -20,7 +20,7 @@ async function mockProducts(page: Page): Promise<void> {
 test.describe("NFR evidence: performance and usability", () => {
   test("keeps key interaction latency within perceived target budget", async ({ page }) => {
     await mockProducts(page);
-    await page.goto("/sales");
+    await page.goto("/cash-register");
 
     const firstProductCard = page.locator('[data-testid^="product-card-"]').first();
     const addStart = Date.now();
@@ -39,10 +39,10 @@ test.describe("NFR evidence: performance and usability", () => {
 
   test("keeps primary controls touch-friendly (>=44px)", async ({ page }) => {
     await mockProducts(page);
-    await page.goto("/sales");
+    await page.goto("/cash-register");
 
     const controls = [
-      page.getByTestId("nav-item-sales"),
+      page.getByTestId("nav-item-cash-register"),
       page.locator('[data-testid^="product-card-"]').first(),
       page.getByTestId("checkout-open-payment-button"),
     ];

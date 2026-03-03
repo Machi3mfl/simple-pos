@@ -32,7 +32,7 @@ Move the bulk price update preview and apply workflow into `/products` so price 
 
 - [x] **Given** the operator is in `/products`, **When** they open bulk price update, **Then** they can select scope, preview changes, and apply the batch without leaving the workspace
 - [x] **Given** the preview contains invalid results, **When** the operator attempts to continue, **Then** the flow blocks apply and explains the validation errors
-- [x] **Given** the batch is applied, **When** the workspace refreshes, **Then** the updated prices are visible in `/products` and `/sales`
+- [x] **Given** the batch is applied, **When** the workspace refreshes, **Then** the updated prices are visible in `/products` and `/cash-register`
 
 ### Non-Functional Requirements
 
@@ -70,7 +70,7 @@ Move the bulk price update preview and apply workflow into `/products` so price 
 
 - [x] Real UI E2E for preview and apply from `/products`
 - [x] API contract regression for `/api/v1/products/price-batches`
-- [x] Cross-module check confirming `/sales` reflects updated prices
+- [x] Cross-module check confirming `/cash-register` reflects updated prices
 
 ---
 

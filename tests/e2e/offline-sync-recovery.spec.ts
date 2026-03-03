@@ -37,7 +37,7 @@ test.describe("offline sync recovery", () => {
       await route.continue();
     });
 
-    await page.goto("/sales");
+    await page.goto("/cash-register");
     await addProductToCart(page, productName);
 
     await page.getByRole("button", { name: "Ir a cobrar" }).click();

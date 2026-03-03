@@ -81,12 +81,12 @@ curl -X POST /api/v1/sales \
 - [x] Basic checkout happy path is covered by mock E2E.
 - [x] Implemented UI matches approved visual structure (left nav + catalog center + order panel right).
 - [x] Product cards, category chips, and checkout action preserve large-target touch usability.
-- [x] Side rail navigation opens each module UI surface while preserving `Sales` layout baseline.
+- [x] Side rail navigation opens each module UI surface while preserving `Caja` layout baseline.
 - [x] Side rail exposes an `Orders` workspace with a list snapshot of recorded sales.
 
 ## Current Output
 
-- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/sales`, `/orders`, `/products`, `/receivables`, `/reporting`, `/sync`)
+- Tablet-first POS mockup routes: `src/app/[workspace]/page.tsx` (`/cash-register`, `/orders`, `/products`, `/receivables`, `/reporting`, `/sync`)
 - `Products` is the single operational workspace for product and inventory administration
 - Modular UI sections:
   - `src/modules/sales/presentation/components/PosLayout.tsx`
@@ -94,7 +94,7 @@ curl -X POST /api/v1/sales \
   - `src/modules/sales/presentation/components/ProductCatalogPanel.tsx`
   - `src/modules/sales/presentation/components/CheckoutPanel.tsx`
 - Integrated side-rail workspaces in `PosLayout`:
-  - `Sales`: POS catalog + cart + checkout
+  - `Caja`: POS catalog + cart + checkout
   - `Orders`: all recorded sales shown as a list snapshot
   - `Products`: unified real workspace for products and inventory operations
   - `Receivables`: debt management UI
@@ -103,7 +103,8 @@ curl -X POST /api/v1/sales \
 - Legacy direct routes outside the rail:
   - `Catalog`: onboarding + bulk price update UI
   - `Inventory`: stock movement UI
-- Root route redirect to POS demo: `src/app/page.tsx` -> `/sales`
+- Root route redirect to POS demo: `src/app/page.tsx` -> `/cash-register`
+- Legacy compatibility route: `/sales` now redirects to `/cash-register`
 - UI interaction wiring added:
   - Catalog loaded from `GET /api/v1/products?activeOnly=true`
   - Category and search filtering in catalog panel
@@ -137,14 +138,14 @@ curl -X POST /api/v1/sales \
   - the on-account path now uses a guided customer selector built as a shadcn autocomplete dropdown, showing recent customers and live matches directly under the input, with explicit "create new customer" action and a second warning step when there are similar names to reduce duplicate debt ledgers
   - server-side customer lookup now forces uncached Supabase reads inside App Router so newly created on-account customers appear immediately in recent matches and exact-name search
 - Orders UX updates:
-  - the `/orders` workspace now uses the same card scale, spacing, rounded surfaces, and emphasized totals as `/sales` and `/products`, with larger summary metrics and more visual sales cards
+  - the `/orders` workspace now uses the same card scale, spacing, rounded surfaces, and emphasized totals as `/cash-register` and `/products`, with larger summary metrics and more visual sales cards
   - sale IDs remain available in automation selectors but are no longer rendered as visible card content for operators
   - `/orders` no longer registers payments directly; debt settlement remains in `/receivables`, while `orders` stays focused on snapshot and visual review
   - sale cards now show clearer payment-method iconography and stronger total/collected/outstanding hierarchy, with the three amounts moved to the upper-right area using one shared visual treatment, compact amount formatting that hides `.00`, and no inline customer strip on the card itself
   - order-level metric cards were tightened to content height across the summary row, sale list, and sale-detail modal so more information fits on screen without changing the overall visual language
   - clicking a sale card opens a detail modal with the purchased items, their stored product photos, quantities, and line totals, keeping the same modal language already used in checkout and products
 - Receivables UX updates:
-  - the `/receivables` workspace now follows the same visual language as `/sales` and `/orders`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
+  - the `/receivables` workspace now follows the same visual language as `/cash-register` and `/orders`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
   - the top area exposes four snapshot metrics: debtor count, total outstanding balance, open orders, and average outstanding balance
   - debtors are now explored through a scrollable card list with filters for customer name, last-activity date range, open-order count, and sorting by debt/recent activity/name
   - opening a debtor card launches a centered detail modal with the customer snapshot, order-level debt breakdown, full debt ledger, optional payment notes, and direct payment registration from the same context

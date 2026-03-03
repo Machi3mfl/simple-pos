@@ -43,7 +43,7 @@ test("creates product and reprices it from Products UI, then verifies Sales inte
     "Lote aplicado: 1 productos actualizados.",
   );
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByLabel("Buscar en el menú").fill(uniqueProductName);
 
   const productCard = page

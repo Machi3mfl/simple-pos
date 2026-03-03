@@ -154,7 +154,7 @@ test("opens product sourcing from /products and searches through the UI", async 
     });
   });
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
   await page.getByTestId("nav-item-products").click();
   await page.getByTestId("products-workspace-open-sourcing-link").click();
 

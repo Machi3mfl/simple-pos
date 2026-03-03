@@ -57,7 +57,7 @@ test("supports alphabet quick jumps and keeps the active letter in sync with cat
 }) => {
   await mockProducts(page);
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   await expect(page.getByTestId("sales-catalog-letter-A")).toHaveAttribute(
     "aria-pressed",

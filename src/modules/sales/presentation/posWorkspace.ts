@@ -1,5 +1,5 @@
 export type PosWorkspaceId =
-  | "sales"
+  | "cash-register"
   | "orders"
   | "products"
   | "receivables"
@@ -7,7 +7,7 @@ export type PosWorkspaceId =
   | "sync";
 
 export const posWorkspaceIds: readonly PosWorkspaceId[] = [
-  "sales",
+  "cash-register",
   "orders",
   "products",
   "receivables",
@@ -16,7 +16,7 @@ export const posWorkspaceIds: readonly PosWorkspaceId[] = [
 ];
 
 export const workspacePathById: Record<PosWorkspaceId, string> = {
-  sales: "/sales",
+  "cash-register": "/cash-register",
   orders: "/orders",
   products: "/products",
   receivables: "/receivables",

@@ -99,7 +99,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("runs checkout smoke in mock mode for cash and on_account", async ({ page }) => {
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Lista del pedido" })).toBeVisible();
@@ -125,7 +125,7 @@ test("runs checkout smoke in mock mode for cash and on_account", async ({ page }
 });
 
 test("rejects unsupported payment method request in mock mode", async ({ page }) => {
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   const result = await page.evaluate(async () => {
     const response = await fetch("/api/v1/sales", {

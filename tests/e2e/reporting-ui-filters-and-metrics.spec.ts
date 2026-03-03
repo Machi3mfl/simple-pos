@@ -25,7 +25,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page 
     `Producto creado: ${productName}`,
   );
 
-  await page.getByTestId("nav-item-sales").click();
+  await page.getByTestId("nav-item-cash-register").click();
   await page.getByLabel("Buscar en el menú").fill(productName);
   const productCard = page
     .locator('[data-testid^="product-card-"]')

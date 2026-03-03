@@ -32,7 +32,7 @@ Move the guided product creation flow from the legacy catalog screen into the `/
 
 - [x] **Given** the operator is in `/products`, **When** they choose to create a product, **Then** the guided onboarding flow opens inside that workspace
 - [x] **Given** the product is created without an image, **When** the flow completes, **Then** the placeholder strategy still applies correctly
-- [x] **Given** the product is created with initial stock, **When** the flow completes, **Then** the product appears in `/products` and `/sales` with consistent stock
+- [x] **Given** the product is created with initial stock, **When** the flow completes, **Then** the product appears in `/products` and `/cash-register` with consistent stock
 
 ### Non-Functional Requirements
 
@@ -69,7 +69,7 @@ Move the guided product creation flow from the legacy catalog screen into the `/
 ## Testing Requirements
 
 - [x] Real UI E2E for create flow from `/products`
-- [x] Cross-module E2E confirming visibility in `/sales`
+- [x] Cross-module E2E confirming visibility in `/cash-register`
 - [x] Regression check for placeholder behavior and inventory initialization
 
 ---

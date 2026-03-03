@@ -40,7 +40,7 @@ test.describe("offline debt payment recovery", () => {
       await route.continue();
     });
 
-    await page.goto("/sales");
+    await page.goto("/cash-register");
     await addProductToCart(page, productName);
     await page.getByTestId("checkout-open-payment-button").click();
     await page.getByTestId("checkout-payment-on-account-button").click();

@@ -16,7 +16,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
     price: 4450,
   });
 
-  await page.goto("/sales");
+  await page.goto("/cash-register");
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();

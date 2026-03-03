@@ -126,7 +126,7 @@ interface PosLayoutProps {
 }
 
 export function PosLayout({
-  initialWorkspace = "sales",
+  initialWorkspace = "cash-register",
 }: PosLayoutProps): JSX.Element {
   const { messages, labelForCategory } = useI18n();
   const router = useRouter();
@@ -143,7 +143,7 @@ export function PosLayout({
   );
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
-      { id: "sales", label: messages.shell.nav.sales, icon: ShoppingCart },
+      { id: "cash-register", label: messages.shell.nav.sales, icon: ShoppingCart },
       { id: "orders", label: messages.shell.nav.orders, icon: ReceiptText },
       { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
@@ -350,7 +350,7 @@ export function PosLayout({
           }}
         />
 
-        {currentWorkspace === "sales" ? (
+        {currentWorkspace === "cash-register" ? (
           <>
             <ProductCatalogPanel
               categories={categories}
