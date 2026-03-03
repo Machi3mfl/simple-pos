@@ -135,6 +135,13 @@ curl -X POST /api/v1/sales \
   - checkout feedback now uses a reusable shadcn toast mounted globally in `src/app/layout.tsx`, with floating success/error/info variants, iconography, POS-aligned colors, and a 10-second visibility window instead of the old inline green status block
   - the on-account path now uses a guided customer selector built as a shadcn autocomplete dropdown, showing recent customers and live matches directly under the input, with explicit "create new customer" action and a second warning step when there are similar names to reduce duplicate debt ledgers
   - server-side customer lookup now forces uncached Supabase reads inside App Router so newly created on-account customers appear immediately in recent matches and exact-name search
+- Orders UX updates:
+  - the `/orders` workspace now uses the same card scale, spacing, rounded surfaces, and emphasized totals as `/sales` and `/products`, with larger summary metrics and more visual sales cards
+  - sale IDs remain available in automation selectors but are no longer rendered as visible card content for operators
+  - `/orders` no longer registers payments directly; debt settlement remains in `/receivables`, while `orders` stays focused on snapshot and visual review
+  - sale cards now show clearer payment-method iconography and stronger total/collected/outstanding hierarchy, with the three amounts moved to the upper-right area using one shared visual treatment, compact amount formatting that hides `.00`, and no inline customer strip on the card itself
+  - order-level metric cards were tightened to content height across the summary row, sale list, and sale-detail modal so more information fits on screen without changing the overall visual language
+  - clicking a sale card opens a detail modal with the purchased items, their stored product photos, quantities, and line totals, keeping the same modal language already used in checkout and products
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`
   - navigation, catalog, checkout, orders, and support workspaces consume a centralized dictionary instead of embedded strings

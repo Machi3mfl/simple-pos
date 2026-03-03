@@ -146,6 +146,18 @@ test.describe("reporting api", () => {
         (item) => item.saleId === onAccountSaleParsed.data.saleId,
       ),
     ).toBe(true);
+    const onAccountHistoryItem = salesHistoryParsed.data.items.find(
+      (item) => item.saleId === onAccountSaleParsed.data.saleId,
+    );
+    expect(onAccountHistoryItem?.saleItems).toEqual([
+      expect.objectContaining({
+        productId: productBId,
+        productName: `Report Product B ${marker}`,
+        quantity: 1,
+        unitPrice: 10,
+        lineTotal: 10,
+      }),
+    ]);
     expect(
       salesHistoryParsed.data.items.every((item) => item.paymentMethod === "on_account"),
     ).toBe(true);

@@ -1505,9 +1505,28 @@ components:
         profit:
           type: number
 
+    SalesHistoryLineItem:
+      type: object
+      required: [productId, quantity, unitPrice, lineTotal]
+      properties:
+        productId:
+          type: string
+        productName:
+          type: [string, 'null']
+        productImageUrl:
+          type: [string, 'null']
+          format: uri
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+        lineTotal:
+          type: number
+
     SalesHistoryItem:
       type: object
-      required: [saleId, paymentMethod, total, amountPaid, outstandingAmount, paymentStatus, itemCount, createdAt]
+      required: [saleId, paymentMethod, total, amountPaid, outstandingAmount, paymentStatus, itemCount, saleItems, createdAt]
       properties:
         saleId:
           type: string
@@ -1530,6 +1549,10 @@ components:
         itemCount:
           type: integer
           minimum: 0
+        saleItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesHistoryLineItem'
         createdAt:
           type: string
           format: date-time

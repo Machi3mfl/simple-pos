@@ -106,38 +106,43 @@ test("shows a snapshot list of all recorded sales in Orders workspace", async ({
 
   await expect(page.getByTestId(`orders-sale-item-${cashSale.saleId}`)).toBeVisible();
   await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).toBeVisible();
-  await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).toContainText(
+  await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).not.toContainText(
     customerName,
+  );
+  await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).not.toContainText(
+    onAccountSale.saleId,
   );
   await expect(page.getByTestId(`orders-sale-status-${onAccountSale.saleId}`)).toHaveText(
     "Parcial",
   );
   await expect(page.getByTestId(`orders-sale-outstanding-${onAccountSale.saleId}`)).toHaveText(
-    "$15.00",
+    "$15",
   );
 
   await page.getByTestId("orders-payment-method-filter").selectOption("on_account");
   await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).toBeVisible();
-  await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).toContainText(
+  await expect(page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`)).not.toContainText(
     customerName,
   );
+  await expect(
+    page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`),
+  ).not.toContainText("Registrar pago");
+  await expect(
+    page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`),
+  ).not.toContainText("Ver detalle del pedido");
+  await page.getByTestId(`orders-sale-item-${onAccountSale.saleId}`).click();
+  await expect(page.getByTestId("orders-sale-detail-modal")).toBeVisible();
+  await expect(
+    page.getByTestId(`orders-sale-detail-item-${onAccountSale.saleId}-${product.id}`),
+  ).toContainText(productName);
+  await expect(page.getByTestId("orders-sale-detail-modal")).toContainText(customerName);
+  await page.getByTestId("orders-sale-detail-modal").getByRole("button", { name: "Cerrar" }).click();
 
-  await page
-    .getByTestId(`orders-partial-payment-amount-input-${onAccountSale.saleId}`)
-    .fill("7");
-  await page.getByTestId(`orders-partial-payment-button-${onAccountSale.saleId}`).click();
-
-  await expect(page.getByTestId("orders-feedback")).toContainText(
-    `Pago registrado para ${onAccountSale.saleId}: $7.00.`,
-  );
-  await expect(page.getByTestId(`orders-sale-outstanding-${onAccountSale.saleId}`)).toHaveText(
-    "$8.00",
-  );
   await page.getByTestId("orders-payment-method-filter").selectOption("all");
   await expect(page.getByTestId("orders-total-collected")).toHaveText(
-    `$${(beforeCollected + 22).toFixed(2)}`,
+    `$${(beforeCollected + 15).toFixed(2)}`,
   );
   await expect(page.getByTestId("orders-total-outstanding")).toHaveText(
-    `$${(beforeOutstanding + 8).toFixed(2)}`,
+    `$${(beforeOutstanding + 15).toFixed(2)}`,
   );
 });

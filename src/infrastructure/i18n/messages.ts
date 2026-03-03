@@ -204,7 +204,8 @@ const spanishMessages = {
       "Revisá cada venta registrada, lo cobrado y el saldo pendiente sin salir del flujo POS.",
     recordedSales: "Ventas registradas",
     partialPaymentTitle: "Registrar pago parcial",
-    partialPaymentHelp: "Aplicá un pago parcial sin salir de esta vista.",
+    partialPaymentHelp:
+      "Ingresá el monto cobrado y confirmá para actualizar el saldo pendiente.",
     noSalesForFilter: "No hay ventas registradas para este filtro.",
     loadError: "No se pudo cargar el listado de ventas.",
     missingCustomer: "Este pedido no está vinculado a un cliente.",
@@ -212,8 +213,7 @@ const spanishMessages = {
     partialPaymentTooHigh:
       "El pago parcial no puede superar el saldo pendiente del pedido.",
     registerPaymentError: "No se pudo registrar el pago del pedido.",
-    registerPaymentSuccess: (saleId: string, amount: string): string =>
-      `Pago registrado para ${saleId}: ${amount}.`,
+    registerPaymentSuccess: (amount: string): string => `Pago registrado: ${amount}.`,
   },
   productsWorkspace: {
     title: "Productos e inventario",

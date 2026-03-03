@@ -188,6 +188,16 @@ test.describe("API contract conformance", () => {
           outstandingAmount: 0,
           paymentStatus: "paid",
           itemCount: 3,
+          saleItems: [
+            {
+              productId: "product-001",
+              productName: "Yerba",
+              productImageUrl: "https://example.com/product-001.png",
+              quantity: 3,
+              unitPrice: 10,
+              lineTotal: 30,
+            },
+          ],
           createdAt: "2026-02-27T12:00:00.000Z",
         },
         {
@@ -200,6 +210,15 @@ test.describe("API contract conformance", () => {
           outstandingAmount: 15,
           paymentStatus: "partial",
           itemCount: 2,
+          saleItems: [
+            {
+              productId: "product-002",
+              productName: "Galletitas",
+              quantity: 2,
+              unitPrice: 10,
+              lineTotal: 20,
+            },
+          ],
           createdAt: "2026-02-27T12:10:00.000Z",
         },
       ],

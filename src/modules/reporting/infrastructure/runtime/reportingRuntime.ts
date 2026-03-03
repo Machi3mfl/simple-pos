@@ -32,6 +32,7 @@ export function createReportingRuntime(): {
     ),
     getSalesHistoryReportUseCase: new GetSalesHistoryReportUseCase(
       saleRepository,
+      productRepository,
       customerRepository,
       debtLedgerRepository,
     ),
