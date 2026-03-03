@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "dev:local": "bash scripts/supabase/dev-local.sh",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3001",
     "lint": "next lint",
     "supabase:start": "bash scripts/supabase/start-local.sh",
     "supabase:stop": "bash scripts/supabase/stop-local.sh",

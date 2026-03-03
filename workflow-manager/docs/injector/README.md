@@ -69,7 +69,7 @@ Requeridas:
 Opcionales:
 
 - `INJECTOR_APP_BASE_URL`
-  - default: `http://127.0.0.1:3000`
+  - default: `http://127.0.0.1:3001`
 - `ENV_FILE`
   - para apuntar a otro archivo `.env`
 

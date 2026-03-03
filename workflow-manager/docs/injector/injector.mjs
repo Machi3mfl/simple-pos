@@ -14,7 +14,7 @@ const PROJECT_ROOT = path.resolve(INJECTOR_ROOT, "../../..");
 const DATASETS_ROOT = path.join(INJECTOR_ROOT, "datasets");
 const DEFAULT_ENV_FILE = path.join(PROJECT_ROOT, ".env.local");
 const PRODUCT_SOURCING_BUCKET = "product-sourcing-images";
-const DEFAULT_APP_BASE_URL = "http://127.0.0.1:3000";
+const DEFAULT_APP_BASE_URL = "http://127.0.0.1:3001";
 
 const COLORS = {
   reset: "\u001b[0m",
