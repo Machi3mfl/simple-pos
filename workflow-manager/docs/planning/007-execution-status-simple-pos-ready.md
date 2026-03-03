@@ -15,7 +15,7 @@
 
 ---
 
-> Closure note: this snapshot records the completed MVP execution state as of `2026-03-01`, plus the post-MVP planning item opened on the same date for external product sourcing.
+> Closure note: this snapshot records the completed MVP execution state as of `2026-03-01`, plus the post-MVP planning items later opened for external product sourcing and cash-register/actor-audit planning.
 
 ## 1. Iteration Status
 
@@ -36,6 +36,7 @@
 | Feature | Status |
 | --- | --- |
 | POS-001 | done |
+| POS-002 | planning |
 | API-001 | done |
 | CATALOG-001 | done |
 | INVENTORY-001 | done |
@@ -77,6 +78,28 @@
 ---
 
 ## 5. Current Planning Items
+
+Open planning item:
+
+- `POS-002` cash register sessions and actor audit:
+  - status: `planning`
+  - scope:
+    - open/close one cash register session per drawer/device,
+    - capture opening float and closing counted cash,
+    - reconcile expected versus counted balance,
+    - record manual cash events such as `paid in`, `paid out`, and `safe drop`,
+    - establish a scalable actor model through `app_users` plus future role assignments
+  - architecture direction:
+    - `CashRegister` + `CashRegisterSession` aggregate lifecycle
+    - immutable `CashMovement` ledger for every cash-affecting event
+    - `ActorContext` passed into command use cases instead of ad hoc headers
+    - request-scoped auth later mapped into `app_users`, while service-role access stays reserved for trusted internal jobs
+  - main artifacts:
+    - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
+    - `workflow-manager/docs/planning/diagrams/class-cash-register-session-domain.md`
+    - `workflow-manager/docs/planning/diagrams/sequence-cash-register-open-close.md`
+    - `workflow-manager/docs/planning/diagrams/activity-cash-register-day.md`
+    - `workflow-manager/docs/planning/diagrams/state-cash-register-session.md`
 
 Completed planning item:
 

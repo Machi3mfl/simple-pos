@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "context7": {
+      "source": "am-will/codex-skills",
+      "sourceType": "github",
+      "computedHash": "9cfc98a08e8de60c57e2413c27bfdeb94f1e5a07dba44d4cbf3460d7f537669a"
+    }
+  }
+}

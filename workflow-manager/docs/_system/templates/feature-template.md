@@ -45,6 +45,11 @@
 
 ## 🔧 Technical Architecture
 
+### Vertical Slice Delivery Rule
+- Every implementation slice must include the full circuit: `UI + API + domain/application + persistence + tests`.
+- Do not start slices as backend-only work or as disconnected static UI.
+- Break the feature into small, reviewable, demoable deliverables that can be validated independently.
+
 ### Affected Components
 ```
 src/core/{entity}/

@@ -54,6 +54,8 @@ This system provides reusable templates for tracking features, tasks, and progre
 8. **Use consistent naming conventions**: `[ENTITY-XXX]` format
 9. **Use `requirements-template.md` as optional complement** for deeper use-case decomposition
 10. **For diagrams, use Markdown files with embedded Mermaid fenced blocks** (` ```mermaid `), never standalone `.mmd` files
+11. **Implement every slice as a full vertical circuit**: `UI + API + domain/application + persistence + tests`
+12. **Split slices into small deliverables** that are reviewable, demoable, and independently testable; avoid backend-only or static-UI-only starts
 
 ### Template Variables:
 - `{feature-name}`: kebab-case feature name
@@ -104,6 +106,7 @@ The directory `workflow-manager/` is the designated central hub for managing and
         *   **Code Examples**: Snippets showing how to use the feature (API calls, function signatures).
     *   **Maintenance**: This document is NOT static. It must be updated whenever the code changes to reflect the current reality (Living Documentation).
     *   **Naming Convention**: Use the `[ENTITY-XXX]` format consistent with the workflow manager (e.g., `INVENTORY-001-bulk-upload.md`).
+4.  **Vertical Slice Rule**: Any slice that starts implementation must include the full user-facing circuit (`UI + API + domain/application + persistence + tests`) and should be broken into small, reviewable, end-to-end deliverables.
 
 ## Integration with Project Rules
 
