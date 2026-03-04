@@ -26,6 +26,7 @@ interface RoleRow {
 }
 
 interface RolePermissionAssignmentRow {
+  readonly role_id: string;
   readonly permission_id: string;
 }
 
@@ -35,6 +36,7 @@ interface PermissionRow {
 }
 
 interface RegisterAssignmentRow {
+  readonly user_id: string;
   readonly cash_register_id: string;
 }
 
@@ -67,7 +69,7 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
       return null;
     }
 
-    return this.buildActorAccessRecord(appUser);
+    return (await this.buildActorAccessRecords([appUser]))[0] ?? null;
   }
 
   async findByAuthUserId(authUserId: string): Promise<ActorAccessRecord | null> {
@@ -76,7 +78,7 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
       return null;
     }
 
-    return this.buildActorAccessRecord(appUser);
+    return (await this.buildActorAccessRecords([appUser]))[0] ?? null;
   }
 
   async findDefaultActor(): Promise<ActorAccessRecord | null> {
@@ -117,7 +119,7 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
     }
 
     const appUsers = (data ?? []).map((row) => this.mapRowToAppUser(row as AppUserRow));
-    return Promise.all(appUsers.map((appUser) => this.buildActorAccessRecord(appUser)));
+    return this.buildActorAccessRecords(appUsers);
   }
 
   private async loadUserByColumn(
@@ -152,37 +154,102 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
     });
   }
 
-  private async buildActorAccessRecord(appUser: AppUser): Promise<ActorAccessRecord> {
-    const roleIds = await this.loadRoleIds(appUser.getId());
-    const roles = roleIds.length > 0 ? await this.loadRoles(roleIds) : [];
-    const permissionIds =
-      roleIds.length > 0 ? await this.loadPermissionIdsByRoleIds(roleIds) : [];
-    const permissionCodes =
-      permissionIds.length > 0 ? await this.loadPermissionCodes(permissionIds) : [];
-    const assignedRegisterIds = await this.loadAssignedRegisterIds(appUser.getId());
+  private async buildActorAccessRecords(
+    appUsers: readonly AppUser[],
+  ): Promise<readonly ActorAccessRecord[]> {
+    if (appUsers.length === 0) {
+      return [];
+    }
 
-    return {
-      user: appUser,
-      roleCodes: roles.map((role) => role.code),
-      roleNames: roles.map((role) => role.name),
-      permissionCodes,
-      assignedRegisterIds,
-    };
+    const userIds = appUsers.map((appUser) => appUser.getId());
+    const roleAssignments = await this.loadUserRoleAssignments(userIds);
+    const roleIds = Array.from(new Set(roleAssignments.map((assignment) => assignment.role_id)));
+    const roles = roleIds.length > 0 ? await this.loadRoles(roleIds) : [];
+    const rolePermissionAssignments =
+      roleIds.length > 0 ? await this.loadRolePermissionAssignments(roleIds) : [];
+    const permissionIds = Array.from(
+      new Set(rolePermissionAssignments.map((assignment) => assignment.permission_id)),
+    );
+    const permissions =
+      permissionIds.length > 0 ? await this.loadPermissions(permissionIds) : [];
+    const registerAssignments = await this.loadAssignedRegisters(userIds);
+
+    const rolesById = new Map(roles.map((role) => [role.id, role]));
+    const permissionCodeById = new Map(permissions.map((permission) => [permission.id, permission.code]));
+    const roleIdsByUserId = new Map<string, string[]>();
+    for (const assignment of roleAssignments) {
+      const currentRoleIds = roleIdsByUserId.get(assignment.user_id) ?? [];
+      currentRoleIds.push(assignment.role_id);
+      roleIdsByUserId.set(assignment.user_id, currentRoleIds);
+    }
+
+    const permissionCodesByRoleId = new Map<string, string[]>();
+    for (const assignment of rolePermissionAssignments) {
+      const permissionCode = permissionCodeById.get(assignment.permission_id);
+      if (!permissionCode) {
+        continue;
+      }
+
+      const currentCodes = permissionCodesByRoleId.get(assignment.role_id) ?? [];
+      currentCodes.push(permissionCode);
+      permissionCodesByRoleId.set(assignment.role_id, currentCodes);
+    }
+
+    const registerIdsByUserId = new Map<string, string[]>();
+    for (const assignment of registerAssignments) {
+      const currentRegisterIds = registerIdsByUserId.get(assignment.user_id) ?? [];
+      currentRegisterIds.push(assignment.cash_register_id);
+      registerIdsByUserId.set(assignment.user_id, currentRegisterIds);
+    }
+
+    return appUsers.map((appUser) => {
+      const roleIdsForUser = Array.from(
+        new Set(roleIdsByUserId.get(appUser.getId()) ?? []),
+      );
+      const rolesForUser = roleIdsForUser
+        .map((roleId) => rolesById.get(roleId))
+        .filter((role): role is RoleRow => Boolean(role))
+        .sort(
+          (left, right) =>
+            byRolePriority([left.code], [right.code]) ||
+            left.name.localeCompare(right.name, "es"),
+        );
+
+      const permissionCodes = Array.from(
+        new Set(
+          roleIdsForUser.flatMap(
+            (roleId) => permissionCodesByRoleId.get(roleId) ?? [],
+          ),
+        ),
+      ).sort((left, right) => left.localeCompare(right, "es"));
+
+      const assignedRegisterIds = Array.from(
+        new Set(registerIdsByUserId.get(appUser.getId()) ?? []),
+      ).sort((left, right) => left.localeCompare(right, "es"));
+
+      return {
+        user: appUser,
+        roleCodes: rolesForUser.map((role) => role.code),
+        roleNames: rolesForUser.map((role) => role.name),
+        permissionCodes,
+        assignedRegisterIds,
+      };
+    });
   }
 
-  private async loadRoleIds(userId: string): Promise<readonly string[]> {
+  private async loadUserRoleAssignments(
+    userIds: readonly string[],
+  ): Promise<readonly (UserRoleAssignmentRow & { readonly user_id: string })[]> {
     const { data, error } = await this.client
       .from("user_role_assignments")
-      .select("role_id")
-      .eq("user_id", userId);
+      .select("user_id, role_id")
+      .in("user_id", [...userIds]);
 
     if (error) {
       throw new Error(`Failed to load user role assignments in Supabase: ${error.message}`);
     }
 
-    return Array.from(
-      new Set((data as readonly UserRoleAssignmentRow[] | null)?.map((row) => row.role_id) ?? []),
-    );
+    return (data as readonly (UserRoleAssignmentRow & { readonly user_id: string })[] | null) ?? [];
   }
 
   private async loadRoles(roleIds: readonly string[]): Promise<readonly RoleRow[]> {
@@ -201,30 +268,24 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
     );
   }
 
-  private async loadPermissionIdsByRoleIds(
+  private async loadRolePermissionAssignments(
     roleIds: readonly string[],
-  ): Promise<readonly string[]> {
+  ): Promise<readonly RolePermissionAssignmentRow[]> {
     const { data, error } = await this.client
       .from("role_permission_assignments")
-      .select("permission_id")
+      .select("role_id, permission_id")
       .in("role_id", [...roleIds]);
 
     if (error) {
       throw new Error(`Failed to load role permissions in Supabase: ${error.message}`);
     }
 
-    return Array.from(
-      new Set(
-        (data as readonly RolePermissionAssignmentRow[] | null)?.map(
-          (row) => row.permission_id,
-        ) ?? [],
-      ),
-    );
+    return (data as readonly RolePermissionAssignmentRow[] | null) ?? [];
   }
 
-  private async loadPermissionCodes(
+  private async loadPermissions(
     permissionIds: readonly string[],
-  ): Promise<readonly string[]> {
+  ): Promise<readonly PermissionRow[]> {
     const { data, error } = await this.client
       .from("permissions")
       .select("id, code")
@@ -234,18 +295,16 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
       throw new Error(`Failed to load permissions in Supabase: ${error.message}`);
     }
 
-    return ((data as readonly PermissionRow[] | null) ?? [])
-      .map((row) => row.code)
-      .sort((left, right) => left.localeCompare(right, "es"));
+    return (data as readonly PermissionRow[] | null) ?? [];
   }
 
-  private async loadAssignedRegisterIds(
-    userId: string,
-  ): Promise<readonly string[]> {
+  private async loadAssignedRegisters(
+    userIds: readonly string[],
+  ): Promise<readonly RegisterAssignmentRow[]> {
     const { data, error } = await this.client
       .from("cash_register_user_assignments")
-      .select("cash_register_id")
-      .eq("user_id", userId);
+      .select("user_id, cash_register_id")
+      .in("user_id", [...userIds]);
 
     if (error) {
       throw new Error(
@@ -253,12 +312,6 @@ export class SupabaseActorAccessRepository implements ActorAccessRepository {
       );
     }
 
-    return Array.from(
-      new Set(
-        (data as readonly RegisterAssignmentRow[] | null)?.map(
-          (row) => row.cash_register_id,
-        ) ?? [],
-      ),
-    ).sort((left, right) => left.localeCompare(right, "es"));
+    return (data as readonly RegisterAssignmentRow[] | null) ?? [];
   }
 }

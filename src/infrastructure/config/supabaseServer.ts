@@ -4,23 +4,14 @@ let supabaseClient: SupabaseClient | null = null;
 let supabaseClientCacheKey: string | null = null;
 
 type SupabaseFetchInput = Parameters<typeof fetch>[0];
-type SupabaseFetchInit = RequestInit & {
-  readonly next?: {
-    readonly revalidate?: number;
-  };
-};
 
 function fetchWithoutStore(
   input: SupabaseFetchInput,
   init?: RequestInit,
 ): Promise<Response> {
-  const requestInit: SupabaseFetchInit = {
+  const requestInit: RequestInit = {
     ...(init ?? {}),
     cache: "no-store",
-    next: {
-      ...((init as SupabaseFetchInit | undefined)?.next ?? {}),
-      revalidate: 0,
-    },
   };
 
   return fetch(input, requestInit);
@@ -47,8 +38,8 @@ export function getSupabaseServerClient(): SupabaseClient {
       autoRefreshToken: false,
     },
     global: {
-      // Next patches global fetch in App Router. For repository reads we need fresh
-      // Supabase results, especially during checkout and customer lookup flows.
+      // Next patches global fetch in App Router. We force no-store here so server
+      // repository reads always hit fresh Supabase state without mixing cache modes.
       fetch: fetchWithoutStore,
     },
   });

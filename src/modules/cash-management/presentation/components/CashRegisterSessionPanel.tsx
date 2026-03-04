@@ -151,9 +151,6 @@ export function CashRegisterSessionPanel({
 
   useEffect(() => {
     if (registers.length === 0) {
-      if (selectedRegisterId) {
-        onSelectedRegisterIdChange("");
-      }
       return;
     }
 
