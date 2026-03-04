@@ -1,3 +1,4 @@
+import { requireAuthenticatedWorkspacePage } from "@/modules/access-control/infrastructure/runtime/pageAccess";
 import { notFound } from "next/navigation";
 
 import { PosLayout } from "@/modules/sales/presentation/components/PosLayout";
@@ -9,12 +10,14 @@ interface PosWorkspacePageProps {
   };
 }
 
-export default function PosWorkspacePage({
+export default async function PosWorkspacePage({
   params,
-}: PosWorkspacePageProps): JSX.Element {
+}: PosWorkspacePageProps): Promise<JSX.Element> {
   if (!isPosWorkspaceId(params.workspace)) {
     notFound();
   }
+
+  await requireAuthenticatedWorkspacePage();
 
   return <PosLayout initialWorkspace={params.workspace as PosWorkspaceId} />;
 }

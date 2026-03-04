@@ -41,6 +41,7 @@ export function PosWorkspaceShell({
     isAuthenticated,
     canSwitchActor,
     openOperatorSelector,
+    clearAssumedActor,
     signOut,
     status,
   } =
@@ -106,6 +107,13 @@ export function PosWorkspaceShell({
           onAuthAction={() => {
             if (isAuthenticated) {
               void signOut().then(() => {
+                router.push("/login");
+              });
+              return;
+            }
+
+            if (sessionSource === "assumed_user") {
+              void clearAssumedActor().then(() => {
                 router.push("/login");
               });
               return;

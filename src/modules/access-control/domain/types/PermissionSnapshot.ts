@@ -89,6 +89,7 @@ export interface ActorSessionSnapshot {
   readonly resolutionSource: ActorSessionResolutionSource;
   readonly authUserId?: string;
   readonly canAssumeUserBridge: boolean;
+  readonly supportControllerActorId?: string;
 }
 
 export interface CurrentActorSnapshot {

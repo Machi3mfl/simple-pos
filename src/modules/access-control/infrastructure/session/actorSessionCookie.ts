@@ -5,6 +5,7 @@ const ACTOR_SESSION_COOKIE_NAME = "actor_session";
 
 interface ActorSessionCookiePayload {
   readonly userId: string;
+  readonly supportUserId?: string;
 }
 
 function parseBooleanEnv(value: string | undefined): boolean | null {
@@ -46,7 +47,20 @@ export function isAssumeUserBridgeEnabled(): boolean {
     return explicitValue;
   }
 
-  return true;
+  if (process.env.NODE_ENV !== "production") {
+    return true;
+  }
+
+  const deploymentEnvironment = (
+    process.env.VERCEL_ENV ??
+    process.env.APP_ENV ??
+    process.env.POS_RUNTIME_ENV ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  return deploymentEnvironment !== "production";
 }
 
 function isLocalHostname(hostname: string): boolean {
@@ -127,7 +141,7 @@ export function parseActorSessionCookie(
   try {
     const parsed = JSON.parse(
       Buffer.from(encodedPayload, "base64url").toString("utf8"),
-    ) as { userId?: unknown };
+    ) as { userId?: unknown; supportUserId?: unknown };
 
     if (typeof parsed.userId !== "string" || parsed.userId.trim().length === 0) {
       return null;
@@ -135,6 +149,11 @@ export function parseActorSessionCookie(
 
     return {
       userId: parsed.userId,
+      supportUserId:
+        typeof parsed.supportUserId === "string" &&
+        parsed.supportUserId.trim().length > 0
+          ? parsed.supportUserId
+          : undefined,
     };
   } catch {
     return null;

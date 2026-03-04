@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { getSupabaseRequestAuthClient } from "@/infrastructure/config/supabaseServer";
 
+import { isGuestAccessBypassEnabled } from "../../domain/constants/supportBridge";
 import {
   getActorSessionCookieName,
   isAssumeUserBridgeEnabled,
@@ -12,6 +13,7 @@ import {
 export interface RequestActorResolverResult {
   readonly actorId?: string;
   readonly authUserId?: string;
+  readonly supportActorId?: string;
   readonly resolutionSource:
     | "authenticated"
     | "authenticated_unmapped"
@@ -93,23 +95,32 @@ export async function resolveRequestActor(
   request: NextRequest,
 ): Promise<RequestActorResolverResult> {
   const canAssumeUserBridge = isAssumeUserBridgeEnabled();
-  const authenticatedActor = await resolveAuthenticatedActor(request);
-  if (authenticatedActor) {
-    return {
-      ...authenticatedActor,
-      canAssumeUserBridge,
-    };
-  }
-
   const actorCookie = canAssumeUserBridge
     ? parseActorSessionCookie(
         request.cookies.get(getActorSessionCookieName())?.value,
       )
     : null;
+  const authenticatedActor = await resolveAuthenticatedActor(request);
+  if (authenticatedActor) {
+    return {
+      ...authenticatedActor,
+      actorId: actorCookie?.userId,
+      supportActorId: actorCookie?.supportUserId,
+      canAssumeUserBridge,
+    };
+  }
+
+  if (!isGuestAccessBypassEnabled()) {
+    return {
+      resolutionSource: "default_actor",
+      canAssumeUserBridge,
+    };
+  }
 
   if (actorCookie?.userId) {
     return {
       actorId: actorCookie.userId,
+      supportActorId: actorCookie.supportUserId,
       resolutionSource: "assumed_user",
       canAssumeUserBridge,
     };

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 let supabaseClient: SupabaseClient | null = null;
@@ -80,6 +81,40 @@ export function getSupabaseRequestAuthClient(
       setAll() {
         // Route handlers can resolve the current user from request cookies without
         // mutating the response in this slice. Middleware-backed refresh can land later.
+      },
+    },
+  });
+}
+
+export function getSupabaseServerComponentAuthClient(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error(
+      "Supabase server component auth client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    );
+  }
+
+  const cookieStore = cookies();
+
+  return createServerClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      fetch: fetchWithoutStore,
+    },
+    cookies: {
+      getAll() {
+        return cookieStore.getAll().map((cookie) => ({
+          name: cookie.name,
+          value: cookie.value,
+        }));
+      },
+      setAll() {
+        // Server components only need read access for gating.
       },
     },
   });

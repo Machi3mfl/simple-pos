@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createClient } from "@supabase/supabase-js";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -12,6 +13,11 @@ const execFileAsync = promisify(execFile);
 const INJECTOR_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
 const PROJECT_ROOT = path.resolve(INJECTOR_ROOT, "../../..");
 const DATASETS_ROOT = path.join(INJECTOR_ROOT, "datasets");
+const DEMO_AUTH_USERS_PATH = path.join(
+  DATASETS_ROOT,
+  "access-control",
+  "demo-auth-users.json",
+);
 const DEFAULT_ENV_FILE = path.join(PROJECT_ROOT, ".env.local");
 const PRODUCT_SOURCING_BUCKET = "product-sourcing-images";
 const DEFAULT_APP_BASE_URL = "http://127.0.0.1:3001";
@@ -62,6 +68,25 @@ function splitCategoryPath(categoryPath) {
     .map((segment) => segment.trim())
     .filter(Boolean);
 }
+
+/**
+ * @typedef {object} DemoAuthUserRecord
+ * @property {number} priority
+ * @property {string} appUserId
+ * @property {string} displayName
+ * @property {string[]} roleCodes
+ * @property {string} email
+ * @property {string} password
+ * @property {string} purpose
+ */
+
+/**
+ * @typedef {object} DemoAuthUsersManifest
+ * @property {string} environment
+ * @property {string} loginUrl
+ * @property {string[]} notes
+ * @property {DemoAuthUserRecord[]} users
+ */
 
 async function fileExists(targetPath) {
   try {
@@ -124,11 +149,13 @@ async function loadEnvironment() {
 
   let supabaseUrl = merged.NEXT_PUBLIC_SUPABASE_URL ?? merged.SUPABASE_URL ?? "";
   let serviceRoleKey = merged.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  let anonKey = merged.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
   if (!supabaseUrl || !serviceRoleKey) {
     const cliEnv = await loadSupabaseCliEnv();
     supabaseUrl ||= cliEnv.NEXT_PUBLIC_SUPABASE_URL ?? cliEnv.API_URL ?? cliEnv.SUPABASE_URL ?? "";
     serviceRoleKey ||= cliEnv.SUPABASE_SERVICE_ROLE_KEY ?? cliEnv.SERVICE_ROLE_KEY ?? "";
+    anonKey ||= cliEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? cliEnv.ANON_KEY ?? "";
   }
 
   if (!supabaseUrl) {
@@ -143,6 +170,7 @@ async function loadEnvironment() {
     envFile,
     supabaseUrl: supabaseUrl.replace(/\/$/u, ""),
     serviceRoleKey,
+    anonKey,
     appBaseUrl: (
       merged.INJECTOR_APP_BASE_URL ??
       merged.NEXT_PUBLIC_APP_URL ??
@@ -172,6 +200,39 @@ async function loadDataset(entity) {
   }
 
   return records;
+}
+
+async function loadDemoAuthUsersManifest() {
+  const parsed = JSON.parse(await fs.readFile(DEMO_AUTH_USERS_PATH, "utf8"));
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.users)) {
+    abort(`Invalid auth users manifest at ${DEMO_AUTH_USERS_PATH}.`);
+  }
+
+  return /** @type {DemoAuthUsersManifest} */ (parsed);
+}
+
+function createAnonClient(env) {
+  if (!env.anonKey) {
+    abort(
+      "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Required to sign in the demo system admin for authenticated injector requests.",
+    );
+  }
+
+  return createClient(env.supabaseUrl, env.anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+function createServiceRoleClient(env) {
+  return createClient(env.supabaseUrl, env.serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 async function request(method, url, { headers = {}, body, expectJson = true } = {}) {
@@ -213,8 +274,12 @@ async function requestSupabase(env, method, route, { body, headers = {}, expectJ
   });
 }
 
-async function requestApp(env, method, apiPath, { jsonBody } = {}) {
+async function requestApp(env, method, apiPath, { jsonBody, accessToken } = {}) {
   const headers = jsonBody === undefined ? {} : { "content-type": "application/json" };
+  if (typeof accessToken === "string" && accessToken.trim().length > 0) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   return request(method, `${env.appBaseUrl}${apiPath}`, {
     headers,
     body: jsonBody === undefined ? undefined : JSON.stringify(jsonBody),
@@ -233,6 +298,130 @@ async function requireAppReachable(env) {
   }
 
   abort(`Could not reach app server at ${env.appBaseUrl}. Start Next.js first (for example: npm run dev).`);
+}
+
+async function listAuthUsers(env) {
+  const adminClient = createServiceRoleClient(env);
+  const users = [];
+  let page = 1;
+
+  while (true) {
+    const response = await adminClient.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (response.error) {
+      abort(`Failed to list auth users: ${response.error.message}`);
+    }
+
+    const batch = ensureArray(response.data.users);
+    users.push(...batch);
+    if (batch.length < 200) {
+      break;
+    }
+    page += 1;
+  }
+
+  return users;
+}
+
+async function findAuthUserByEmail(env, email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const users = await listAuthUsers(env);
+  return (
+    users.find((user) => (user.email ?? "").trim().toLowerCase() === normalizedEmail) ??
+    null
+  );
+}
+
+async function ensureDemoAuthUsers(env, authManifest) {
+  const adminClient = createServiceRoleClient(env);
+  logInfo(`Reconciling ${authManifest.users.length} demo auth users.`);
+
+  for (const userRecord of [...authManifest.users].sort((left, right) => left.priority - right.priority)) {
+    const appUserRows = await listRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]]);
+    const appUser = appUserRows[0];
+    if (!appUser) {
+      abort(`App user ${userRecord.appUserId} was not found. Run POS-002 seeds first.`);
+    }
+
+    const normalizedEmail = userRecord.email.trim().toLowerCase();
+    const currentAuthUserId =
+      typeof appUser.auth_user_id === "string" && appUser.auth_user_id.length > 0
+        ? appUser.auth_user_id
+        : null;
+
+    let authUserId = currentAuthUserId;
+    if (!authUserId) {
+      const existingAuthUser = await findAuthUserByEmail(env, normalizedEmail);
+      authUserId = existingAuthUser?.id ?? null;
+    }
+
+    if (authUserId) {
+      const updateResponse = await adminClient.auth.admin.updateUserById(authUserId, {
+        email: normalizedEmail,
+        password: userRecord.password,
+        email_confirm: true,
+        user_metadata: {
+          app_user_id: userRecord.appUserId,
+          display_name: userRecord.displayName,
+        },
+      });
+      if (updateResponse.error) {
+        abort(
+          `Failed to update auth user ${userRecord.appUserId} (${normalizedEmail}): ${updateResponse.error.message}`,
+        );
+      }
+    } else {
+      const createResponse = await adminClient.auth.admin.createUser({
+        email: normalizedEmail,
+        password: userRecord.password,
+        email_confirm: true,
+        user_metadata: {
+          app_user_id: userRecord.appUserId,
+          display_name: userRecord.displayName,
+        },
+      });
+
+      if (createResponse.error || !createResponse.data.user?.id) {
+        abort(
+          `Failed to create auth user ${userRecord.appUserId} (${normalizedEmail}): ${createResponse.error?.message ?? "unknown error"}`,
+        );
+      }
+
+      authUserId = createResponse.data.user.id;
+    }
+
+    await patchRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]], {
+      auth_user_id: authUserId,
+    });
+  }
+
+  logOk("Demo auth users reconciled successfully.");
+}
+
+async function signInDemoSystemAdmin(env, authManifest) {
+  const systemAdminRecord = authManifest.users.find((user) =>
+    ensureArray(user.roleCodes).includes("system_admin"),
+  );
+
+  if (!systemAdminRecord) {
+    abort("The demo auth users manifest must include a system_admin user.");
+  }
+
+  const anonClient = createAnonClient(env);
+  const signInResponse = await anonClient.auth.signInWithPassword({
+    email: systemAdminRecord.email,
+    password: systemAdminRecord.password,
+  });
+
+  if (!signInResponse.data.session?.access_token || signInResponse.error) {
+    abort(
+      `Failed to sign in demo system admin (${systemAdminRecord.email}): ${signInResponse.error?.message ?? "unknown error"}`,
+    );
+  }
+
+  return signInResponse.data.session.access_token;
 }
 
 function buildRestUrl(table, params) {
@@ -484,7 +673,7 @@ async function collectManagedProducts(env, productDataset) {
   return managed;
 }
 
-async function injectProducts(env, productDataset) {
+async function injectProducts(env, productDataset, accessToken) {
   await requireAppReachable(env);
   logInfo(`Injecting ${productDataset.length} demo products from Carrefour.`);
 
@@ -506,9 +695,15 @@ async function injectProducts(env, productDataset) {
     })),
   };
 
-  const { response, data, text } = await requestApp(env, "POST", "/api/v1/product-sourcing/import", {
-    jsonBody: payload,
-  });
+  const { response, data, text } = await requestApp(
+    env,
+    "POST",
+    "/api/v1/product-sourcing/import",
+    {
+      jsonBody: payload,
+      accessToken,
+    },
+  );
 
   if (!response.ok) {
     abort(`Product sourcing import failed (${response.status}): ${text}`);
@@ -646,7 +841,13 @@ async function resetDemoInventoryBaseline(env, productDataset) {
   }
 }
 
-async function injectSales(env, productDataset, salesDataset, debtPaymentDataset) {
+async function injectSales(
+  env,
+  productDataset,
+  salesDataset,
+  debtPaymentDataset,
+  accessToken,
+) {
   await requireAppReachable(env);
   const productIdByKey = await resolveProductIdsByKey(env, productDataset);
   await clearDemoSales(env, salesDataset, debtPaymentDataset);
@@ -675,6 +876,7 @@ async function injectSales(env, productDataset, salesDataset, debtPaymentDataset
 
     const { response, data, text } = await requestApp(env, "POST", "/api/v1/sales", {
       jsonBody: payload,
+      accessToken,
     });
     if (!response.ok) {
       abort(`Sale injection failed for ${saleRecord.key} (${response.status}): ${text}`);
@@ -717,9 +919,15 @@ async function injectSales(env, productDataset, salesDataset, debtPaymentDataset
         quantity: line.quantity,
         reason: movementReason,
       };
-      const movementResponse = await requestApp(env, "POST", "/api/v1/stock-movements", {
-        jsonBody: movementPayload,
-      });
+      const movementResponse = await requestApp(
+        env,
+        "POST",
+        "/api/v1/stock-movements",
+        {
+          jsonBody: movementPayload,
+          accessToken,
+        },
+      );
       if (!movementResponse.response.ok) {
         abort(`Outbound stock movement failed for ${saleRecord.key}/${line.productRef} (${movementResponse.response.status}): ${movementResponse.text}`);
       }
@@ -751,7 +959,7 @@ async function getSaleIdByKey(env, salesDataset, saleKey) {
   return sale.id;
 }
 
-async function injectDebtPayments(env, salesDataset, debtPaymentDataset) {
+async function injectDebtPayments(env, salesDataset, debtPaymentDataset, accessToken) {
   await requireAppReachable(env);
   await clearDemoDebtPayments(env, debtPaymentDataset);
   logInfo(`Injecting ${debtPaymentDataset.length} demo debt payments.`);
@@ -771,9 +979,15 @@ async function injectDebtPayments(env, salesDataset, debtPaymentDataset) {
       notes: `demo:${paymentRecord.key}`,
     };
 
-    const { response, data, text } = await requestApp(env, "POST", "/api/v1/debt-payments", {
-      jsonBody: payload,
-    });
+    const { response, data, text } = await requestApp(
+      env,
+      "POST",
+      "/api/v1/debt-payments",
+      {
+        jsonBody: payload,
+        accessToken,
+      },
+    );
     if (!response.ok) {
       abort(`Debt payment injection failed for ${paymentRecord.key} (${response.status}): ${text}`);
     }
@@ -1031,6 +1245,7 @@ function printHelp() {
   process.stdout.write(`Simple POS demo injector\n\n`);
   process.stdout.write(`Usage:\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh all\n`);
+  process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh auth-users\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh products\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh sales\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh debt-payments\n`);
@@ -1043,6 +1258,7 @@ function printHelp() {
 async function selectInteractiveCommand() {
   const options = [
     ["all", "Inject demo products + sales + debt payments"],
+    ["auth-users", "Provision demo auth users for local login"],
     ["products", "Inject or reconcile sourced demo products"],
     ["sales", "Recreate demo sales and outbound stock movements"],
     ["debt-payments", "Recreate demo debt payments"],
@@ -1082,26 +1298,59 @@ async function main() {
   }
 
   const datasets = {
+    authUsers: await loadDemoAuthUsersManifest(),
     products: await loadDataset("products"),
     sales: await loadDataset("sales"),
     debtPayments: await loadDataset("debt-payments"),
   };
   const env = await loadEnvironment();
+  const getSystemAdminAccessToken = async () => {
+    await ensureDemoAuthUsers(env, datasets.authUsers);
+    return signInDemoSystemAdmin(env, datasets.authUsers);
+  };
 
   switch (command) {
     case "all":
-      await injectProducts(env, datasets.products);
-      await injectSales(env, datasets.products, datasets.sales, datasets.debtPayments);
-      await injectDebtPayments(env, datasets.sales, datasets.debtPayments);
+      {
+        const accessToken = await getSystemAdminAccessToken();
+        await injectProducts(env, datasets.products, accessToken);
+        await injectSales(
+          env,
+          datasets.products,
+          datasets.sales,
+          datasets.debtPayments,
+          accessToken,
+        );
+        await injectDebtPayments(
+          env,
+          datasets.sales,
+          datasets.debtPayments,
+          accessToken,
+        );
+      }
+      break;
+    case "auth-users":
+      await ensureDemoAuthUsers(env, datasets.authUsers);
       break;
     case "products":
-      await injectProducts(env, datasets.products);
+      await injectProducts(env, datasets.products, await getSystemAdminAccessToken());
       break;
     case "sales":
-      await injectSales(env, datasets.products, datasets.sales, datasets.debtPayments);
+      await injectSales(
+        env,
+        datasets.products,
+        datasets.sales,
+        datasets.debtPayments,
+        await getSystemAdminAccessToken(),
+      );
       break;
     case "debt-payments":
-      await injectDebtPayments(env, datasets.sales, datasets.debtPayments);
+      await injectDebtPayments(
+        env,
+        datasets.sales,
+        datasets.debtPayments,
+        await getSystemAdminAccessToken(),
+      );
       break;
     case "status":
       await showStatus(env, datasets);

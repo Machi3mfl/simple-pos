@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  isGuestAccessBypassEnabled,
+  SUPPORT_OVERRIDE_PERMISSION,
+} from "../../domain/constants/supportBridge";
 import { buildEmptyPermissionSnapshot } from "../../domain/services/buildEmptyPermissionSnapshot";
 import type { CurrentActorSnapshot } from "../../domain/types/PermissionSnapshot";
 import { buildPermissionSnapshot } from "../../domain/services/buildPermissionSnapshot";
@@ -19,23 +23,96 @@ export async function resolveActorSnapshotForRequest(
   request: NextRequest,
 ): Promise<CurrentActorSnapshot> {
   const requestActor = await resolveRequestActor(request);
+  const { getCurrentActorSnapshotUseCase } = createAccessControlRuntime();
+
+  const resolveCurrentActorSnapshot = async (
+    params:
+      | {
+          readonly authUserId: string;
+        }
+      | {
+          readonly actorId: string;
+        },
+  ) => {
+    if ("authUserId" in params) {
+      return getCurrentActorSnapshotUseCase.execute({
+        authUserId: params.authUserId,
+      });
+    }
+
+    return getCurrentActorSnapshotUseCase.execute({
+      actorId: params.actorId,
+    });
+  };
 
   try {
-    const { getCurrentActorSnapshotUseCase } = createAccessControlRuntime();
-    const snapshot = await getCurrentActorSnapshotUseCase.execute(requestActor);
-    if (snapshot) {
+    const controllerSnapshot = requestActor.authUserId
+      ? await resolveCurrentActorSnapshot({
+          authUserId: requestActor.authUserId,
+        })
+      : null;
+
+    if (
+      requestActor.actorId &&
+      requestActor.supportActorId &&
+      controllerSnapshot &&
+      controllerSnapshot.actor.actorId === requestActor.supportActorId &&
+      controllerSnapshot.permissionSnapshot.permissionCodes.includes(
+        SUPPORT_OVERRIDE_PERMISSION,
+      )
+    ) {
+      const assumedSnapshot = await resolveCurrentActorSnapshot({
+        actorId: requestActor.actorId,
+      });
+
+      if (assumedSnapshot) {
+        return {
+          ...assumedSnapshot,
+          session: {
+            resolutionSource: "assumed_user",
+            authUserId: requestActor.authUserId,
+            canAssumeUserBridge: requestActor.canAssumeUserBridge,
+            supportControllerActorId: requestActor.supportActorId,
+          },
+        };
+      }
+    }
+
+    if (controllerSnapshot) {
       return {
-        ...snapshot,
+        ...controllerSnapshot,
         session: {
-          resolutionSource: requestActor.resolutionSource,
+          resolutionSource:
+            requestActor.resolutionSource === "authenticated"
+              ? "authenticated"
+              : "authenticated_unmapped",
           authUserId: requestActor.authUserId,
           canAssumeUserBridge: requestActor.canAssumeUserBridge,
+          supportControllerActorId: undefined,
         },
       };
     }
+
+    if (requestActor.actorId) {
+      const assumedSnapshot = await resolveCurrentActorSnapshot({
+        actorId: requestActor.actorId,
+      });
+      if (assumedSnapshot) {
+        return {
+          ...assumedSnapshot,
+          session: {
+            resolutionSource: requestActor.resolutionSource,
+            authUserId: requestActor.authUserId,
+            canAssumeUserBridge: requestActor.canAssumeUserBridge,
+            supportControllerActorId: requestActor.supportActorId,
+          },
+        };
+      }
+    }
   } catch {
-    // The pre-auth bridge must stay demoable in non-Supabase runs, so route
-    // guards fall back to deterministic in-memory actors when persistence is unavailable.
+    // Keep deterministic fallbacks only for explicit assumed-actor flows during
+    // local demo/test bootstrap; unauthenticated request access must degrade to
+    // zero permissions once real login becomes mandatory.
   }
 
   if (
@@ -59,30 +136,73 @@ export async function resolveActorSnapshotForRequest(
             : requestActor.resolutionSource,
         authUserId: requestActor.authUserId,
         canAssumeUserBridge: requestActor.canAssumeUserBridge,
+        supportControllerActorId: requestActor.supportActorId,
       },
       permissionSnapshot: buildEmptyPermissionSnapshot(),
     };
   }
 
-  const fallbackActor =
-    (requestActor.actorId ? findFallbackActorById(requestActor.actorId) : null) ??
-    findFallbackDefaultActor();
+  if (requestActor.actorId) {
+    const fallbackActor = findFallbackActorById(requestActor.actorId);
+    if (fallbackActor) {
+      return {
+        actor: {
+          actorId: fallbackActor.user.getId(),
+          displayName: fallbackActor.user.getDisplayName(),
+          actorKind: fallbackActor.user.getActorKind(),
+          roleCodes: fallbackActor.roleCodes,
+          roleNames: fallbackActor.roleNames,
+          assignedRegisterIds: fallbackActor.assignedRegisterIds,
+        },
+        session: {
+          resolutionSource: requestActor.resolutionSource,
+          authUserId: requestActor.authUserId,
+          canAssumeUserBridge: requestActor.canAssumeUserBridge,
+          supportControllerActorId: requestActor.supportActorId,
+        },
+        permissionSnapshot: buildPermissionSnapshot(fallbackActor),
+      };
+    }
+  }
+
+  if (isGuestAccessBypassEnabled()) {
+    const fallbackActor = findFallbackDefaultActor();
+
+    return {
+      actor: {
+        actorId: fallbackActor.user.getId(),
+        displayName: fallbackActor.user.getDisplayName(),
+        actorKind: fallbackActor.user.getActorKind(),
+        roleCodes: fallbackActor.roleCodes,
+        roleNames: fallbackActor.roleNames,
+        assignedRegisterIds: fallbackActor.assignedRegisterIds,
+      },
+      session: {
+        resolutionSource: requestActor.resolutionSource,
+        authUserId: requestActor.authUserId,
+        canAssumeUserBridge: requestActor.canAssumeUserBridge,
+        supportControllerActorId: requestActor.supportActorId,
+      },
+      permissionSnapshot: buildPermissionSnapshot(fallbackActor),
+    };
+  }
 
   return {
     actor: {
-      actorId: fallbackActor.user.getId(),
-      displayName: fallbackActor.user.getDisplayName(),
-      actorKind: fallbackActor.user.getActorKind(),
-      roleCodes: fallbackActor.roleCodes,
-      roleNames: fallbackActor.roleNames,
-      assignedRegisterIds: fallbackActor.assignedRegisterIds,
+      actorId: "anonymous-session",
+      displayName: "Sesión no autenticada",
+      actorKind: "human",
+      roleCodes: [],
+      roleNames: [],
+      assignedRegisterIds: [],
     },
     session: {
       resolutionSource: requestActor.resolutionSource,
       authUserId: requestActor.authUserId,
       canAssumeUserBridge: requestActor.canAssumeUserBridge,
+      supportControllerActorId: requestActor.supportActorId,
     },
-    permissionSnapshot: buildPermissionSnapshot(fallbackActor),
+    permissionSnapshot: buildEmptyPermissionSnapshot(),
   };
 }
 

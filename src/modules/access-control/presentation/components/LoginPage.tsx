@@ -49,7 +49,6 @@ export function LoginPage(): JSX.Element {
     status,
     sessionSource,
     permissionSnapshot,
-    canSwitchActor,
     isAuthenticated,
     refreshActorSession,
   } = useActorSession();
@@ -64,12 +63,16 @@ export function LoginPage(): JSX.Element {
   );
 
   useEffect(() => {
-    if (status !== "ready" || !isAuthenticated || !preferredWorkspaceId) {
+    if (
+      status !== "ready" ||
+      !preferredWorkspaceId ||
+      !(isAuthenticated || sessionSource === "assumed_user")
+    ) {
       return;
     }
 
     router.replace(workspacePathById[preferredWorkspaceId]);
-  }, [isAuthenticated, preferredWorkspaceId, router, status]);
+  }, [isAuthenticated, preferredWorkspaceId, router, sessionSource, status]);
 
   const authenticatedWarning =
     sessionSource === "authenticated_unmapped"
@@ -246,23 +249,6 @@ export function LoginPage(): JSX.Element {
               </button>
             </form>
 
-            {canSwitchActor ? (
-              <div className="mt-6 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4">
-                <p className="text-sm text-slate-600">
-                  {messages.accessControl.loginSupportHint}
-                </p>
-                <button
-                  type="button"
-                  data-testid="login-support-button"
-                  onClick={() => {
-                    router.push(workspacePathById["cash-register"]);
-                  }}
-                  className="mt-4 inline-flex h-12 items-center justify-center rounded-[1.2rem] border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white"
-                >
-                  {messages.accessControl.loginSupportAction}
-                </button>
-              </div>
-            ) : null}
           </div>
         </section>
       </div>

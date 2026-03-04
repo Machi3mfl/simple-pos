@@ -105,6 +105,7 @@ export const meResponseDTOSchema = z
         ]),
         authUserId: z.string().uuid().optional(),
         canAssumeUserBridge: z.boolean(),
+        supportControllerActorId: z.string().min(1).optional(),
       })
       .strict(),
     permissionSnapshot: z

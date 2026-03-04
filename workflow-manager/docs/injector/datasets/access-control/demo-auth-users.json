@@ -1,0 +1,38 @@
+{
+  "environment": "local-development",
+  "loginUrl": "http://127.0.0.1:3001/login",
+  "notes": [
+    "Credenciales solo para desarrollo local.",
+    "El usuario mas importante para administrar policies y roles es el system admin.",
+    "Si corres `npm run supabase:reset`, estos accesos pueden requerir reprovision desde /users-admin."
+  ],
+  "users": [
+    {
+      "priority": 1,
+      "appUserId": "user_admin_soporte",
+      "displayName": "Soporte",
+      "roleCodes": ["system_admin"],
+      "email": "soporte@simple-pos.test",
+      "password": "Soporte123!",
+      "purpose": "Administrar usuarios, roles, permisos y soporte operativo."
+    },
+    {
+      "priority": 2,
+      "appUserId": "user_manager_maxi",
+      "displayName": "Maxi",
+      "roleCodes": ["business_manager"],
+      "email": "maxi@simple-pos.test",
+      "password": "Maxi123!",
+      "purpose": "Validar reporting, ventas, deudas y autorizaciones gerenciales."
+    },
+    {
+      "priority": 3,
+      "appUserId": "user_cashier_putri",
+      "displayName": "Putri",
+      "roleCodes": ["cashier"],
+      "email": "putri@simple-pos.test",
+      "password": "Putri123!",
+      "purpose": "Validar operacion diaria de caja y checkout."
+    }
+  ]
+}

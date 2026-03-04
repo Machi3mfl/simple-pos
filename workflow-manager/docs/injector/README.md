@@ -41,6 +41,7 @@ Nota: `Sincronizacion` usa `localStorage` del navegador. Este injector siembra b
 
 - Los productos se crean a traves de `POST /api/v1/product-sourcing/import`.
 - Las imagenes se descargan desde `sourceImageUrl` y quedan guardadas en Supabase Storage (`product-sourcing-images`).
+- Antes de llamar APIs protegidas, el injector reconcilia los usuarios auth demo y entra como `system_admin`.
 - Las ventas se crean via `POST /api/v1/sales`.
 - Las ventas en cuenta corriente confirman `createCustomerIfMissing` cuando el dataset referencia un cliente por nombre y todavia no existe.
 - Los movimientos de stock de salida se crean via `POST /api/v1/stock-movements`.
@@ -86,6 +87,7 @@ bash workflow-manager/docs/injector/injector.sh
 
 ```bash
 bash workflow-manager/docs/injector/injector.sh all
+bash workflow-manager/docs/injector/injector.sh auth-users
 bash workflow-manager/docs/injector/injector.sh products
 bash workflow-manager/docs/injector/injector.sh sales
 bash workflow-manager/docs/injector/injector.sh debt-payments
@@ -105,6 +107,7 @@ Para una demo completa:
 
 Para iterar por entidad:
 
+1. `auth-users`
 1. `products`
 2. `sales`
 3. `debt-payments`
@@ -117,10 +120,30 @@ workflow-manager/docs/injector/
 |-- injector.mjs
 |-- README.md
 `-- datasets/
+    |-- access-control/demo-auth-users.json
     |-- products/demo-kiosk-carrefour-products.json
     |-- sales/demo-sales.json
     `-- debt-payments/demo-debt-payments.json
 ```
+
+## Usuarios de prueba
+
+Para login local y validacion de roles/permisos existe este manifiesto:
+
+```text
+workflow-manager/docs/injector/datasets/access-control/demo-auth-users.json
+```
+
+Incluye especialmente el `system_admin`:
+
+- email: `soporte@simple-pos.test`
+- password: `Soporte123!`
+
+Importante:
+
+- estas credenciales son solo para desarrollo local
+- `all`, `products`, `sales` y `debt-payments` reprovisionan automaticamente estos accesos antes de usar las APIs protegidas
+- pueden requerir reprovision desde `/users-admin` despues de `npm run supabase:reset`
 
 ## Notas de limpieza
 

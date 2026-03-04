@@ -40,17 +40,19 @@ const spanishMessages = {
     signOutAction: "Cerrar sesión",
     sessionSourceAuthenticated: "Login verificado",
     sessionSourceAuthenticatedUnmapped: "Login sin perfil",
-    sessionSourceAssumedUser: "Modo soporte",
-    sessionSourceDefaultActor: "Preset temporal",
+    sessionSourceAssumedUser: "Sesión delegada",
+    sessionSourceDefaultActor: "Sin sesión",
     loginTitle: "Iniciar sesión",
     loginDescription:
       "Entrá con tu usuario real para que la caja, las ventas y los reportes queden atribuidos correctamente.",
     loginEmailLabel: "Correo electrónico",
     loginPasswordLabel: "Contraseña",
     loginSubmitAction: "Entrar",
-    loginSupportAction: "Seguir en modo soporte",
+    loginSupportAction: "Entrar en modo soporte",
+    loginSupportActionError:
+      "No se pudo entrar en modo soporte para validar usuarios y permisos.",
     loginSupportHint:
-      "Mientras el bridge temporal siga habilitado, todavía podés operar con el preset de soporte para validar el flujo.",
+      "Si necesitás validar roles o dar soporte operativo, entrá al bridge temporal de soporte y desde ahí elegí el operador a revisar.",
     loginInvalidCredentials:
       "No se pudo iniciar sesión. Revisá el correo y la contraseña.",
     loginUnmappedProfile:

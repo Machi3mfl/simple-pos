@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { fallbackActorAccessRecords } from "@/modules/access-control/infrastructure/fallback/fallbackActors";
 import { createAccessControlRuntime } from "@/modules/access-control/infrastructure/runtime/accessControlRuntime";
+import { resolveSupportBridgeAccess } from "@/modules/access-control/infrastructure/runtime/supportBridgeAccess";
 import { selectableActorsResponseDTOSchema } from "@/modules/access-control/presentation/dtos/app-user-response.dto";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,15 @@ function errorResponse(
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
+  const bridgeAccess = await resolveSupportBridgeAccess(request);
+  if (!bridgeAccess.bridgeEnabled || !bridgeAccess.canManageBridge) {
+    return errorResponse(403, {
+      code: "forbidden",
+      message:
+        "Solo el modo soporte con permiso explícito puede listar operadores disponibles.",
+    });
+  }
+
   const url = new URL(request.url);
   const roleFilter = url.searchParams.get("role")?.trim();
 

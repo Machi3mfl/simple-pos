@@ -11,6 +11,10 @@ import {
 } from "react";
 
 import { getSupabaseBrowserClient } from "@/infrastructure/config/supabase";
+import {
+  SUPPORT_BRIDGE_ACTOR_ID,
+  SUPPORT_OVERRIDE_PERMISSION,
+} from "@/modules/access-control/domain/constants/supportBridge";
 
 import type {
   ActorSessionResolutionSource,
@@ -28,8 +32,10 @@ interface ActorSessionContextValue {
   readonly sessionSource: ActorSessionResolutionSource | null;
   readonly isAuthenticated: boolean;
   readonly canSwitchActor: boolean;
+  readonly canEnterSupportMode: boolean;
   readonly errorMessage: string | null;
   readonly openOperatorSelector: () => void;
+  readonly enterSupportMode: () => Promise<void>;
   readonly refreshActorSession: () => Promise<CurrentActorSnapshot | null>;
   readonly switchActor: (userId: string) => Promise<void>;
   readonly clearAssumedActor: () => Promise<void>;
@@ -177,9 +183,14 @@ export function ActorSessionProvider({
   }, [refreshActorSession]);
 
   const openOperatorSelector = useCallback((): void => {
+    const canManageFromCurrentSnapshot =
+      snapshot?.permissionSnapshot.permissionCodes.includes(
+        SUPPORT_OVERRIDE_PERMISSION,
+      ) ?? false;
+
     if (
       !snapshot?.session.canAssumeUserBridge ||
-      isAuthenticatedSessionSource(snapshot.session.resolutionSource)
+      (!snapshot.session.supportControllerActorId && !canManageFromCurrentSnapshot)
     ) {
       return;
     }
@@ -188,8 +199,9 @@ export function ActorSessionProvider({
     void loadSelectableActors();
   }, [
     loadSelectableActors,
+    snapshot?.permissionSnapshot.permissionCodes,
     snapshot?.session.canAssumeUserBridge,
-    snapshot?.session.resolutionSource,
+    snapshot?.session.supportControllerActorId,
   ]);
 
   const switchActor = useCallback(
@@ -230,6 +242,30 @@ export function ActorSessionProvider({
     },
     [refreshActorSession],
   );
+
+  const enterSupportMode = useCallback(async (): Promise<void> => {
+    setErrorMessage(null);
+
+    const response = await fetch("/api/v1/me/assume-user", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({ userId: SUPPORT_BRIDGE_ACTOR_ID }),
+    });
+    const payload = (await response.json()) as
+      | { readonly actorId: string }
+      | ApiErrorPayload;
+
+    if (!response.ok) {
+      throw new Error(
+        resolveApiMessage(payload, "No se pudo entrar en modo soporte."),
+      );
+    }
+
+    await refreshActorSession();
+  }, [refreshActorSession]);
 
   const clearAssumedActor = useCallback(async (): Promise<void> => {
     await fetch("/api/v1/me/assume-user", {
@@ -282,9 +318,17 @@ export function ActorSessionProvider({
       ),
       canSwitchActor:
         (snapshot?.session.canAssumeUserBridge ?? false) &&
+        (Boolean(snapshot?.session.supportControllerActorId) ||
+          (snapshot?.permissionSnapshot.permissionCodes.includes(
+            SUPPORT_OVERRIDE_PERMISSION,
+          ) ??
+            false)),
+      canEnterSupportMode:
+        (snapshot?.session.canAssumeUserBridge ?? false) &&
         !isAuthenticatedSessionSource(snapshot?.session.resolutionSource ?? null),
       errorMessage,
       openOperatorSelector,
+      enterSupportMode,
       refreshActorSession,
       switchActor,
       clearAssumedActor,
@@ -295,6 +339,7 @@ export function ActorSessionProvider({
       snapshot,
       errorMessage,
       openOperatorSelector,
+      enterSupportMode,
       refreshActorSession,
       switchActor,
       clearAssumedActor,

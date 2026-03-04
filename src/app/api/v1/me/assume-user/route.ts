@@ -11,6 +11,10 @@ import {
   shouldUseSecureActorSessionCookie,
 } from "@/modules/access-control/infrastructure/session/actorSessionCookie";
 import {
+  isSupportBridgeBootstrapTarget,
+  resolveSupportBridgeAccess,
+} from "@/modules/access-control/infrastructure/runtime/supportBridgeAccess";
+import {
   assumeUserSessionRequestDTOSchema,
   assumeUserSessionResponseDTOSchema,
 } from "@/modules/access-control/presentation/dtos/assume-user.dto";
@@ -40,11 +44,16 @@ function buildSuccessResponse(payload: {
   readonly roleCodes: readonly string[];
   readonly roleNames: readonly string[];
   readonly assignedRegisterIds: readonly string[];
+  readonly supportControllerActorId?: string;
 }, request?: NextRequest): NextResponse {
-  const response = NextResponse.json(payload, { status: 200 });
+  const { supportControllerActorId, ...responseBody } = payload;
+  const response = NextResponse.json(responseBody, { status: 200 });
   response.cookies.set({
     name: getActorSessionCookieName(),
-    value: serializeActorSessionCookie({ userId: payload.actorId }),
+    value: serializeActorSessionCookie({
+      userId: payload.actorId,
+      supportUserId: supportControllerActorId,
+    }),
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -55,7 +64,8 @@ function buildSuccessResponse(payload: {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  if (!isAssumeUserBridgeEnabled()) {
+  const bridgeAccess = await resolveSupportBridgeAccess(request);
+  if (!bridgeAccess.bridgeEnabled) {
     return errorResponse(403, {
       code: "assume_user_bridge_disabled",
       message:
@@ -86,6 +96,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   }
 
+  const canBootstrapSupportActor = await isSupportBridgeBootstrapTarget(
+    parsedBody.data.userId,
+  );
+  const canSwitchActor =
+    bridgeAccess.canManageBridge ||
+    (bridgeAccess.canBootstrapSupportActor && canBootstrapSupportActor);
+
+  if (!canSwitchActor) {
+    return errorResponse(403, {
+      code: "forbidden",
+      message:
+        "La selección temporal de operador quedó restringida al modo soporte.",
+    });
+  }
+
   try {
     const { assumeSelectableActorUseCase } = createAccessControlRuntime();
     const actor = await assumeSelectableActorUseCase.execute(parsedBody.data.userId);
@@ -104,7 +129,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       });
     }
 
-    return buildSuccessResponse(parsedResponse.data, request);
+    return buildSuccessResponse(
+      {
+        ...parsedResponse.data,
+        supportControllerActorId:
+          bridgeAccess.supportControllerActorId ??
+          (canBootstrapSupportActor ? parsedResponse.data.actorId : undefined),
+      },
+      request,
+    );
   } catch {
     const actor = findFallbackActorById(parsedBody.data.userId);
     if (!actor) {
@@ -129,7 +162,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       });
     }
 
-    return buildSuccessResponse(parsedResponse.data, request);
+    return buildSuccessResponse(
+      {
+        ...parsedResponse.data,
+        supportControllerActorId:
+          bridgeAccess.supportControllerActorId ??
+          (canBootstrapSupportActor ? parsedResponse.data.actorId : undefined),
+      },
+      request,
+    );
   }
 }
 

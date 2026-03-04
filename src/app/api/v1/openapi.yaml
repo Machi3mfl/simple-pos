@@ -1380,6 +1380,8 @@ components:
           format: uuid
         canAssumeUserBridge:
           type: boolean
+        supportControllerActorId:
+          type: string
 
     MeResponse:
       type: object
