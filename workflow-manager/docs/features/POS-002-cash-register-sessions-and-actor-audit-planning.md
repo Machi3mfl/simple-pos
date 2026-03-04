@@ -61,7 +61,7 @@ Current gaps:
 
 Important architectural note:
 
-- `workflow-manager/docs/planning/001-requirements-simple-pos-draft.md` mentions "POS session is open" as a precondition in `UC-001`; that precondition is now materially represented by the delivered `Slice 1` cash-register session flow in `/cash-register`, but automatic cash integrations still remain pending for later slices.
+- `workflow-manager/docs/planning/001-requirements-simple-pos-draft.md` mentions "POS session is open" as a precondition in `UC-001`; that precondition is now materially represented by the delivered `Slice 1` cash-register session flow in `/cash-register`, and `Slice 4` now makes that precondition operational by appending automatic cash ledger events from checkout and cash debt-collection flows.
 
 ## Implementation Status Snapshot
 
@@ -90,10 +90,15 @@ Delivered so far:
   - `/cash-register` now includes a movement ledger list plus a modal to register manual cash movements against the open session
   - session expected balance now updates from immutable manual movements before closeout
   - manual movements remain protected by `cash.movement.manual.record`, so lower-trust cashiers keep a read-only drawer view
+- `Slice 4`:
+  - `POST /api/v1/sales` now appends `cash_sale` automatically when the checkout collects cash into an active register session
+  - `POST /api/v1/debt-payments` now appends `debt_payment_cash` automatically when a receivables payment is registered against an active register session
+  - `/cash-register` shares the selected drawer with checkout and receivables so the operator sees the expected balance update without leaving the workflow
+  - `/receivables` payment modal now shows the active drawer context and expected amount before registering the payment
+  - `RecordAutomaticCashMovementUseCase` centralizes these append rules so the ledger stays application-driven instead of relying on SQL side effects
 
 Still pending:
 
-- automatic cash-session integration from checkout and debt-payment flows,
 - discrepancy approval workflow,
 - custom role administration for `system_admin` so role bundles can be adapted to each business without code changes,
 - full auth hardening beyond the temporary `assume-user` bridge.
@@ -1185,11 +1190,19 @@ Completed UI checkpoint:
 
 ### Slice 4: Automatic integrations
 
-- auto-record `cash_sale`
-- auto-record `debt_payment_cash`
-- reporting widget: current drawer expected amount
-- mandatory UI checkpoint:
-  - checkout and debt-payment flows visibly update the active cash session state
+Current implementation status:
+
+- `POST /api/v1/sales` automatically records `cash_sale` when cash is collected against the selected active drawer
+- partial cash collected during `on_account` checkout also records `cash_sale` for the paid amount, while the remainder stays in receivables
+- `POST /api/v1/debt-payments` automatically records `debt_payment_cash` when the payment is tied to the selected active drawer
+- automatic cash recording resolves the active drawer through the selected register or the actor's single assigned drawer, and returns a conflict when the drawer context is ambiguous or closed
+- `/cash-register` now refreshes the active-session summary after checkout and after receivables payments
+- `/receivables` now surfaces the active drawer name and expected amount before registering a payment, keeping notes support intact
+
+Completed UI checkpoint:
+
+- checkout and debt-payment flows visibly update the active cash session state
+- the receivables payment modal exposes drawer context before the operator confirms the payment
 
 ### Slice 5: Discrepancy approval and business authorization
 

@@ -113,6 +113,11 @@ Open planning item:
     - `Slice 3` cash movement ledger is also implemented
     - `/cash-register` now includes an active-session movement list plus a modal for `paid in`, `paid out`, `safe drop`, and `adjustment`
     - `GET /api/v1/cash-registers/{id}/active-session` now returns movement detail with actor attribution and `POST /api/v1/cash-register-sessions/{id}/movements` updates expected balance in real time
+    - `Slice 4` automatic drawer integrations are also implemented
+    - `POST /api/v1/sales` now appends `cash_sale` into the active session when checkout collects cash, including partial cash collected during `on_account` checkout
+    - `POST /api/v1/debt-payments` now appends `debt_payment_cash` into the active session when receivables payments are tied to the selected drawer
+    - `/cash-register` and the receivables modal now expose the same active-drawer context so operators can confirm expected-balance changes without leaving the workflow
+    - next plan step is `Slice 5`: discrepancy approval and higher-trust business authorization
     - next recommended insertion point is a new role-administration slice after discrepancy approval and before full auth hardening, so the permission catalog is stable before exposing custom role composition to `system_admin`
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:

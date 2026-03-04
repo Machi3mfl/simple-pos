@@ -88,6 +88,20 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Automatic Cash Integrations
+
+`POS-002 Slice 4` ties the active drawer session to checkout and receivables so collected cash becomes a first-class ledger event instead of an implicit side effect.
+
+- Main contracts:
+  - `POST /api/v1/sales`
+  - `POST /api/v1/debt-payments`
+  - `GET /api/v1/cash-registers/{id}/active-session`
+- Coverage:
+  - UI: [tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts](../../../tests/e2e/ar-ui-checkout-on-account-and-payment.spec.ts)
+  - API/contract: [tests/e2e/cash-register-automatic-integrations-api.spec.ts](../../../tests/e2e/cash-register-automatic-integrations-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -131,3 +145,5 @@ Since `2026-03-03`, `POS-002 Slice 1` is also part of the real-backend workflow:
 Since `2026-03-03`, `POS-002 Slice 2` is also part of traceability: `/sales` now keeps a summary-only mode for operators without `sales_history.view_all_registers`, `/api/v1/reports/sales-history` redacts customer/detail payloads server-side for those roles, and `/reporting` now exposes an operational subset for `shift_supervisor` while hiding margin, credit exposure, and inventory-value blocks without the corresponding strategic permissions.
 
 Since `2026-03-03`, `POS-002 Slice 3` is also part of the real-backend workflow: `/cash-register` now shows the active-session ledger, `GET /api/v1/cash-registers/{id}/active-session` returns movement detail with actor attribution, and `POST /api/v1/cash-register-sessions/{id}/movements` updates the expected drawer balance for manual ingress/egress flows.
+
+Since `2026-03-03`, `POS-002 Slice 4` is also part of the real-backend workflow: `POST /api/v1/sales` now appends `cash_sale` for collected cash, `POST /api/v1/debt-payments` now appends `debt_payment_cash` for receivables payments collected into the active drawer, and both `/cash-register` and the receivables modal now surface the updated expected balance in the same operator workflow.
