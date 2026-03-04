@@ -43,6 +43,21 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `mock` + `supabase`
 
+## Cash Register Session Core
+
+`POS-002 Slice 1` introduces the first real drawer workflow inside `/cash-register`, so checkout no longer depends only on a conceptual "POS session is open" precondition.
+
+- Main contracts:
+  - `GET /api/v1/cash-registers`
+  - `GET /api/v1/cash-registers/{id}/active-session`
+  - `POST /api/v1/cash-register-sessions`
+  - `POST /api/v1/cash-register-sessions/{id}/close`
+- Coverage:
+  - UI: [tests/e2e/cash-register-session-ui.spec.ts](../../../tests/e2e/cash-register-session-ui.spec.ts)
+  - API/contract: [tests/e2e/cash-register-session-api.spec.ts](../../../tests/e2e/cash-register-session-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -80,3 +95,5 @@ Since `2026-03-03`, `UC-007` also validates the redesigned `/receivables` snapsh
 Since `2026-03-03`, `UC-004` also validates the redesigned `/reporting` executive dashboard, which blends `sales-history`, `top-products`, `profit-summary`, `products/workspace`, and `receivables` into a single CEO-facing snapshot with charts, current-credit visibility, and inventory-health metrics.
 
 Since `2026-03-03`, the cross-cutting actor bootstrap of `POS-002 Slice 0` is also part of traceability: the app now exposes real operator selection, `/api/v1/me` permission snapshots, workspace-level blocked states, and first 403 guards across checkout, receivables, products, inventory, reporting, and sourcing.
+
+Since `2026-03-03`, `POS-002 Slice 1` is also part of the real-backend workflow: `/cash-register` now includes a register-session panel with selector, opening float capture, active-session summary, and counted closeout modal backed by the new cash-session contracts.

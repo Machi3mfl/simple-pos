@@ -60,7 +60,7 @@ Mobile-friendly navigation map for the full project workflow.
 | Iteration 5 | Offline capture and reconciliation | [OFFLINE-001](./features/OFFLINE-001-offline-capture-and-sync-draft.md) |
 | Iteration 6 | Reporting and real-backend release gate | [RELEASE-001](./features/RELEASE-001-release-hardening-and-reporting-draft.md), [INVENTORY-001](./features/INVENTORY-001-stock-movement-and-weighted-average-profit-draft.md), [API-001](./features/API-001-contracts-v1-and-mock-runtime-draft.md) |
 | Post-MVP extension batch | Unified products workspace, convergence, and runtime localization | [PRODUCTS-001](./features/PRODUCTS-001-unified-products-inventory-mock-draft.md), [PRODUCTS-002](./features/PRODUCTS-002-unified-products-inventory-real-integration-plan.md), [PRODUCTS-003](./features/PRODUCTS-003-products-workspace-parity-and-catalog-convergence-draft.md), [I18N-001](./features/I18N-001-ui-localization-spanish-draft.md) |
-| Post-MVP operations controls batch | Cash register sessions, cash reconciliation, actor attribution, and role-based UI/data protection foundation | [POS-002](./features/POS-002-cash-register-sessions-and-actor-audit-planning.md) |
+| Post-MVP operations controls batch | Cash register sessions, cash reconciliation, actor attribution, role-based UI/data protection foundation, and delivered Slice 0/1 workflow checkpoints | [POS-002](./features/POS-002-cash-register-sessions-and-actor-audit-planning.md) |
 | Post-MVP sourcing batch | External product discovery, assisted import, and source traceability | [SOURCING-001](./features/SOURCING-001-external-product-sourcing-and-assisted-import-planning.md), [POC-001](./pocs/001-poc-product-sourcing-vtex-search-feasibility-ready.md) |
 
 ---

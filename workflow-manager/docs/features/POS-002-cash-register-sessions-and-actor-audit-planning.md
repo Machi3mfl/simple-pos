@@ -61,7 +61,30 @@ Current gaps:
 
 Important architectural note:
 
-- `workflow-manager/docs/planning/001-requirements-simple-pos-draft.md` already mentions "POS session is open" as a precondition in `UC-001`, but that precondition is not implemented yet.
+- `workflow-manager/docs/planning/001-requirements-simple-pos-draft.md` mentions "POS session is open" as a precondition in `UC-001`; that precondition is now materially represented by the delivered `Slice 1` cash-register session flow in `/cash-register`, but automatic cash integrations still remain pending for later slices.
+
+## Implementation Status Snapshot
+
+Delivered so far:
+
+- `Slice 0`:
+  - `app_users`, roles, permissions, user-role assignments, role-permission assignments, and register assignments
+  - `GET /api/v1/me`, `GET /api/v1/app-users`, `POST/DELETE /api/v1/me/assume-user`
+  - operator selector dialog, permission-filtered rail, blocked workspace states, and first protected route checks
+- `Slice 1`:
+  - `cash_register_sessions` and `cash_movements`
+  - `GET /api/v1/cash-registers`
+  - `GET /api/v1/cash-registers/{id}/active-session`
+  - `POST /api/v1/cash-register-sessions`
+  - `POST /api/v1/cash-register-sessions/{id}/close`
+  - real `/cash-register` UI checkpoint with register selector, opening float, active-session summary, and counted closeout modal
+
+Still pending:
+
+- manual `paid in` / `paid out` / `safe drop` / `adjustment` capture,
+- automatic cash-session integration from checkout and debt-payment flows,
+- discrepancy approval workflow,
+- full auth hardening beyond the temporary `assume-user` bridge.
 
 ---
 
@@ -550,19 +573,22 @@ export interface CloseCashRegisterSessionUseCaseInput {
 
 ## API and Integration Proposal
 
-### Proposed Endpoints
+### Implemented in Slice 0 and Slice 1
 
 - `GET /api/v1/me`
 - `POST /api/v1/me/assume-user`
 - `DELETE /api/v1/me/assume-user`
+- `GET /api/v1/app-users?role=...`
 - `GET /api/v1/cash-registers`
-- `POST /api/v1/cash-registers`
 - `GET /api/v1/cash-registers/{id}/active-session`
 - `POST /api/v1/cash-register-sessions`
-- `POST /api/v1/cash-register-sessions/{id}/movements`
 - `POST /api/v1/cash-register-sessions/{id}/close`
+
+### Planned Next Endpoints
+
+- `POST /api/v1/cash-registers`
+- `POST /api/v1/cash-register-sessions/{id}/movements`
 - `GET /api/v1/cash-register-sessions?registerId=...&status=...&dateFrom=...&dateTo=...`
-- `GET /api/v1/app-users?role=...&active=...`
 - `POST /api/v1/user-role-assignments`
 
 ### Command Examples
@@ -573,7 +599,7 @@ Open a register:
 curl -X POST /api/v1/cash-register-sessions \
   -H "content-type: application/json" \
   -d '{
-    "registerId": "front-counter",
+    "cashRegisterId": "front-counter",
     "openingFloatAmount": 15000,
     "openingNotes": "Cambio inicial"
   }'
@@ -1004,7 +1030,7 @@ Minimum end-to-end story for the first implementation:
 
 ### Slice 0 E2E and Review Gate
 
-Before starting `Slice 1`, the team should be able to demo all of these live:
+Completed gate before moving into `Slice 1`:
 
 - operator selection changes the effective actor,
 - `/api/v1/me` changes accordingly,
@@ -1056,6 +1082,16 @@ Additional execution rule:
 - no denomination breakdown required yet
 - mandatory UI checkpoint:
   - register selector + open-session form + active-session summary + close-session form
+
+### Slice 1 E2E and Review Gate
+
+Before starting `Slice 2`, the team should be able to demo all of these live:
+
+- `/cash-register` shows only registers accessible to the selected operator,
+- opening a session immediately creates an active-session summary on the same screen,
+- trying to open the same register twice returns a conflict instead of corrupting state,
+- active-session lookup can be queried through the real API,
+- closing stores counted cash and discrepancy and returns the workspace to the pre-open state.
 
 ### Slice 2: UI and data guardrails across existing workspaces
 
