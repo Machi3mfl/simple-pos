@@ -38,8 +38,9 @@ test("system admin can compose a role, assign it, and validate the resulting wor
   await expect(page.getByTestId("nav-item-cash-register")).toBeVisible();
   await page.getByTestId("nav-item-cash-register").click();
   await expect(page).toHaveURL(/\/cash-register$/);
-  await expect(page.getByRole("heading", { name: "Caja abierta" })).toHaveCount(0);
-  await expect(page.getByText("Sesión de caja")).toBeVisible();
+  await expect(
+    page.getByText("Este operador no tiene cajas disponibles para operar en esta estación."),
+  ).toBeVisible();
 
   await selectOperator(page, "user_admin_soporte");
   await page.getByTestId("nav-item-users-admin").click();

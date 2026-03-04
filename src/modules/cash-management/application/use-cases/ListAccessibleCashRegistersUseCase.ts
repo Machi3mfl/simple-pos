@@ -29,9 +29,9 @@ export class ListAccessibleCashRegistersUseCase {
     const registers = await this.cashRegisterRepository.listActive();
     const accessibleRegisterIds = new Set(input.accessibleRegisterIds ?? []);
     const visibleRegisters =
-      accessibleRegisterIds.size > 0
-        ? registers.filter((register) => accessibleRegisterIds.has(register.getId()))
-        : registers;
+      input.accessibleRegisterIds === undefined
+        ? registers
+        : registers.filter((register) => accessibleRegisterIds.has(register.getId()));
 
     return Promise.all(
       visibleRegisters.map(async (register) => {
