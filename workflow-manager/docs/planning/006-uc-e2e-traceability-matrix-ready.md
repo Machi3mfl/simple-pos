@@ -58,6 +58,23 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Workspace Guardrails and Read-Model Redaction
+
+`POS-002 Slice 2` extends the same permission snapshot into existing workspaces so operational roles can keep safe read paths without inheriting strategic or sensitive detail.
+
+- Main contracts:
+  - `GET /api/v1/me`
+  - `GET /api/v1/reports/sales-history`
+  - `GET /api/v1/reports/top-products`
+  - `GET /api/v1/reports/profit-summary`
+  - `GET /api/v1/products/workspace`
+  - `GET /api/v1/receivables`
+- Coverage:
+  - UI: [tests/e2e/access-control-shell-ui.spec.ts](../../../tests/e2e/access-control-shell-ui.spec.ts), [tests/e2e/orders-ui-sales-snapshot.spec.ts](../../../tests/e2e/orders-ui-sales-snapshot.spec.ts), [tests/e2e/reporting-ui-filters-and-metrics.spec.ts](../../../tests/e2e/reporting-ui-filters-and-metrics.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts)
+- Runtime mode:
+  - `mock` + `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -97,3 +114,5 @@ Since `2026-03-03`, `UC-004` also validates the redesigned `/reporting` executiv
 Since `2026-03-03`, the cross-cutting actor bootstrap of `POS-002 Slice 0` is also part of traceability: the app now exposes real operator selection, `/api/v1/me` permission snapshots, workspace-level blocked states, and first 403 guards across checkout, receivables, products, inventory, reporting, and sourcing.
 
 Since `2026-03-03`, `POS-002 Slice 1` is also part of the real-backend workflow: `/cash-register` now includes a register-session panel with selector, opening float capture, active-session summary, and counted closeout modal backed by the new cash-session contracts.
+
+Since `2026-03-03`, `POS-002 Slice 2` is also part of traceability: `/sales` now keeps a summary-only mode for operators without `sales_history.view_all_registers`, `/api/v1/reports/sales-history` redacts customer/detail payloads server-side for those roles, and `/reporting` now exposes an operational subset for `shift_supervisor` while hiding margin, credit exposure, and inventory-value blocks without the corresponding strategic permissions.

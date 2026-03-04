@@ -105,6 +105,9 @@ Open planning item:
     - `Slice 1` register-session core is also implemented
     - includes `cash_register_sessions` + `cash_movements`, `GET /api/v1/cash-registers`, `GET /api/v1/cash-registers/{id}/active-session`, `POST /api/v1/cash-register-sessions`, and `POST /api/v1/cash-register-sessions/{id}/close`
     - `/cash-register` now exposes a real operator-facing session panel with register selection, opening float, active-session summary, and counted closeout modal
+    - `Slice 2` workspace guardrails and read-model redaction is also implemented
+    - `/sales` now keeps a summary-only mode for lower-trust operators and reserves customer/item detail for `sales_history.view_all_registers`
+    - `/reporting` now supports an operational subset for `shift_supervisor`, while margin, credit exposure, and inventory-value blocks stay hidden unless the strategic permissions exist
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
@@ -192,6 +195,7 @@ Resolved cross-cutting planning item:
 - Real-backend release gate: `npm run test:e2e:release-gate:real` -> passing.
 - Access-control Slice 0 verification: `tests/e2e/access-control-api.spec.ts` and `tests/e2e/access-control-shell-ui.spec.ts` cover operator selection, `/api/v1/me`, permission-filtered rail visibility, blocked workspaces, and 403 enforcement on protected routes.
 - Cash-register session Slice 1 verification: `tests/e2e/cash-register-session-api.spec.ts` and `tests/e2e/cash-register-session-ui.spec.ts` cover register discovery, opening float capture, open-session conflict protection, active-session lookup, counted closeout, and discrepancy persistence.
+- Workspace guardrails Slice 2 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, `tests/e2e/orders-ui-sales-snapshot.spec.ts`, and `tests/e2e/reporting-ui-filters-and-metrics.spec.ts` cover summary-only `/sales`, server-redacted sale detail, hidden strategic reporting metrics, and supervisor operational reporting visibility.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

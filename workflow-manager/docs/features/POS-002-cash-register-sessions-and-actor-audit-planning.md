@@ -78,6 +78,12 @@ Delivered so far:
   - `POST /api/v1/cash-register-sessions`
   - `POST /api/v1/cash-register-sessions/{id}/close`
   - real `/cash-register` UI checkpoint with register selector, opening float, active-session summary, and counted closeout modal
+- `Slice 2`:
+  - permission-driven UI and read-model guardrails across `/cash-register`, `/sales`, `/products`, `/receivables`, and `/reporting`
+  - `/sales` detail access narrowed to `sales_history.view_all_registers`, while lower-trust operators only keep the summary snapshot
+  - `/api/v1/reports/sales-history` now redacts `customer*` fields and `saleItems` when the actor lacks sale-detail permission
+  - `/reporting` now degrades to an operational subset for `shift_supervisor`, hiding margin, credit exposure, and inventory-value cards/charts
+  - role-aware UI hints now explain restricted workspaces instead of silently omitting strategic data blocks
 
 Still pending:
 
@@ -1095,13 +1101,25 @@ Before starting `Slice 2`, the team should be able to demo all of these live:
 
 ### Slice 2: UI and data guardrails across existing workspaces
 
-- protect `/cash-register`, `/sales`, `/products`, `/receivables`, `/reporting`
-- hide or downgrade mutation controls by capability
-- split operational data from strategic data
-- mandatory UI checkpoint:
-  - `cashier` sees only operational surfaces
-  - `executive_readonly` sees only read-only strategic and financial views
-  - product/admin controls disappear for non-authorized operators
+Current implementation status:
+
+- `/sales`
+  - `cashier` can keep a list-level operational snapshot but cannot open the sale-detail modal
+  - `collections_clerk` no longer sees `/sales` in the rail
+  - server projection now strips `customerId`, `customerName`, and `saleItems` unless `sales_history.view_all_registers` is present
+- `/reporting`
+  - `shift_supervisor` now gets an operational read-only subset backed by `reporting.operational.view`
+  - margin, credit exposure, and inventory-value metrics stay hidden without the corresponding strategic permissions
+  - the UI renders an explicit restricted-state hint so the operator understands why some blocks are absent
+- `/products`, `/receivables`, and `/cash-register`
+  - previous role-based blocked states remain in force and now share the same permission snapshot semantics used by `/sales` and `/reporting`
+
+Completed UI checkpoint:
+
+- `cashier` sees only operational surfaces and a summary-only `/sales`
+- `shift_supervisor` can inspect operational reporting without strategic metrics
+- `executive_readonly` still sees read-only strategic and financial views
+- product/admin controls disappear for non-authorized operators
 
 ### Slice 3: Cash movement ledger
 
@@ -1152,6 +1170,8 @@ Before starting `Slice 2`, the team should be able to demo all of these live:
 - [x] The temporary pre-auth actor bridge is testable from a real UI without resorting to developer-only local storage hacks.
 - [x] UI navigation, components, and data blocks are protected by the same permission model.
 - [x] Strategic metrics and sensitive financial fields are hidden from operational roles by default.
+- [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.
+- [x] Operational reporting can be exposed to supervisors without leaking margin, credit exposure, or stock-value data.
 
 ---
 
@@ -1180,6 +1200,8 @@ Before starting `Slice 2`, the team should be able to demo all of these live:
 
 - operator selection -> `GET /api/v1/me` -> permission-filtered shell
 - blocked direct access to unauthorized workspace
+- operational `/sales` snapshot without sale-detail access
+- operational `/reporting` subset without strategic metrics
 - open register -> cash sale -> cash out -> close register
 - close with discrepancy inside tolerance
 - close with discrepancy requiring supervisor role
