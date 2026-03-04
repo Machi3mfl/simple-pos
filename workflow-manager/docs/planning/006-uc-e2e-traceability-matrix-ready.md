@@ -57,6 +57,8 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
   - API/contract: [tests/e2e/cash-register-session-api.spec.ts](../../../tests/e2e/cash-register-session-api.spec.ts)
 - Runtime mode:
   - `supabase`
+- E2E auth posture:
+  - Playwright bootstraps demo auth users in `globalSetup` and runs with authenticated fixtures by default (no `POS_ALLOW_GUEST_WORKSPACES` runtime bypass in the webServer command).
 
 ## Workspace Guardrails and Read-Model Redaction
 
@@ -176,6 +178,21 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Coverage:
   - UI: [tests/e2e/access-control-credentials-admin-ui.spec.ts](../../../tests/e2e/access-control-credentials-admin-ui.spec.ts)
   - API/contract: [tests/e2e/access-control-credentials-admin-api.spec.ts](../../../tests/e2e/access-control-credentials-admin-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
+## Auth-required Runtime and Controlled Support Delegation
+
+`POS-002 Slice 10` removes the support bridge from the default operator path, requires real login for runtime workspaces, and leaves support impersonation available only after authenticated `system_admin` entry. The injector now reprovisions demo auth users so protected seeding still works without reopening guest access.
+
+- Main contracts:
+  - `GET /api/v1/me`
+  - `GET /api/v1/app-users`
+  - `POST /api/v1/me/assume-user`
+  - `DELETE /api/v1/me/assume-user`
+- Coverage:
+  - UI: [tests/e2e/access-control-login-ui.spec.ts](../../../tests/e2e/access-control-login-ui.spec.ts), [tests/e2e/access-control-shell-ui.spec.ts](../../../tests/e2e/access-control-shell-ui.spec.ts), [tests/e2e/access-control-credentials-admin-ui.spec.ts](../../../tests/e2e/access-control-credentials-admin-ui.spec.ts), [tests/e2e/cash-register-session-ui.spec.ts](../../../tests/e2e/cash-register-session-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts), [tests/e2e/access-control-role-admin-api.spec.ts](../../../tests/e2e/access-control-role-admin-api.spec.ts), [tests/e2e/cash-register-session-api.spec.ts](../../../tests/e2e/cash-register-session-api.spec.ts)
 - Runtime mode:
   - `supabase`
 

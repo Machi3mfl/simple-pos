@@ -112,10 +112,15 @@ Delivered so far:
   - the workspace snapshot now exposes auth credential status (`not_provisioned`, `provisioned`, `stale_mapping`) plus the currently linked email
   - `POST /api/v1/access-control/users/{id}/auth-credentials` now closes the admin workflow for real operator onboarding without test-only helpers
   - a provisioned operator can now be validated immediately through `/login`, using the same permission snapshot and role guards already active across the shell
+- `Slice 10`:
+  - the temporary bridge no longer sits in the default navigation flow: `/` now lands on `/login`
+  - runtime access to workspaces is now credential-first: support bootstrap is no longer exposed from `/login`
+- `GET /api/v1/app-users` and `POST /api/v1/me/assume-user` are now restricted to authenticated `system_admin` support flows in runtime and in E2E bootstrap flows
+  - support-controlled impersonation now preserves the support controller across assumed operators, so `system_admin` can still switch actors repeatedly after login while validating the resulting UI
+  - the rail now clears the assumed-support cookie before returning to `/login`, so real credential login no longer loops back into the delegated session
 
 Still pending:
 
-- removal of the temporary `assume-user` bridge from normal operator flows once business validation is complete,
 - making real-credential provisioning the default onboarding path before the support bridge is disabled in production-like environments.
 
 ---
@@ -1290,11 +1295,11 @@ Implemented result:
 
 Implemented result:
 
-- `GET /api/v1/me` now exposes a `session` block with `resolutionSource`, `authUserId`, and `canAssumeUserBridge`,
+- `GET /api/v1/me` now exposes a `session` block with `resolutionSource`, `authUserId`, `canAssumeUserBridge`, and `supportControllerActorId`,
 - request actor resolution now prefers a validated Supabase bearer token mapped through `app_users.auth_user_id`,
 - authenticated-but-unmapped requests no longer fall back to the default business actor; they degrade to an empty permission snapshot instead,
-- `POST /api/v1/me/assume-user` and `DELETE /api/v1/me/assume-user` are now gated by `POS_ENABLE_ASSUME_USER_BRIDGE` and remain enabled by default only outside production,
-- the shell now surfaces the attribution mode directly in the rail (`Login verificado`, `Modo soporte`, or fallback temporary mode),
+- `POST /api/v1/me/assume-user` and `DELETE /api/v1/me/assume-user` are now gated by `POS_ENABLE_ASSUME_USER_BRIDGE`, while local build/test runs still keep the bridge available unless the environment marks a real production deployment,
+- the shell now surfaces the attribution mode directly in the rail (`Login verificado`, `Sesión delegada`, or `Sin sesión`),
 - manual cash movements can now be queued offline from `/cash-register`,
 - retrying sync from `/cash-register` replays `cash_movement_recorded` into the real cash ledger and refreshes the active-session detail after success,
 - opening and closing a register remain online-first as previously recommended; the hardening slice only adds offline support for manual cash events.
@@ -1323,6 +1328,21 @@ Completed UI checkpoint:
 
 - `/users-admin` credential provisioning -> `/login` with the provisioned user -> redirect to the first permitted workspace
 
+### Slice 10: Auth-required runtime with controlled support delegation
+
+- `/` now lands on `/login` even when the bridge is enabled, so the normal operator path starts with real credentials instead of the legacy preset,
+- `/login` no longer exposes a public support CTA; all operator and support entry starts from real credentials,
+- runtime workspace pages now redirect to `/login` unless a real authenticated session exists,
+- `GET /api/v1/app-users` is now support-only, and `POST /api/v1/me/assume-user` only accepts authenticated support-capable sessions in runtime,
+- support-controlled impersonation now carries `supportControllerActorId` in the request/session snapshot so the UI can keep changing actors without losing the support context,
+- the shell `Iniciar sesión` action now clears the assumed-support cookie before returning to `/login`, preventing accidental redirect loops back into the impersonated operator,
+- the demo injector now reconciles the local auth users manifest and signs protected writes as the provisioned `system_admin`, so local demo data can still be regenerated after login hardening.
+- Playwright now provisions demo auth users in `globalSetup` and boots with real authenticated fixtures by default, removing `POS_ALLOW_GUEST_WORKSPACES` from the E2E webServer command.
+
+Completed UI checkpoint:
+
+- `/login` real sign-in path -> `system_admin` switches operator from the rail -> clear delegated session back to `/login`
+
 ---
 
 ## Acceptance Criteria for the Feature Plan
@@ -1339,6 +1359,7 @@ Completed UI checkpoint:
 - [x] The temporary pre-auth actor bridge is testable from a real UI without resorting to developer-only local storage hacks.
 - [x] The same permission snapshot can now be reached through a real login/logout browser flow backed by Supabase Auth.
 - [x] `system_admin` can provision or repair real login credentials for `app_users` from the admin UI.
+- [x] The temporary bridge is now explicit support-only UI instead of the default operator entry path.
 - [x] UI navigation, components, and data blocks are protected by the same permission model.
 - [x] Strategic metrics and sensitive financial fields are hidden from operational roles by default.
 - [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.

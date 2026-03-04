@@ -136,6 +136,10 @@ Open planning item:
     - `Slice 9` real credential provisioning is also implemented
     - `/users-admin` now lets `system_admin` provision or repair real Supabase Auth credentials for existing `app_users` without leaving the workspace
     - the workspace snapshot now exposes auth credential status/email so missing vs stale mappings can be resolved from the UI before disabling the support bridge
+    - `Slice 10` auth-required runtime with controlled support delegation is also implemented
+    - `/` now lands on `/login`, runtime workspaces now require real authentication, and `GET /api/v1/app-users` plus `POST /api/v1/me/assume-user` are now restricted to authenticated support-controlled flows
+    - support impersonation now persists the support controller across assumed operators after login, the rail clears the support cookie before returning to `/login`, and the injector now reprovisions demo auth users so protected demo seeding remains usable
+    - Playwright now provisions demo auth users in `globalSetup`, uses authenticated fixtures as the default runtime path, and no longer relies on `POS_ALLOW_GUEST_WORKSPACES` in the E2E webServer command
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
@@ -229,6 +233,7 @@ Resolved cross-cutting planning item:
 - Hardening Slice 7 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, and `tests/e2e/offline-cash-movement-recovery.spec.ts` cover authenticated actor precedence over the support bridge, visible session attribution in the rail, and offline manual cash-movement replay into the real ledger.
 - Real-login Slice 8 verification: `tests/e2e/access-control-login-ui.spec.ts` covers Supabase password login, redirect to the permitted workspace, authenticated attribution in the shell, and logout back to `/login`.
 - Credential-provisioning Slice 9 verification: `tests/e2e/access-control-credentials-admin-api.spec.ts` and `tests/e2e/access-control-credentials-admin-ui.spec.ts` cover creating/updating auth credentials for `app_users`, then signing in through `/login` with the provisioned operator.
+- Slice 10 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, `tests/e2e/access-control-login-ui.spec.ts`, `tests/e2e/access-control-role-admin-api.spec.ts`, `tests/e2e/access-control-role-admin-ui.spec.ts`, `tests/e2e/access-control-credentials-admin-ui.spec.ts`, `tests/e2e/cash-register-session-api.spec.ts`, and `tests/e2e/cash-register-session-ui.spec.ts` cover credential-first entry, support-only actor listing/switching, persistent delegated impersonation across role checks, and returning cleanly to real login from the rail.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.
