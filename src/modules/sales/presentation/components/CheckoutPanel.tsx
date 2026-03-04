@@ -56,10 +56,12 @@ export interface CheckoutOrderItem {
 interface CheckoutPanelProps {
   readonly items: readonly CheckoutOrderItem[];
   readonly subtotal: number;
+  readonly cashRegisterId?: string;
   readonly onIncreaseQuantity: (productId: string) => void;
   readonly onDecreaseQuantity: (productId: string) => void;
   readonly onRemoveItem: (productId: string) => void;
   readonly onCheckoutSuccess: () => void;
+  readonly onCashSessionMutation?: () => void;
 }
 
 interface CheckoutApiError {
@@ -123,10 +125,12 @@ function parseMonetaryInput(rawValue: string): number {
 export function CheckoutPanel({
   items,
   subtotal,
+  cashRegisterId,
   onIncreaseQuantity,
   onDecreaseQuantity,
   onRemoveItem,
   onCheckoutSuccess,
+  onCashSessionMutation,
 }: CheckoutPanelProps): JSX.Element {
   const { messages } = useI18n();
   const total = subtotal;
@@ -556,6 +560,15 @@ export function CheckoutPanel({
     }
 
     if (paymentMethod === "cash") {
+      if (!cashRegisterId) {
+        publishFeedback({
+          tone: "error",
+          title: "Falta seleccionar la caja",
+          message: messages.sales.checkout.cashRegisterRequired,
+        });
+        return;
+      }
+
       if (!Number.isFinite(effectiveCashReceivedValue)) {
         publishFeedback({
           tone: "error",
@@ -615,6 +628,15 @@ export function CheckoutPanel({
         });
         return;
       }
+
+      if (initialPaymentAmount > 0 && !cashRegisterId) {
+        publishFeedback({
+          tone: "error",
+          title: "Falta seleccionar la caja",
+          message: messages.sales.checkout.cashRegisterRequired,
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -629,6 +651,7 @@ export function CheckoutPanel({
             quantity: item.quantity,
           })),
           paymentMethod,
+          ...(cashRegisterId ? { cashRegisterId } : {}),
           ...(paymentMethod === "on_account"
             ? {
                 ...(selectedOnAccountCustomer?.kind === "existing"
@@ -680,6 +703,9 @@ export function CheckoutPanel({
         title: "Venta registrada",
         message: successMessageParts.join(" "),
       });
+      if ((successPayload.amountPaid ?? 0) > 0) {
+        onCashSessionMutation?.();
+      }
       setIsPaymentSheetOpen(false);
       resetPaymentInputs();
       onCheckoutSuccess();
@@ -692,6 +718,7 @@ export function CheckoutPanel({
             quantity: item.quantity,
           })),
           paymentMethod,
+          cashRegisterId,
           customerId:
             paymentMethod === "on_account" && selectedOnAccountCustomer?.kind === "existing"
               ? selectedOnAccountCustomer.id

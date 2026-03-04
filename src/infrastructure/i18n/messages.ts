@@ -280,6 +280,8 @@ const spanishMessages = {
       addItemFirst: "Agregá al menos un producto antes de cobrar.",
       invalidCustomerPayment: "El monto entregado debe ser un número válido.",
       cashMustCoverTotal: "El efectivo debe cubrir el total para completar la venta.",
+      cashRegisterRequired:
+        "Primero elegí una caja con sesión abierta para registrar el efectivo.",
       onAccountCustomerRequired:
         "Para cuenta corriente primero asigná el nombre del cliente.",
       onAccountCustomerSelectionRequired:
@@ -630,6 +632,11 @@ const spanishMessages = {
     registerPaymentTitle: "Registrar pago",
     registerPaymentHelp:
       "Cargá el monto cobrado y una nota opcional para dejar trazabilidad del movimiento.",
+    cashRegisterExpectedLabel: "Caja seleccionada",
+    cashRegisterContext: (registerName: string): string => `Caja activa: ${registerName}`,
+    cashRegisterUnavailableHint:
+      "No hay una caja activa accesible para vincular este cobro en efectivo.",
+    noActiveCashRegister: "Sin caja abierta",
     pendingOrdersTitle: "Pedidos con saldo pendiente",
     orderTitle: (dateLabel: string): string => `Pedido del ${dateLabel}`,
     noPendingOrders: "Este cliente no tiene pedidos pendientes.",

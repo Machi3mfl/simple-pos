@@ -12,6 +12,7 @@ export type CreateSaleItemDTO = z.infer<typeof createSaleItemDTOSchema>;
 export const createSaleDTOSchema = z.object({
   items: z.array(createSaleItemDTOSchema).min(1),
   paymentMethod: paymentMethodSchema,
+  cashRegisterId: z.string().min(1).optional(),
   customerId: z.string().min(1).optional(),
   customerName: z.string().min(2).max(120).optional(),
   createCustomerIfMissing: z.boolean().optional(),

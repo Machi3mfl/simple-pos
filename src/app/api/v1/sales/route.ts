@@ -11,6 +11,11 @@ import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/appl
 import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
 import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
 import { SupabaseProductRepository } from "@/modules/catalog/infrastructure/repositories/SupabaseProductRepository";
+import { CashSaleRecorderAdapter } from "@/modules/cash-management/application/services/CashSaleRecorderAdapter";
+import { RecordAutomaticCashMovementUseCase } from "@/modules/cash-management/application/use-cases/RecordAutomaticCashMovementUseCase";
+import { CashManagementDomainError } from "@/modules/cash-management/domain/errors/CashManagementDomainError";
+import { SupabaseCashMovementRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashMovementRepository";
+import { SupabaseCashRegisterSessionRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashRegisterSessionRepository";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
@@ -47,10 +52,21 @@ function createSaleRuntime(): {
   const debtLedgerRepository: DebtLedgerRepository = new SupabaseDebtLedgerRepository(
     supabaseClient,
   );
+  const cashRegisterSessionRepository = new SupabaseCashRegisterSessionRepository(
+    supabaseClient,
+  );
+  const cashMovementRepository = new SupabaseCashMovementRepository(supabaseClient);
   const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
   const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);
   const onAccountDebtRecorder = new OnAccountDebtRecorderAdapter(
     recordOnAccountDebtUseCase,
+  );
+  const recordAutomaticCashMovementUseCase = new RecordAutomaticCashMovementUseCase(
+    cashRegisterSessionRepository,
+    cashMovementRepository,
+  );
+  const cashSaleRecorder = new CashSaleRecorderAdapter(
+    recordAutomaticCashMovementUseCase,
   );
 
   return {
@@ -59,6 +75,7 @@ function createSaleRuntime(): {
       productRepository,
       findOrCreateCustomerUseCase,
       onAccountDebtRecorder,
+      cashSaleRecorder,
     ),
   };
 }
@@ -105,9 +122,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const result = await createSaleUseCase.execute(parsedBody.data);
+    const result = await createSaleUseCase.execute({
+      ...parsedBody.data,
+      actorId: actorSnapshot.actor.actorId,
+      accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
+    if (error instanceof CashManagementDomainError) {
+      return errorResponse(409, {
+        code: "cash_register_conflict",
+        message: error.message,
+      });
+    }
+
     if (error instanceof SaleDomainError) {
       return errorResponse(400, {
         code: "sale_rule_error",

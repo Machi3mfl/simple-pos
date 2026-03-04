@@ -589,6 +589,8 @@ paths:
                 $ref: '#/components/schemas/SaleResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
 
   /stock-movements:
     get:
@@ -1959,6 +1961,8 @@ components:
         paymentMethod:
           type: string
           const: cash
+        cashRegisterId:
+          type: string
         customerId:
           type: [string, 'null']
         customerName:
@@ -1978,6 +1982,8 @@ components:
         paymentMethod:
           type: string
           const: on_account
+        cashRegisterId:
+          type: string
         customerId:
           type: [string, 'null']
         customerName:
@@ -2384,6 +2390,8 @@ components:
       required: [customerId, amount, paymentMethod]
       properties:
         customerId:
+          type: string
+        cashRegisterId:
           type: string
         orderId:
           type: [string, 'null']

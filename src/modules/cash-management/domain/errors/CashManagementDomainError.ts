@@ -40,6 +40,20 @@ export class CashRegisterSessionNotFoundError extends CashManagementDomainError 
   }
 }
 
+export class CashRegisterActiveSessionRequiredError extends CashManagementDomainError {
+  constructor(registerId: string) {
+    super(`Debés abrir una caja en ${registerId} antes de registrar efectivo.`);
+    this.name = "CashRegisterActiveSessionRequiredError";
+  }
+}
+
+export class CashRegisterSelectionRequiredError extends CashManagementDomainError {
+  constructor() {
+    super("Debés seleccionar una caja para atribuir el movimiento de efectivo.");
+    this.name = "CashRegisterSelectionRequiredError";
+  }
+}
+
 export class CashRegisterSessionStatusError extends CashManagementDomainError {
   constructor(message: string) {
     super(message);

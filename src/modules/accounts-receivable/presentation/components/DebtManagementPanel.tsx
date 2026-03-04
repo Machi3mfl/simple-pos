@@ -21,6 +21,10 @@ import {
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
+  listCashRegistersResponseDTOSchema,
+  type CashRegisterListItemDTO,
+} from "@/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
+import {
   enqueueOfflineSyncEvent,
   flushOfflineSyncQueue,
   getPendingOfflineSyncCount,
@@ -89,6 +93,7 @@ interface DebtManagementPanelProps {
   readonly refreshToken?: number;
   readonly canRegisterPayment?: boolean;
   readonly canViewSensitiveNotes?: boolean;
+  readonly preferredCashRegisterId?: string;
 }
 
 interface ReceivablesMetricCardProps {
@@ -114,8 +119,11 @@ interface DebtDetailDialogProps {
   readonly paymentAmount: string;
   readonly paymentNotes: string;
   readonly isSubmitting: boolean;
+  readonly paymentRegisters: readonly CashRegisterListItemDTO[];
+  readonly selectedPaymentRegisterId: string;
   readonly onPaymentAmountChange: (value: string) => void;
   readonly onPaymentNotesChange: (value: string) => void;
+  readonly onSelectedPaymentRegisterIdChange: (value: string) => void;
   readonly onSubmitPayment: (event: FormEvent<HTMLFormElement>) => void;
   readonly onClose: () => void;
 }
@@ -245,8 +253,11 @@ function DebtDetailDialog({
   paymentAmount,
   paymentNotes,
   isSubmitting,
+  paymentRegisters,
+  selectedPaymentRegisterId,
   onPaymentAmountChange,
   onPaymentNotesChange,
+  onSelectedPaymentRegisterIdChange,
   onSubmitPayment,
   onClose,
 }: DebtDetailDialogProps): JSX.Element {
@@ -257,6 +268,8 @@ function DebtDetailDialog({
   const effectiveOpenOrders = detail?.openOrderCount ?? customer.openOrderCount;
   const effectiveLastActivityAt = detail?.lastActivityAt ?? customer.lastActivityAt;
   const pendingAmount = parseMonetaryInput(paymentAmount);
+  const selectedPaymentRegister =
+    paymentRegisters.find((register) => register.id === selectedPaymentRegisterId) ?? null;
 
   return (
     <div
@@ -369,6 +382,59 @@ function DebtDetailDialog({
                         {messages.receivables.summaryCustomer(customer.customerName)}
                       </p>
                     </div>
+
+                    {paymentRegisters.length > 0 ? (
+                      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                        <label className="flex flex-col gap-2">
+                          <span className="text-sm font-semibold text-slate-700">
+                            {messages.sales.cashSession.registerLabel}
+                          </span>
+                          <select
+                            data-testid="debt-payment-register-select"
+                            value={selectedPaymentRegisterId}
+                            onChange={(event) =>
+                              onSelectedPaymentRegisterIdChange(event.target.value)
+                            }
+                            disabled={isSubmitting || isLoading}
+                            className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                          >
+                            {paymentRegisters.map((register) => (
+                              <option key={register.id} value={register.id}>
+                                {register.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div className="rounded-[1.35rem] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                            {messages.receivables.cashRegisterExpectedLabel}
+                          </p>
+                          <p
+                            data-testid="debt-payment-register-expected-value"
+                            className="mt-2 text-[1.4rem] leading-none font-bold tracking-tight text-emerald-800"
+                          >
+                            {selectedPaymentRegister?.activeSession
+                              ? formatCurrency(
+                                  selectedPaymentRegister.activeSession
+                                    .expectedBalanceAmount,
+                                )
+                              : messages.receivables.noActiveCashRegister}
+                          </p>
+                          {selectedPaymentRegister ? (
+                            <p className="mt-2 text-sm font-medium text-emerald-800/80">
+                              {messages.receivables.cashRegisterContext(
+                                selectedPaymentRegister.name,
+                              )}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                        {messages.receivables.cashRegisterUnavailableHint}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
@@ -666,6 +732,7 @@ export function DebtManagementPanel({
   refreshToken,
   canRegisterPayment = true,
   canViewSensitiveNotes = true,
+  preferredCashRegisterId,
 }: DebtManagementPanelProps): JSX.Element {
   const { messages, formatCurrency, formatDateTime } = useI18n();
   const [receivables, setReceivables] = useState<readonly ReceivableSnapshotItem[]>([]);
@@ -680,6 +747,10 @@ export function DebtManagementPanel({
     useState<CustomerDebtSummary | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentNotes, setPaymentNotes] = useState<string>("");
+  const [paymentRegisters, setPaymentRegisters] = useState<
+    readonly CashRegisterListItemDTO[]
+  >([]);
+  const [selectedPaymentRegisterId, setSelectedPaymentRegisterId] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -791,6 +862,52 @@ export function DebtManagementPanel({
     [messages.receivables.loadSummaryError, publishFeedback],
   );
 
+  const loadPaymentRegisters = useCallback(async (): Promise<void> => {
+    if (!canRegisterPayment) {
+      setPaymentRegisters([]);
+      setSelectedPaymentRegisterId("");
+      return;
+    }
+
+    try {
+      const { response, data } = await fetchJsonNoStore<unknown>("/api/v1/cash-registers");
+      if (!response.ok || !data) {
+        setPaymentRegisters([]);
+        setSelectedPaymentRegisterId("");
+        return;
+      }
+
+      const parsed = listCashRegistersResponseDTOSchema.safeParse(data);
+      if (!parsed.success) {
+        setPaymentRegisters([]);
+        setSelectedPaymentRegisterId("");
+        return;
+      }
+
+      const activeRegisters = parsed.data.items.filter(
+        (register) => register.activeSession !== null,
+      );
+      setPaymentRegisters(activeRegisters);
+      setSelectedPaymentRegisterId((current) => {
+        if (activeRegisters.some((register) => register.id === current)) {
+          return current;
+        }
+
+        if (
+          preferredCashRegisterId &&
+          activeRegisters.some((register) => register.id === preferredCashRegisterId)
+        ) {
+          return preferredCashRegisterId;
+        }
+
+        return activeRegisters[0]?.id ?? "";
+      });
+    } catch {
+      setPaymentRegisters([]);
+      setSelectedPaymentRegisterId("");
+    }
+  }, [canRegisterPayment, preferredCashRegisterId]);
+
   const retryOfflineSync = useCallback(async () => {
     const result = await flushOfflineSyncQueue();
     refreshPendingSyncCount();
@@ -833,8 +950,9 @@ export function DebtManagementPanel({
       setPaymentAmount("");
       setPaymentNotes("");
       void loadCustomerDetail(customer.customerId);
+      void loadPaymentRegisters();
     },
-    [loadCustomerDetail],
+    [loadCustomerDetail, loadPaymentRegisters],
   );
 
   const handleCloseCustomer = useCallback((): void => {
@@ -846,6 +964,8 @@ export function DebtManagementPanel({
     setActiveCustomerDetail(null);
     setPaymentAmount("");
     setPaymentNotes("");
+    setPaymentRegisters([]);
+    setSelectedPaymentRegisterId("");
   }, [isSubmitting]);
 
   useEffect(() => {
@@ -990,6 +1110,7 @@ export function DebtManagementPanel({
       customerId: activeCustomer.customerId,
       amount: Number(parsedAmount.toFixed(2)),
       paymentMethod: "cash" as const,
+      cashRegisterId: selectedPaymentRegisterId || undefined,
       notes: paymentNotes.trim() || undefined,
     };
 
@@ -1022,6 +1143,7 @@ export function DebtManagementPanel({
       });
       setPaymentAmount("");
       setPaymentNotes("");
+      await loadPaymentRegisters();
 
       const updatedItems = await loadReceivablesSnapshot();
       const updatedCustomer =
@@ -1328,8 +1450,11 @@ export function DebtManagementPanel({
           paymentAmount={paymentAmount}
           paymentNotes={paymentNotes}
           isSubmitting={isSubmitting}
+          paymentRegisters={paymentRegisters}
+          selectedPaymentRegisterId={selectedPaymentRegisterId}
           onPaymentAmountChange={setPaymentAmount}
           onPaymentNotesChange={setPaymentNotes}
+          onSelectedPaymentRegisterIdChange={setSelectedPaymentRegisterId}
           onSubmitPayment={handleRegisterPayment}
           onClose={handleCloseCustomer}
         />

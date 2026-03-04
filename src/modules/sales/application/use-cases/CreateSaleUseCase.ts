@@ -2,6 +2,10 @@ import { ProductNotFoundError } from "@/modules/catalog/domain/errors/ProductDom
 import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
 import type { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
 import {
+  NoopCashSaleRecorder,
+  type CashSaleRecorder,
+} from "@/modules/sales/domain/services/CashSaleRecorder";
+import {
   NoopOnAccountDebtRecorder,
   type OnAccountDebtRecorder,
 } from "@/modules/sales/domain/services/OnAccountDebtRecorder";
@@ -22,6 +26,9 @@ export interface CreateSaleUseCaseInput {
   readonly customerName?: string;
   readonly createCustomerIfMissing?: boolean;
   readonly initialPaymentAmount?: number;
+  readonly cashRegisterId?: string;
+  readonly actorId?: string;
+  readonly accessibleRegisterIds?: readonly string[];
 }
 
 export interface CreateSaleUseCaseOutput {
@@ -40,6 +47,7 @@ export class CreateSaleUseCase {
     private readonly productRepository: ProductRepository,
     private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
     private readonly onAccountDebtRecorder: OnAccountDebtRecorder = new NoopOnAccountDebtRecorder(),
+    private readonly cashSaleRecorder: CashSaleRecorder = new NoopCashSaleRecorder(),
   ) {}
 
   async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
@@ -93,6 +101,17 @@ export class CreateSaleUseCase {
       sale.getPaymentMethod() === "cash" ? total : initialPaymentAmount;
     const outstandingAmount =
       sale.getPaymentMethod() === "cash" ? 0 : Number((total - amountPaid).toFixed(2));
+
+    if (amountPaid > 0 && input.actorId) {
+      await this.cashSaleRecorder.recordCashSale({
+        saleId: sale.getId(),
+        amount: amountPaid,
+        occurredAt: sale.getCreatedAt(),
+        actorId: input.actorId,
+        cashRegisterId: input.cashRegisterId,
+        accessibleRegisterIds: input.accessibleRegisterIds,
+      });
+    }
 
     return {
       saleId: sale.getId(),

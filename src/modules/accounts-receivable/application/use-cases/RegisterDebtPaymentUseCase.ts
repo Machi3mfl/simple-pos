@@ -1,4 +1,8 @@
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
+import {
+  NoopCashDebtPaymentRecorder,
+  type CashDebtPaymentRecorder,
+} from "../../domain/services/CashDebtPaymentRecorder";
 
 import { DebtLedgerEntry } from "../../domain/entities/DebtLedgerEntry";
 import {
@@ -17,6 +21,9 @@ export interface RegisterDebtPaymentUseCaseInput {
   readonly paymentMethod: "cash";
   readonly orderId?: string;
   readonly notes?: string;
+  readonly cashRegisterId?: string;
+  readonly actorId?: string;
+  readonly accessibleRegisterIds?: readonly string[];
 }
 
 export interface RegisterDebtPaymentUseCaseOutput {
@@ -31,6 +38,7 @@ export class RegisterDebtPaymentUseCase {
   constructor(
     private readonly debtLedgerRepository: DebtLedgerRepository,
     private readonly customerRepository: CustomerRepository,
+    private readonly cashDebtPaymentRecorder: CashDebtPaymentRecorder = new NoopCashDebtPaymentRecorder(),
   ) {}
 
   async execute(
@@ -75,6 +83,17 @@ export class RegisterDebtPaymentUseCase {
 
     await this.debtLedgerRepository.append(payment);
     const primitives = payment.toPrimitives();
+
+    if (input.actorId && (input.cashRegisterId || (input.accessibleRegisterIds?.length ?? 0) === 1)) {
+      await this.cashDebtPaymentRecorder.recordCashDebtPayment({
+        paymentId: primitives.entryId,
+        amount: primitives.amount,
+        occurredAt: new Date(primitives.occurredAt),
+        actorId: input.actorId,
+        cashRegisterId: input.cashRegisterId,
+        accessibleRegisterIds: input.accessibleRegisterIds,
+      });
+    }
 
     return {
       paymentId: primitives.entryId,

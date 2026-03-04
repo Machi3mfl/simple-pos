@@ -36,6 +36,9 @@ type ManualMovementDirection = "inbound" | "outbound";
 
 interface CashRegisterSessionPanelProps {
   readonly preferredRegisterIds: readonly string[];
+  readonly selectedRegisterId: string;
+  readonly onSelectedRegisterIdChange: (registerId: string) => void;
+  readonly refreshToken?: number;
   readonly canOpenSession: boolean;
   readonly canCloseSession: boolean;
   readonly canRecordManualCashMovement: boolean;
@@ -88,6 +91,9 @@ function resolveMovementAmountClassName(direction: "inbound" | "outbound"): stri
 
 export function CashRegisterSessionPanel({
   preferredRegisterIds,
+  selectedRegisterId,
+  onSelectedRegisterIdChange,
+  refreshToken = 0,
   canOpenSession,
   canCloseSession,
   canRecordManualCashMovement,
@@ -95,7 +101,6 @@ export function CashRegisterSessionPanel({
   const { messages } = useI18n();
   const cashSessionMessages = messages.sales.cashSession;
   const [registers, setRegisters] = useState<readonly CashRegisterListItemDTO[]>([]);
-  const [selectedRegisterId, setSelectedRegisterId] = useState<string>("");
   const [activeSessionDetail, setActiveSessionDetail] =
     useState<ActiveCashRegisterSessionResponseDTO["session"]>(null);
   const [openingFloatAmount, setOpeningFloatAmount] = useState<string>("0");
@@ -146,7 +151,9 @@ export function CashRegisterSessionPanel({
 
   useEffect(() => {
     if (registers.length === 0) {
-      setSelectedRegisterId("");
+      if (selectedRegisterId) {
+        onSelectedRegisterIdChange("");
+      }
       return;
     }
 
@@ -158,8 +165,13 @@ export function CashRegisterSessionPanel({
       registers.some((register) => register.id === registerId),
     );
 
-    setSelectedRegisterId(preferredRegister ?? registers[0]?.id ?? "");
-  }, [preferredRegisterIds, registers, selectedRegisterId]);
+    onSelectedRegisterIdChange(preferredRegister ?? registers[0]?.id ?? "");
+  }, [
+    onSelectedRegisterIdChange,
+    preferredRegisterIds,
+    registers,
+    selectedRegisterId,
+  ]);
 
   const selectedRegister = useMemo(
     () => registers.find((register) => register.id === selectedRegisterId) ?? null,
@@ -219,7 +231,7 @@ export function CashRegisterSessionPanel({
     }
 
     void loadActiveSession(selectedRegisterId);
-  }, [loadActiveSession, selectedRegisterId]);
+  }, [loadActiveSession, refreshToken, selectedRegisterId]);
 
   const handleOpenSession = useCallback(async (): Promise<void> => {
     const openingFloatValue = parseMonetaryInput(openingFloatAmount);
@@ -443,7 +455,7 @@ export function CashRegisterSessionPanel({
           <select
             data-testid="cash-session-register-select"
             value={selectedRegisterId}
-            onChange={(event) => setSelectedRegisterId(event.target.value)}
+            onChange={(event) => onSelectedRegisterIdChange(event.target.value)}
             className="mt-2 min-h-[52px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-[1rem] font-semibold text-slate-900 outline-none"
           >
             {registers.length === 0 ? (

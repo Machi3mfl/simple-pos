@@ -1,8 +1,67 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
 import { createNewOnAccountCustomer } from "./support/checkout";
 import { openReceivableDetail, parseMoneyValue } from "./support/receivables";
+import { activeCashRegisterSessionResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
+import { listCashRegistersResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
+
+async function ensureClosedSession(request: APIRequestContext): Promise<void> {
+  const registersResponse = await request.get("/api/v1/cash-registers");
+  expect(registersResponse.status()).toBe(200);
+  const registersBody = listCashRegistersResponseDTOSchema.parse(
+    await registersResponse.json(),
+  );
+  const register = registersBody.items[0];
+  expect(register).toBeDefined();
+
+  const activeSessionResponse = await request.get(
+    `/api/v1/cash-registers/${register!.id}/active-session`,
+  );
+  expect(activeSessionResponse.status()).toBe(200);
+  const activeSessionBody = activeCashRegisterSessionResponseDTOSchema.parse(
+    await activeSessionResponse.json(),
+  );
+
+  if (!activeSessionBody.session) {
+    return;
+  }
+
+  const closeResponse = await request.post(
+    `/api/v1/cash-register-sessions/${activeSessionBody.session.id}/close`,
+    {
+      data: {
+        countedClosingAmount: activeSessionBody.session.expectedBalanceAmount,
+        closingNotes: "cleanup ui ar",
+      },
+    },
+  );
+  expect(closeResponse.status()).toBe(200);
+}
+
+async function ensureOpenSession(
+  request: APIRequestContext,
+  openingFloatAmount: number,
+): Promise<void> {
+  const registersResponse = await request.get("/api/v1/cash-registers");
+  expect(registersResponse.status()).toBe(200);
+  const registersBody = listCashRegistersResponseDTOSchema.parse(
+    await registersResponse.json(),
+  );
+  const register = registersBody.items[0];
+  expect(register).toBeDefined();
+
+  await ensureClosedSession(request);
+
+  const openResponse = await request.post("/api/v1/cash-register-sessions", {
+    data: {
+      cashRegisterId: register!.id,
+      openingFloatAmount,
+      openingNotes: "setup ui ar",
+    },
+  });
+  expect(openResponse.status()).toBe(201);
+}
 
 test("runs on-account checkout and settles customer debt from Receivables UI", async ({
   request,
@@ -16,7 +75,12 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
     price: 4450,
   });
 
+  await ensureOpenSession(request, 500);
+
   await page.goto("/cash-register");
+  const activeCashSummary = page.getByTestId("cash-session-active-summary");
+  await expect(activeCashSummary).toBeVisible();
+  await expect(activeCashSummary).toContainText("$500.00");
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
   await expect(page.getByTestId("checkout-open-payment-button")).toBeDisabled();
@@ -42,6 +106,7 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await expect(checkoutFeedback).toContainText("Venta registrada correctamente.");
   await expect(checkoutFeedback).toContainText(customerName);
   await expect(checkoutFeedback).toContainText("Saldo pendiente: $3450.00.");
+  await expect(activeCashSummary).toContainText("$1500.00");
 
   await page.getByTestId("nav-item-receivables").click();
   await expect(
@@ -61,12 +126,18 @@ test("runs on-account checkout and settles customer debt from Receivables UI", a
   await expect(firstDebtOrderItem).toContainText(productName);
   await expect(firstDebtOrderItem).toContainText("1 x $4450.00");
   await expect(firstDebtOrderItem.getByRole("img", { name: productName })).toBeVisible();
+  await expect(page.getByTestId("debt-payment-register-expected-value")).toHaveText(
+    "$1500.00",
+  );
 
   await page.getByTestId("debt-payment-amount-input").fill("500");
   await page.getByTestId("debt-register-payment-button").click();
 
   await expect(page.getByTestId("debt-feedback")).toContainText("Pago registrado: $500.00.");
   await expect(outstandingValue).toHaveText("$2950.00");
+  await expect(page.getByTestId("debt-payment-register-expected-value")).toHaveText(
+    "$2000.00",
+  );
   const afterOutstandingRaw = (await outstandingValue.textContent()) ?? "$0";
   const afterOutstanding = parseMoneyValue(afterOutstandingRaw);
 

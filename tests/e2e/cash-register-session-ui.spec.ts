@@ -50,7 +50,7 @@ test("opens, records manual movements, and closes a cash register session from t
   await expect(activeSummary).toBeVisible();
   await expect(page.getByText("Caja abierta")).toBeVisible();
   await expect(activeSummary).toContainText("$1234.50");
-  await expect(page.getByText("Cambio inicial")).toBeVisible();
+  await expect(activeSummary).toContainText("Cambio inicial");
 
   await page.getByTestId("cash-session-add-movement-button").click();
   await expect(page.getByTestId("cash-session-movement-modal")).toBeVisible();

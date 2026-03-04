@@ -143,6 +143,8 @@ export function PosLayout({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
+  const [cashSessionRefreshToken, setCashSessionRefreshToken] = useState<number>(0);
   const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
@@ -213,6 +215,17 @@ export function PosLayout({
   useEffect(() => {
     void refreshCatalog();
   }, [refreshCatalog]);
+
+  useEffect(() => {
+    if (
+      selectedCashRegisterId &&
+      currentActor?.assignedRegisterIds.includes(selectedCashRegisterId)
+    ) {
+      return;
+    }
+
+    setSelectedCashRegisterId(currentActor?.assignedRegisterIds[0] ?? "");
+  }, [currentActor?.assignedRegisterIds, selectedCashRegisterId]);
 
   useEffect(() => {
     if (categories.some((category) => category.id === activeCategoryId)) {
@@ -317,6 +330,9 @@ export function PosLayout({
     setCartItems([]);
     setSalesRefreshToken((current) => current + 1);
   }, []);
+  const handleCashSessionMutation = useCallback((): void => {
+    setCashSessionRefreshToken((current) => current + 1);
+  }, []);
 
   const renderNonSalesWorkspace = (): JSX.Element => {
     if (currentWorkspace === "products") {
@@ -349,6 +365,7 @@ export function PosLayout({
             canViewSensitiveNotes={
               permissionSnapshot?.workspaces.receivables.canViewSensitiveNotes ?? false
             }
+            preferredCashRegisterId={selectedCashRegisterId || undefined}
           />
         </section>
       );
@@ -427,6 +444,9 @@ export function PosLayout({
             topContent={
               <CashRegisterSessionPanel
                 preferredRegisterIds={currentActor?.assignedRegisterIds ?? []}
+                selectedRegisterId={selectedCashRegisterId}
+                onSelectedRegisterIdChange={setSelectedCashRegisterId}
+                refreshToken={cashSessionRefreshToken}
                 canOpenSession={
                   permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
                 }
@@ -454,10 +474,12 @@ export function PosLayout({
           <CheckoutPanel
             items={cartItems}
             subtotal={subtotal}
+            cashRegisterId={selectedCashRegisterId || undefined}
             onIncreaseQuantity={increaseQuantity}
             onDecreaseQuantity={decreaseQuantity}
             onRemoveItem={removeItem}
             onCheckoutSuccess={handleCheckoutSuccess}
+            onCashSessionMutation={handleCashSessionMutation}
           />
         </>
       );

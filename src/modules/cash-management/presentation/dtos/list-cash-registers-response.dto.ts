@@ -17,3 +17,8 @@ export const listCashRegistersResponseDTOSchema = z
     items: z.array(cashRegisterListItemDTOSchema),
   })
   .strict();
+
+export type CashRegisterListItemDTO = z.infer<typeof cashRegisterListItemDTOSchema>;
+export type ListCashRegistersResponseDTO = z.infer<
+  typeof listCashRegistersResponseDTOSchema
+>;

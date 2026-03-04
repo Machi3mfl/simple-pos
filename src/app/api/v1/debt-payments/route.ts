@@ -15,6 +15,7 @@ import {
 import { createAccountsReceivableRuntime } from "@/modules/accounts-receivable/infrastructure/runtime/accountsReceivableRuntime";
 import { createDebtPaymentDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";
 import { debtPaymentResponseDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/debt-payment-response.dto";
+import { CashManagementDomainError } from "@/modules/cash-management/domain/errors/CashManagementDomainError";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const result = await registerDebtPaymentUseCase.execute(parsedBody.data);
+    const result = await registerDebtPaymentUseCase.execute({
+      ...parsedBody.data,
+      actorId: actorSnapshot.actor.actorId,
+      accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
+    });
     const parsedResponse = debtPaymentResponseDTOSchema.safeParse(result);
     if (!parsedResponse.success) {
       return errorResponse(500, {
@@ -109,6 +114,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (error instanceof AccountsReceivableDomainError) {
       return errorResponse(400, {
         code: "debt_rule_error",
+        message: error.message,
+      });
+    }
+
+    if (error instanceof CashManagementDomainError) {
+      return errorResponse(409, {
+        code: "cash_register_conflict",
         message: error.message,
       });
     }

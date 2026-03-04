@@ -1,4 +1,8 @@
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
+import { CashDebtPaymentRecorderAdapter } from "@/modules/cash-management/application/services/CashDebtPaymentRecorderAdapter";
+import { RecordAutomaticCashMovementUseCase } from "@/modules/cash-management/application/use-cases/RecordAutomaticCashMovementUseCase";
+import { SupabaseCashMovementRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashMovementRepository";
+import { SupabaseCashRegisterSessionRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashRegisterSessionRepository";
 import { SupabaseProductRepository } from "@/modules/catalog/infrastructure/repositories/SupabaseProductRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
 import { SupabaseSaleRepository } from "@/modules/sales/infrastructure/repositories/SupabaseSaleRepository";
@@ -18,6 +22,17 @@ export function createAccountsReceivableRuntime(): {
   const customerRepository = new SupabaseCustomerRepository(supabaseClient);
   const saleRepository = new SupabaseSaleRepository(supabaseClient);
   const debtLedgerRepository = new SupabaseDebtLedgerRepository(supabaseClient);
+  const cashRegisterSessionRepository = new SupabaseCashRegisterSessionRepository(
+    supabaseClient,
+  );
+  const cashMovementRepository = new SupabaseCashMovementRepository(supabaseClient);
+  const recordAutomaticCashMovementUseCase = new RecordAutomaticCashMovementUseCase(
+    cashRegisterSessionRepository,
+    cashMovementRepository,
+  );
+  const cashDebtPaymentRecorder = new CashDebtPaymentRecorderAdapter(
+    recordAutomaticCashMovementUseCase,
+  );
 
   return {
     getCustomerDebtSummaryUseCase: new GetCustomerDebtSummaryUseCase(
@@ -34,6 +49,7 @@ export function createAccountsReceivableRuntime(): {
     registerDebtPaymentUseCase: new RegisterDebtPaymentUseCase(
       debtLedgerRepository,
       customerRepository,
+      cashDebtPaymentRecorder,
     ),
   };
 }
