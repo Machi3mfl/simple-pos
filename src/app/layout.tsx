@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProvider } from "@/infrastructure/i18n/I18nProvider";
+import { ActorSessionProvider } from "@/modules/access-control/presentation/context/ActorSessionContext";
 
 import "./globals.css";
 
@@ -25,8 +26,10 @@ export default function RootLayout({
     <html lang="es">
       <body className={poppins.className}>
         <I18nProvider>
-          {children}
-          <Toaster />
+          <ActorSessionProvider>
+            {children}
+            <Toaster />
+          </ActorSessionProvider>
         </I18nProvider>
       </body>
     </html>

@@ -32,8 +32,80 @@ tags:
     description: Offline event synchronization.
   - name: ProductSourcing
     description: External catalog search and assisted import orchestration.
+  - name: AccessControl
+    description: Temporary operator bootstrap and permission snapshot endpoints.
 
 paths:
+  /app-users:
+    get:
+      tags: [AccessControl]
+      operationId: listSelectableAppUsers
+      summary: List active selectable operators for the pre-auth bridge
+      parameters:
+        - in: query
+          name: role
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Selectable operators
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectableActorsResponse'
+
+  /me:
+    get:
+      tags: [AccessControl]
+      operationId: getCurrentActorSnapshot
+      summary: Get current operator identity and permission snapshot
+      responses:
+        '200':
+          description: Current actor snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+
+  /me/assume-user:
+    post:
+      tags: [AccessControl]
+      operationId: assumeUserSession
+      summary: Assume an active operator during the pre-auth rollout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssumeUserSessionRequest'
+      responses:
+        '200':
+          description: Operator assumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssumeUserSessionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags: [AccessControl]
+      operationId: clearAssumedUserSession
+      summary: Clear the temporary assumed operator session
+      responses:
+        '200':
+          description: Assumed operator cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+
   /products:
     get:
       tags: [Catalog]
@@ -707,6 +779,237 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
+    SelectableActor:
+      type: object
+      required: [actorId, displayName, roleCodes, roleNames, assignedRegisterIds]
+      properties:
+        actorId:
+          type: string
+        displayName:
+          type: string
+        roleCodes:
+          type: array
+          items:
+            type: string
+        roleNames:
+          type: array
+          items:
+            type: string
+        assignedRegisterIds:
+          type: array
+          items:
+            type: string
+
+    SelectableActorsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectableActor'
+
+    AssumeUserSessionRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+
+    AssumeUserSessionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SelectableActor'
+
+    PermissionSnapshotNavigation:
+      type: object
+      required: [cashRegister, sales, receivables, products, reporting, sync, usersAdmin]
+      properties:
+        cashRegister:
+          type: boolean
+        sales:
+          type: boolean
+        receivables:
+          type: boolean
+        products:
+          type: boolean
+        reporting:
+          type: boolean
+        sync:
+          type: boolean
+        usersAdmin:
+          type: boolean
+
+    PermissionSnapshotWorkspaceCashRegister:
+      type: object
+      required: [canView, canCreateSale, canOpenSession, canCloseSession, canRecordManualCashMovement]
+      properties:
+        canView:
+          type: boolean
+        canCreateSale:
+          type: boolean
+        canOpenSession:
+          type: boolean
+        canCloseSession:
+          type: boolean
+        canRecordManualCashMovement:
+          type: boolean
+
+    PermissionSnapshotWorkspaceSales:
+      type: object
+      required: [canView, canViewAllRegisters, canViewSaleDetail]
+      properties:
+        canView:
+          type: boolean
+        canViewAllRegisters:
+          type: boolean
+        canViewSaleDetail:
+          type: boolean
+
+    PermissionSnapshotWorkspaceReceivables:
+      type: object
+      required: [canView, canRegisterPayment, canViewSensitiveNotes]
+      properties:
+        canView:
+          type: boolean
+        canRegisterPayment:
+          type: boolean
+        canViewSensitiveNotes:
+          type: boolean
+
+    PermissionSnapshotWorkspaceProducts:
+      type: object
+      required: [canView, canCreateFromSourcing, canUpdatePrice, canAdjustStock, canRunBulkImport, canViewInventoryCost]
+      properties:
+        canView:
+          type: boolean
+        canCreateFromSourcing:
+          type: boolean
+        canUpdatePrice:
+          type: boolean
+        canAdjustStock:
+          type: boolean
+        canRunBulkImport:
+          type: boolean
+        canViewInventoryCost:
+          type: boolean
+
+    PermissionSnapshotWorkspaceReporting:
+      type: object
+      required: [canView, canViewExecutiveMetrics, canViewMargin, canViewInventoryValue, canViewCreditExposure]
+      properties:
+        canView:
+          type: boolean
+        canViewExecutiveMetrics:
+          type: boolean
+        canViewMargin:
+          type: boolean
+        canViewInventoryValue:
+          type: boolean
+        canViewCreditExposure:
+          type: boolean
+
+    PermissionSnapshotWorkspaceSync:
+      type: object
+      required: [canView]
+      properties:
+        canView:
+          type: boolean
+
+    PermissionSnapshotWorkspaceUsersAdmin:
+      type: object
+      required: [canView, canAssignRoles, canManageUsers]
+      properties:
+        canView:
+          type: boolean
+        canAssignRoles:
+          type: boolean
+        canManageUsers:
+          type: boolean
+
+    PermissionSnapshotWorkspaces:
+      type: object
+      required: [cashRegister, sales, receivables, products, reporting, sync, usersAdmin]
+      properties:
+        cashRegister:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceCashRegister'
+        sales:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceSales'
+        receivables:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceReceivables'
+        products:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceProducts'
+        reporting:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceReporting'
+        sync:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceSync'
+        usersAdmin:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaceUsersAdmin'
+
+    PermissionSnapshotDataVisibility:
+      type: object
+      required: [salesScope, receivablesScope, canViewInventoryCost, canViewProfitMetrics, canViewAuditMetadata]
+      properties:
+        salesScope:
+          type: string
+          enum: [none, own_register, assigned_registers, store]
+        receivablesScope:
+          type: string
+          enum: [none, summary_only, full]
+        canViewInventoryCost:
+          type: boolean
+        canViewProfitMetrics:
+          type: boolean
+        canViewAuditMetadata:
+          type: boolean
+
+    PermissionSnapshot:
+      type: object
+      required: [permissionCodes, navigation, workspaces, dataVisibility]
+      properties:
+        permissionCodes:
+          type: array
+          items:
+            type: string
+        navigation:
+          $ref: '#/components/schemas/PermissionSnapshotNavigation'
+        workspaces:
+          $ref: '#/components/schemas/PermissionSnapshotWorkspaces'
+        dataVisibility:
+          $ref: '#/components/schemas/PermissionSnapshotDataVisibility'
+
+    MeResponseActor:
+      type: object
+      required: [actorId, displayName, actorKind, roleCodes, roleNames, assignedRegisterIds]
+      properties:
+        actorId:
+          type: string
+        displayName:
+          type: string
+        actorKind:
+          type: string
+          enum: [human, system]
+        roleCodes:
+          type: array
+          items:
+            type: string
+        roleNames:
+          type: array
+          items:
+            type: string
+        assignedRegisterIds:
+          type: array
+          items:
+            type: string
+
+    MeResponse:
+      type: object
+      required: [actor, permissionSnapshot]
+      properties:
+        actor:
+          $ref: '#/components/schemas/MeResponseActor'
+        permissionSnapshot:
+          $ref: '#/components/schemas/PermissionSnapshot'
+
     Product:
       type: object
       required: [id, sku, name, categoryId, price, stock, minStock, imageUrl, isActive]

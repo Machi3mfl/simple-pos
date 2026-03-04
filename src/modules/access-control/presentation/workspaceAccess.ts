@@ -1,0 +1,28 @@
+import type { PermissionSnapshot } from "../domain/types/PermissionSnapshot";
+import type { PosWorkspaceId } from "@/modules/sales/presentation/posWorkspace";
+
+export function canAccessWorkspace(
+  workspaceId: PosWorkspaceId,
+  permissionSnapshot: PermissionSnapshot | null,
+): boolean {
+  if (!permissionSnapshot) {
+    return false;
+  }
+
+  switch (workspaceId) {
+    case "cash-register":
+      return permissionSnapshot.workspaces.cashRegister.canView;
+    case "sales":
+      return permissionSnapshot.workspaces.sales.canView;
+    case "products":
+      return permissionSnapshot.workspaces.products.canView;
+    case "receivables":
+      return permissionSnapshot.workspaces.receivables.canView;
+    case "reporting":
+      return permissionSnapshot.workspaces.reporting.canView;
+    case "sync":
+      return permissionSnapshot.workspaces.sync.canView;
+    default:
+      return false;
+  }
+}

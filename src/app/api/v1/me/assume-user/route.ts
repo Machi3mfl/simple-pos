@@ -1,0 +1,140 @@
+import { NextRequest, NextResponse } from "next/server";
+
+import {
+  findFallbackActorById,
+} from "@/modules/access-control/infrastructure/fallback/fallbackActors";
+import { createAccessControlRuntime } from "@/modules/access-control/infrastructure/runtime/accessControlRuntime";
+import {
+  getActorSessionCookieName,
+  serializeActorSessionCookie,
+  shouldUseSecureActorSessionCookie,
+} from "@/modules/access-control/infrastructure/session/actorSessionCookie";
+import {
+  assumeUserSessionRequestDTOSchema,
+  assumeUserSessionResponseDTOSchema,
+} from "@/modules/access-control/presentation/dtos/assume-user.dto";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+interface ApiErrorResponse {
+  readonly code: string;
+  readonly message: string;
+  readonly details?: readonly {
+    readonly field: string;
+    readonly message: string;
+  }[];
+}
+
+function errorResponse(
+  status: number,
+  body: ApiErrorResponse,
+): NextResponse<ApiErrorResponse> {
+  return NextResponse.json(body, { status });
+}
+
+function buildSuccessResponse(payload: {
+  readonly actorId: string;
+  readonly displayName: string;
+  readonly roleCodes: readonly string[];
+  readonly roleNames: readonly string[];
+  readonly assignedRegisterIds: readonly string[];
+}, request?: NextRequest): NextResponse {
+  const response = NextResponse.json(payload, { status: 200 });
+  response.cookies.set({
+    name: getActorSessionCookieName(),
+    value: serializeActorSessionCookie({ userId: payload.actorId }),
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: shouldUseSecureActorSessionCookie(request),
+  });
+
+  return response;
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  let payload: unknown;
+
+  try {
+    payload = await request.json();
+  } catch {
+    return errorResponse(400, {
+      code: "invalid_json",
+      message: "El body debe ser JSON válido.",
+    });
+  }
+
+  const parsedBody = assumeUserSessionRequestDTOSchema.safeParse(payload);
+  if (!parsedBody.success) {
+    return errorResponse(400, {
+      code: "validation_error",
+      message: "La selección de operador es inválida.",
+      details: parsedBody.error.issues.map((issue) => ({
+        field: issue.path.join(".") || "body",
+        message: issue.message,
+      })),
+    });
+  }
+
+  try {
+    const { assumeSelectableActorUseCase } = createAccessControlRuntime();
+    const actor = await assumeSelectableActorUseCase.execute(parsedBody.data.userId);
+    if (!actor) {
+      return errorResponse(404, {
+        code: "actor_not_found",
+        message: "No encontramos ese operador activo.",
+      });
+    }
+
+    const parsedResponse = assumeUserSessionResponseDTOSchema.safeParse(actor);
+    if (!parsedResponse.success) {
+      return errorResponse(500, {
+        code: "response_contract_error",
+        message: "La respuesta de selección de operador viola el contrato.",
+      });
+    }
+
+    return buildSuccessResponse(parsedResponse.data, request);
+  } catch {
+    const actor = findFallbackActorById(parsedBody.data.userId);
+    if (!actor) {
+      return errorResponse(404, {
+        code: "actor_not_found",
+        message: "No encontramos ese operador activo.",
+      });
+    }
+
+    const responseBody = {
+      actorId: actor.user.getId(),
+      displayName: actor.user.getDisplayName(),
+      roleCodes: actor.roleCodes,
+      roleNames: actor.roleNames,
+      assignedRegisterIds: actor.assignedRegisterIds,
+    };
+    const parsedResponse = assumeUserSessionResponseDTOSchema.safeParse(responseBody);
+    if (!parsedResponse.success) {
+      return errorResponse(500, {
+        code: "response_contract_error",
+        message: "La respuesta fallback de selección de operador viola el contrato.",
+      });
+    }
+
+    return buildSuccessResponse(parsedResponse.data, request);
+  }
+}
+
+export async function DELETE(request: NextRequest): Promise<Response> {
+  const response = NextResponse.json({ ok: true }, { status: 200 });
+  response.cookies.set({
+    name: getActorSessionCookieName(),
+    value: "",
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: shouldUseSecureActorSessionCookie(request),
+    maxAge: 0,
+  });
+
+  return response;
+}
