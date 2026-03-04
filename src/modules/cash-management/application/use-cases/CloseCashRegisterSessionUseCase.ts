@@ -5,6 +5,10 @@ import {
   CashRegisterSessionNotFoundError,
 } from "../../domain/errors/CashManagementDomainError";
 import type { CashRegisterSessionRepository } from "../../domain/repositories/CashRegisterSessionRepository";
+import {
+  DEFAULT_CASH_REGISTER_DISCREPANCY_TOLERANCE_AMOUNT,
+  evaluateCashRegisterCloseoutDecision,
+} from "../../domain/services/CashRegisterCloseoutPolicy";
 import { toCashRegisterSessionSummary, type CashRegisterSessionSummary } from "../mappers/toCashRegisterSessionSummary";
 
 export interface CloseCashRegisterSessionUseCaseInput {
@@ -13,6 +17,8 @@ export interface CloseCashRegisterSessionUseCaseInput {
   readonly closingNotes?: string;
   readonly actorId: string;
   readonly accessibleRegisterIds?: readonly string[];
+  readonly canApproveDiscrepancyClose: boolean;
+  readonly discrepancyToleranceAmount?: number;
 }
 
 export class CloseCashRegisterSessionUseCase {
@@ -37,12 +43,35 @@ export class CloseCashRegisterSessionUseCase {
       throw new CashRegisterAssignmentError(session.getCashRegisterId());
     }
 
-    const closedSession = session.close({
+    const closeoutDecision = evaluateCashRegisterCloseoutDecision({
+      expectedBalanceAmount: session.getExpectedBalanceAmount(),
       countedClosingAmount: input.countedClosingAmount,
-      closedAt: new Date(),
-      closedByUserId: input.actorId,
-      closingNotes: input.closingNotes,
+      discrepancyToleranceAmount:
+        input.discrepancyToleranceAmount ??
+        DEFAULT_CASH_REGISTER_DISCREPANCY_TOLERANCE_AMOUNT,
+      canOverrideDiscrepancy: input.canApproveDiscrepancyClose,
     });
+    const now = new Date();
+
+    const closedSession = closeoutDecision.requiresSupervisorReview
+      ? session.markClosingReviewRequired({
+          countedClosingAmount: input.countedClosingAmount,
+          closeoutSubmittedAt: now,
+          closeoutSubmittedByUserId: input.actorId,
+          closingNotes: input.closingNotes,
+        })
+      : session.close({
+          countedClosingAmount: input.countedClosingAmount,
+          closeoutSubmittedAt: now,
+          closeoutSubmittedByUserId: input.actorId,
+          closedAt: now,
+          closedByUserId: input.actorId,
+          closingNotes: input.closingNotes,
+          discrepancyApprovedAt: closeoutDecision.isOutsideTolerance ? now : undefined,
+          discrepancyApprovedByUserId: closeoutDecision.isOutsideTolerance
+            ? input.actorId
+            : undefined,
+        });
 
     await this.cashRegisterSessionRepository.save(closedSession);
 

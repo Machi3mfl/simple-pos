@@ -457,6 +457,10 @@ export function PosLayout({
                   permissionSnapshot?.workspaces.cashRegister
                     .canRecordManualCashMovement ?? false
                 }
+                canApproveDiscrepancyClose={
+                  permissionSnapshot?.workspaces.cashRegister
+                    .canApproveDiscrepancyClose ?? false
+                }
               />
             }
             categories={categories}

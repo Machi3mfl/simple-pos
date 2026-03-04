@@ -51,13 +51,23 @@ sequenceDiagram
     CashUC->>SessionRepo: save session(status=closed)
     CashAPI-->>UI: expected + counted + discrepancy
   else Discrepancy above tolerance
-    CashUC->>Authz: assertCanCloseWithDiscrepancy(actorId, discrepancy)
-    alt Authorized supervisor
+    CashUC->>Authz: canOverrideCloseoutDiscrepancy(actorId, discrepancy)
+    alt Authorized supervisor/manager
       CashUC->>SessionRepo: save session(status=closed)
       CashAPI-->>UI: closed with supervisor approval
     else Not authorized
       CashUC->>SessionRepo: save session(status=closing_review_required)
       CashAPI-->>UI: supervisor review required
+      UI->>CashAPI: POST /api/v1/cash-register-sessions/{id}/approve-closeout
+      CashAPI->>CashUC: approveCloseout(sessionId, actor)
+      CashUC->>SessionRepo: save session(status=closed)
+      CashAPI-->>UI: closed after higher-trust approval
+      opt Reject for recount
+        UI->>CashAPI: POST /api/v1/cash-register-sessions/{id}/reopen
+        CashAPI->>CashUC: reopenForRecount(sessionId, actor)
+        CashUC->>SessionRepo: save session(status=open)
+        CashAPI-->>UI: active session restored for recount
+      end
     end
   end
 ```

@@ -212,6 +212,66 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
+  /cash-register-sessions/{id}/approve-closeout:
+    post:
+      tags: [CashManagement]
+      operationId: approveCashRegisterSessionCloseout
+      summary: Approve a pending cash register closeout with discrepancy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveCashRegisterCloseoutRequest'
+      responses:
+        '200':
+          description: Approved and closed cash register session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegisterSession'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /cash-register-sessions/{id}/reopen:
+    post:
+      tags: [CashManagement]
+      operationId: reopenCashRegisterSessionForRecount
+      summary: Reopen a pending cash register closeout for recount
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reopened cash register session detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegisterSessionDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
   /cash-register-sessions/{id}/movements:
     post:
       tags: [CashManagement]
@@ -982,7 +1042,7 @@ components:
 
     PermissionSnapshotWorkspaceCashRegister:
       type: object
-      required: [canView, canCreateSale, canOpenSession, canCloseSession, canRecordManualCashMovement]
+      required: [canView, canCreateSale, canOpenSession, canCloseSession, canRecordManualCashMovement, canApproveDiscrepancyClose]
       properties:
         canView:
           type: boolean
@@ -993,6 +1053,8 @@ components:
         canCloseSession:
           type: boolean
         canRecordManualCashMovement:
+          type: boolean
+        canApproveDiscrepancyClose:
           type: boolean
 
     PermissionSnapshotWorkspaceSales:
@@ -1187,6 +1249,13 @@ components:
           type: string
         openedByDisplayName:
           type: string
+        closeoutSubmittedAt:
+          type: string
+          format: date-time
+        closeoutSubmittedByUserId:
+          type: string
+        closeoutSubmittedByDisplayName:
+          type: string
         closedAt:
           type: string
           format: date-time
@@ -1194,9 +1263,24 @@ components:
           type: string
         closedByDisplayName:
           type: string
+        discrepancyApprovedAt:
+          type: string
+          format: date-time
+        discrepancyApprovedByUserId:
+          type: string
+        discrepancyApprovedByDisplayName:
+          type: string
+        discrepancyApprovalNotes:
+          type: string
         openingNotes:
           type: string
         closingNotes:
+          type: string
+
+    ApproveCashRegisterCloseoutRequest:
+      type: object
+      properties:
+        approvalNotes:
           type: string
 
     CashMovement:

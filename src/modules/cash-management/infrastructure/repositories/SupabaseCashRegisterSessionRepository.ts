@@ -13,8 +13,13 @@ interface CashRegisterSessionRow {
   readonly discrepancy_amount: number | string | null;
   readonly opened_at: string;
   readonly opened_by_user_id: string;
+  readonly closeout_submitted_at: string | null;
+  readonly closeout_submitted_by_user_id: string | null;
   readonly closed_at: string | null;
   readonly closed_by_user_id: string | null;
+  readonly discrepancy_approved_at: string | null;
+  readonly discrepancy_approved_by_user_id: string | null;
+  readonly discrepancy_approval_notes: string | null;
   readonly opening_notes: string | null;
   readonly closing_notes: string | null;
 }
@@ -84,8 +89,15 @@ export class SupabaseCashRegisterSessionRepository
       discrepancy_amount: primitives.discrepancyAmount ?? null,
       opened_at: primitives.openedAt.toISOString(),
       opened_by_user_id: primitives.openedByUserId,
+      closeout_submitted_at: primitives.closeoutSubmittedAt?.toISOString() ?? null,
+      closeout_submitted_by_user_id: primitives.closeoutSubmittedByUserId ?? null,
       closed_at: primitives.closedAt?.toISOString() ?? null,
       closed_by_user_id: primitives.closedByUserId ?? null,
+      discrepancy_approved_at:
+        primitives.discrepancyApprovedAt?.toISOString() ?? null,
+      discrepancy_approved_by_user_id:
+        primitives.discrepancyApprovedByUserId ?? null,
+      discrepancy_approval_notes: primitives.discrepancyApprovalNotes ?? null,
       opening_notes: primitives.openingNotes ?? null,
       closing_notes: primitives.closingNotes ?? null,
       updated_at: new Date().toISOString(),
@@ -111,8 +123,18 @@ export class SupabaseCashRegisterSessionRepository
       discrepancyAmount: parseNumeric(row.discrepancy_amount),
       openedAt: new Date(row.opened_at),
       openedByUserId: row.opened_by_user_id,
+      closeoutSubmittedAt: row.closeout_submitted_at
+        ? new Date(row.closeout_submitted_at)
+        : undefined,
+      closeoutSubmittedByUserId: row.closeout_submitted_by_user_id ?? undefined,
       closedAt: row.closed_at ? new Date(row.closed_at) : undefined,
       closedByUserId: row.closed_by_user_id ?? undefined,
+      discrepancyApprovedAt: row.discrepancy_approved_at
+        ? new Date(row.discrepancy_approved_at)
+        : undefined,
+      discrepancyApprovedByUserId:
+        row.discrepancy_approved_by_user_id ?? undefined,
+      discrepancyApprovalNotes: row.discrepancy_approval_notes ?? undefined,
       openingNotes: row.opening_notes ?? undefined,
       closingNotes: row.closing_notes ?? undefined,
     });

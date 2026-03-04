@@ -161,9 +161,9 @@ namespace CashManagement {
     +listBySession(sessionId: string) CashMovement[]
   }
 
-  class AuthorizationService {
-    <<port-interface>>
-    +assertCanCloseWithDiscrepancy(actorId: ActorId, discrepancy: Money) void
+  class CashRegisterCloseoutPolicy {
+    <<domain-service>>
+    +evaluateCloseout(expected: Money, counted: Money, canOverride: boolean) CloseoutDecision
   }
 
   class ActorContext {
@@ -178,7 +178,7 @@ namespace CashManagement {
 CashRegisterSession --> CashRegister : belongs to
 CashRegisterSession --> CashCount : uses at close
 CashRegisterSession --> CashMovement : emits
-CashRegisterSession --> AuthorizationService : depends on
+CashRegisterSession --> CashRegisterCloseoutPolicy : closeout decision
 CashRegisterSession --> ActorContext : receives from app layer
 CashMovement --> AppUser : performed by
 UserRoleAssignment --> AppUser

@@ -102,6 +102,21 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Discrepancy Approval and Business Authorization
+
+`POS-002 Slice 5` extends closeout with a tolerance policy, review-required state, and higher-trust approval so a cashier does not silently close a drawer with a material difference.
+
+- Main contracts:
+  - `POST /api/v1/cash-register-sessions/{id}/close`
+  - `POST /api/v1/cash-register-sessions/{id}/approve-closeout`
+  - `POST /api/v1/cash-register-sessions/{id}/reopen`
+  - `GET /api/v1/me`
+- Coverage:
+  - UI: [tests/e2e/cash-register-session-ui.spec.ts](../../../tests/e2e/cash-register-session-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts), [tests/e2e/cash-register-session-api.spec.ts](../../../tests/e2e/cash-register-session-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -147,3 +162,5 @@ Since `2026-03-03`, `POS-002 Slice 2` is also part of traceability: `/sales` now
 Since `2026-03-03`, `POS-002 Slice 3` is also part of the real-backend workflow: `/cash-register` now shows the active-session ledger, `GET /api/v1/cash-registers/{id}/active-session` returns movement detail with actor attribution, and `POST /api/v1/cash-register-sessions/{id}/movements` updates the expected drawer balance for manual ingress/egress flows.
 
 Since `2026-03-03`, `POS-002 Slice 4` is also part of the real-backend workflow: `POST /api/v1/sales` now appends `cash_sale` for collected cash, `POST /api/v1/debt-payments` now appends `debt_payment_cash` for receivables payments collected into the active drawer, and both `/cash-register` and the receivables modal now surface the updated expected balance in the same operator workflow.
+
+Since `2026-03-04`, `POS-002 Slice 5` is also part of the real-backend workflow: `POST /api/v1/cash-register-sessions/{id}/close` now leaves high-discrepancy closeouts in `closing_review_required`, `POST /api/v1/cash-register-sessions/{id}/approve-closeout` finalizes them under a higher-trust actor, `POST /api/v1/cash-register-sessions/{id}/reopen` returns them to recount, and `/cash-register` exposes the corresponding supervisor review UI.

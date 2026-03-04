@@ -56,6 +56,10 @@ export function buildPermissionSnapshot(
           permissionSet,
           "cash.movement.manual.record",
         ),
+        canApproveDiscrepancyClose: hasPermission(
+          permissionSet,
+          "cash.session.close.override_discrepancy",
+        ),
       },
       sales: {
         canView: canViewSales,

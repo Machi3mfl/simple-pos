@@ -96,10 +96,15 @@ Delivered so far:
   - `/cash-register` shares the selected drawer with checkout and receivables so the operator sees the expected balance update without leaving the workflow
   - `/receivables` payment modal now shows the active drawer context and expected amount before registering the payment
   - `RecordAutomaticCashMovementUseCase` centralizes these append rules so the ledger stays application-driven instead of relying on SQL side effects
+- `Slice 5`:
+  - high-discrepancy closeouts now transition to `closing_review_required` instead of closing immediately
+  - `POST /api/v1/cash-register-sessions/{id}/approve-closeout` lets `shift_supervisor` and `business_manager` approve a pending closeout through the new `cash.session.close.override_discrepancy` permission
+  - `POST /api/v1/cash-register-sessions/{id}/reopen` returns a pending closeout to `open` so the operator can recount without opening a new drawer session
+  - the session read model now exposes who submitted the count and who approved the discrepancy, with minimal approval notes for audit context
+  - `/cash-register` now shows a review-required state and supervisor approval/reopen flow in the real UI checkpoint
 
 Still pending:
 
-- discrepancy approval workflow,
 - custom role administration for `system_admin` so role bundles can be adapted to each business without code changes,
 - full auth hardening beyond the temporary `assume-user` bridge.
 
@@ -1213,6 +1218,14 @@ Completed UI checkpoint:
 - mandatory UI checkpoint:
   - closeout review state + supervisor approval/rejection flow in UI
 
+Delivered checkpoint:
+
+- discrepancy tolerance is centralized in application policy and currently defaults to a small operational threshold until per-register configuration exists
+- closeout above tolerance now lands in `closing_review_required` with `closeoutSubmitted*` metadata instead of silently closing
+- supervisor-capable actors approve through `POST /api/v1/cash-register-sessions/{id}/approve-closeout`
+- higher-trust actors can also send the closeout back to recount through `POST /api/v1/cash-register-sessions/{id}/reopen`
+- `/cash-register` now renders the review-required state with submitted count, difference, approval CTA, and reopen-for-recount CTA
+
 ### Slice 6: Role catalog and permission composition UI
 
 Why this slice belongs here:
@@ -1260,7 +1273,7 @@ Mandatory UI checkpoint:
 - [ ] Only one open session can exist per register.
 - [ ] Cash sales and cash debt payments can be reflected in expected cash.
 - [x] Manual cash movements are immutable and attributable to an actor.
-- [ ] Closing shows expected amount, counted amount, and discrepancy.
+- [x] Closing shows expected amount, counted amount, and discrepancy.
 - [ ] The actor model works before and after full login is introduced.
 - [x] Role enforcement can be added without redesigning business tables.
 - [x] Roles are implemented as bundles of permission codes, not as hardcoded UI conditionals.
@@ -1270,6 +1283,7 @@ Mandatory UI checkpoint:
 - [x] Strategic metrics and sensitive financial fields are hidden from operational roles by default.
 - [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.
 - [x] Operational reporting can be exposed to supervisors without leaking margin, credit exposure, or stock-value data.
+- [x] High-discrepancy closeouts require higher-trust approval or a recount flow instead of silently closing.
 - [ ] `system_admin` can create and assign custom roles as bundles of existing permission codes without code changes.
 
 ---

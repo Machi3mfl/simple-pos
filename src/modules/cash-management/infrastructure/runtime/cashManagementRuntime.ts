@@ -1,10 +1,12 @@
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import { SupabaseActorAccessRepository } from "@/modules/access-control/infrastructure/repositories/SupabaseActorAccessRepository";
 
+import { ApproveCashRegisterSessionCloseoutUseCase } from "../../application/use-cases/ApproveCashRegisterSessionCloseoutUseCase";
 import { CloseCashRegisterSessionUseCase } from "../../application/use-cases/CloseCashRegisterSessionUseCase";
 import { GetActiveCashRegisterSessionUseCase } from "../../application/use-cases/GetActiveCashRegisterSessionUseCase";
 import { ListAccessibleCashRegistersUseCase } from "../../application/use-cases/ListAccessibleCashRegistersUseCase";
 import { OpenCashRegisterSessionUseCase } from "../../application/use-cases/OpenCashRegisterSessionUseCase";
+import { ReopenCashRegisterSessionForRecountUseCase } from "../../application/use-cases/ReopenCashRegisterSessionForRecountUseCase";
 import { RecordCashMovementUseCase } from "../../application/use-cases/RecordCashMovementUseCase";
 import { SupabaseCashMovementRepository } from "../repositories/SupabaseCashMovementRepository";
 import { SupabaseCashRegisterRepository } from "../repositories/SupabaseCashRegisterRepository";
@@ -15,6 +17,8 @@ export function createCashManagementRuntime(): {
   readonly getActiveCashRegisterSessionUseCase: GetActiveCashRegisterSessionUseCase;
   readonly openCashRegisterSessionUseCase: OpenCashRegisterSessionUseCase;
   readonly closeCashRegisterSessionUseCase: CloseCashRegisterSessionUseCase;
+  readonly approveCashRegisterSessionCloseoutUseCase: ApproveCashRegisterSessionCloseoutUseCase;
+  readonly reopenCashRegisterSessionForRecountUseCase: ReopenCashRegisterSessionForRecountUseCase;
   readonly recordCashMovementUseCase: RecordCashMovementUseCase;
 } {
   const client = getSupabaseServerClient();
@@ -45,6 +49,17 @@ export function createCashManagementRuntime(): {
       cashRegisterSessionRepository,
       actorAccessRepository,
     ),
+    approveCashRegisterSessionCloseoutUseCase:
+      new ApproveCashRegisterSessionCloseoutUseCase(
+        cashRegisterSessionRepository,
+        actorAccessRepository,
+      ),
+    reopenCashRegisterSessionForRecountUseCase:
+      new ReopenCashRegisterSessionForRecountUseCase(
+        cashRegisterSessionRepository,
+        cashMovementRepository,
+        actorAccessRepository,
+      ),
     recordCashMovementUseCase: new RecordCashMovementUseCase(
       cashRegisterSessionRepository,
       cashMovementRepository,

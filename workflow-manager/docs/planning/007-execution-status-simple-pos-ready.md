@@ -10,7 +10,7 @@
 **Author**: `maxi`  
 **Version**: `0.4`
 **Created At**: `2026-03-01`  
-**Last Updated**: `2026-03-03`
+**Last Updated**: `2026-03-04`
 **Source Docs**: `001`, `002`, `003`, `004`, `005`, `006`  
 
 ---
@@ -117,8 +117,11 @@ Open planning item:
     - `POST /api/v1/sales` now appends `cash_sale` into the active session when checkout collects cash, including partial cash collected during `on_account` checkout
     - `POST /api/v1/debt-payments` now appends `debt_payment_cash` into the active session when receivables payments are tied to the selected drawer
     - `/cash-register` and the receivables modal now expose the same active-drawer context so operators can confirm expected-balance changes without leaving the workflow
-    - next plan step is `Slice 5`: discrepancy approval and higher-trust business authorization
-    - next recommended insertion point is a new role-administration slice after discrepancy approval and before full auth hardening, so the permission catalog is stable before exposing custom role composition to `system_admin`
+    - `Slice 5` discrepancy approval and business authorization is also implemented
+    - closeouts above tolerance now move to `closing_review_required`, exposing who submitted the count and who approved the discrepancy
+    - `shift_supervisor` and `business_manager` now hold `cash.session.close.override_discrepancy`, while `cashier` still closes directly only within tolerance
+    - `/cash-register` now includes the supervisor review checkpoint with approve-closeout and reopen-for-recount actions
+    - next plan step is `Slice 6`: role catalog and permission composition UI for `system_admin`
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
@@ -208,6 +211,7 @@ Resolved cross-cutting planning item:
 - Cash-register session Slice 1 verification: `tests/e2e/cash-register-session-api.spec.ts` and `tests/e2e/cash-register-session-ui.spec.ts` cover register discovery, opening float capture, open-session conflict protection, active-session lookup, counted closeout, and discrepancy persistence.
 - Workspace guardrails Slice 2 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, `tests/e2e/orders-ui-sales-snapshot.spec.ts`, and `tests/e2e/reporting-ui-filters-and-metrics.spec.ts` cover summary-only `/sales`, server-redacted sale detail, hidden strategic reporting metrics, and supervisor operational reporting visibility.
 - Cash movement ledger Slice 3 verification: `tests/e2e/cash-register-session-api.spec.ts`, `tests/e2e/cash-register-session-ui.spec.ts`, and `tests/e2e/api-contract-conformance.spec.ts` cover manual movement recording, active-session ledger detail, expected-balance updates, and the new movement endpoint contract.
+- Discrepancy approval Slice 5 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/cash-register-session-api.spec.ts`, and `tests/e2e/cash-register-session-ui.spec.ts` cover the new override permission, review-required closeouts, supervisor approval, and reopen-for-recount UI flow.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

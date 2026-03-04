@@ -7,21 +7,14 @@ import {
   CashRegisterSessionNotFoundError,
 } from "@/modules/cash-management/domain/errors/CashManagementDomainError";
 import { createCashManagementRuntime } from "@/modules/cash-management/infrastructure/runtime/cashManagementRuntime";
-import { cashRegisterSessionResponseDTOSchema } from "@/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
-import { closeCashRegisterSessionDTOSchema } from "@/modules/cash-management/presentation/dtos/close-cash-register-session.dto";
+import { cashRegisterSessionDetailResponseDTOSchema } from "@/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-interface ApiErrorDetail {
-  readonly field: string;
-  readonly message: string;
-}
-
 interface ApiErrorResponse {
   readonly code: string;
   readonly message: string;
-  readonly details?: readonly ApiErrorDetail[];
 }
 
 function errorResponse(
@@ -36,54 +29,31 @@ export async function POST(
   context: { params: { id: string } },
 ): Promise<Response> {
   const actorSnapshot = await resolveActorSnapshotForRequest(request);
-  if (!actorSnapshot.permissionSnapshot.workspaces.cashRegister.canCloseSession) {
+  if (
+    !actorSnapshot.permissionSnapshot.workspaces.cashRegister
+      .canApproveDiscrepancyClose
+  ) {
     return errorResponse(403, {
       code: "forbidden",
-      message: "El operador actual no tiene permiso para cerrar caja.",
-    });
-  }
-
-  let payload: unknown;
-
-  try {
-    payload = await request.json();
-  } catch {
-    return errorResponse(400, {
-      code: "invalid_json",
-      message: "El body debe ser JSON válido.",
-    });
-  }
-
-  const parsedBody = closeCashRegisterSessionDTOSchema.safeParse(payload);
-  if (!parsedBody.success) {
-    return errorResponse(400, {
-      code: "validation_error",
-      message: "La validación de cierre de caja falló.",
-      details: parsedBody.error.issues.map((issue) => ({
-        field: issue.path.join(".") || "body",
-        message: issue.message,
-      })),
+      message:
+        "El operador actual no tiene permiso para devolver el cierre a reconteo.",
     });
   }
 
   try {
-    const { closeCashRegisterSessionUseCase } = createCashManagementRuntime();
-    const session = await closeCashRegisterSessionUseCase.execute({
+    const { reopenCashRegisterSessionForRecountUseCase } =
+      createCashManagementRuntime();
+    const session = await reopenCashRegisterSessionForRecountUseCase.execute({
       sessionId: context.params.id,
-      countedClosingAmount: parsedBody.data.countedClosingAmount,
-      closingNotes: parsedBody.data.closingNotes,
-      actorId: actorSnapshot.actor.actorId,
       accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
-      canApproveDiscrepancyClose:
-        actorSnapshot.permissionSnapshot.workspaces.cashRegister
-          .canApproveDiscrepancyClose,
     });
 
-    const parsedResponse = cashRegisterSessionResponseDTOSchema.safeParse(session);
+    const parsedResponse =
+      cashRegisterSessionDetailResponseDTOSchema.safeParse(session);
     if (!parsedResponse.success) {
       return errorResponse(500, {
         code: "response_contract_error",
-        message: "La respuesta de cierre de caja viola el contrato.",
+        message: "La respuesta de reapertura de caja viola el contrato.",
       });
     }
 
@@ -112,7 +82,7 @@ export async function POST(
 
     return errorResponse(500, {
       code: "internal_error",
-      message: "No se pudo cerrar la caja.",
+      message: "No se pudo reabrir la caja para reconteo.",
     });
   }
 }

@@ -7,10 +7,22 @@ import {
 } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
 import { listCashRegistersResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
 
+async function assumeUser(
+  request: APIRequestContext,
+  userId: string,
+): Promise<void> {
+  const response = await request.post("/api/v1/me/assume-user", {
+    data: { userId },
+  });
+  expect(response.status()).toBe(200);
+}
+
 async function closeActiveSessionIfNeeded(
   request: APIRequestContext,
   registerId: string,
 ): Promise<void> {
+  await assumeUser(request, "user_manager_maxi");
+
   const activeSessionResponse = await request.get(
     `/api/v1/cash-registers/${registerId}/active-session`,
   );
@@ -20,6 +32,19 @@ async function closeActiveSessionIfNeeded(
   );
 
   if (!activeSessionBody.session) {
+    return;
+  }
+
+  if (activeSessionBody.session.status === "closing_review_required") {
+    const approveResponse = await request.post(
+      `/api/v1/cash-register-sessions/${activeSessionBody.session.id}/approve-closeout`,
+      {
+        data: {
+          approvalNotes: "cleanup test",
+        },
+      },
+    );
+    expect(approveResponse.status()).toBe(200);
     return;
   }
 
@@ -39,6 +64,8 @@ test.describe("cash register session api", () => {
   test("opens, records manual movements, and closes a register session", async ({
     request,
   }) => {
+    await assumeUser(request, "user_manager_maxi");
+
     const registersResponse = await request.get("/api/v1/cash-registers");
     expect(registersResponse.status()).toBe(200);
     const registersBody = listCashRegistersResponseDTOSchema.parse(
@@ -119,6 +146,93 @@ test.describe("cash register session api", () => {
     expect(closedSession.status).toBe("closed");
     expect(closedSession.countedClosingAmount).toBe(14700);
     expect(closedSession.discrepancyAmount).toBe(-50);
+
+    const clearedActiveSessionResponse = await request.get(
+      `/api/v1/cash-registers/${register!.id}/active-session`,
+    );
+    expect(clearedActiveSessionResponse.status()).toBe(200);
+    const clearedActiveSessionBody = activeCashRegisterSessionResponseDTOSchema.parse(
+      await clearedActiveSessionResponse.json(),
+    );
+    expect(clearedActiveSessionBody.session).toBeNull();
+  });
+
+  test("sends closeout with high discrepancy to review and requires supervisor approval", async ({
+    request,
+  }) => {
+    await assumeUser(request, "user_cashier_putri");
+
+    const registersResponse = await request.get("/api/v1/cash-registers");
+    expect(registersResponse.status()).toBe(200);
+    const registersBody = listCashRegistersResponseDTOSchema.parse(
+      await registersResponse.json(),
+    );
+    const register = registersBody.items[0];
+    expect(register).toBeDefined();
+
+    await closeActiveSessionIfNeeded(request, register!.id);
+    await assumeUser(request, "user_cashier_putri");
+
+    const openResponse = await request.post("/api/v1/cash-register-sessions", {
+      data: {
+        cashRegisterId: register!.id,
+        openingFloatAmount: 1000,
+        openingNotes: "turno cajera",
+      },
+    });
+    expect(openResponse.status()).toBe(201);
+    const openedSession = cashRegisterSessionResponseDTOSchema.parse(
+      await openResponse.json(),
+    );
+
+    const reviewResponse = await request.post(
+      `/api/v1/cash-register-sessions/${openedSession.id}/close`,
+      {
+        data: {
+          countedClosingAmount: 700,
+          closingNotes: "faltante para revisar",
+        },
+      },
+    );
+    expect(reviewResponse.status()).toBe(200);
+    const reviewSession = cashRegisterSessionResponseDTOSchema.parse(
+      await reviewResponse.json(),
+    );
+    expect(reviewSession.status).toBe("closing_review_required");
+    expect(reviewSession.discrepancyAmount).toBe(-300);
+    expect(reviewSession.closeoutSubmittedByDisplayName).toBe("Putri");
+    expect(reviewSession.closedAt).toBeUndefined();
+
+    const cashierApproveResponse = await request.post(
+      `/api/v1/cash-register-sessions/${openedSession.id}/approve-closeout`,
+      {
+        data: {
+          approvalNotes: "intento sin permiso",
+        },
+      },
+    );
+    expect(cashierApproveResponse.status()).toBe(403);
+
+    await assumeUser(request, "user_supervisor_bruno");
+
+    const approveResponse = await request.post(
+      `/api/v1/cash-register-sessions/${openedSession.id}/approve-closeout`,
+      {
+        data: {
+          approvalNotes: "diferencia validada por supervisor",
+        },
+      },
+    );
+    expect(approveResponse.status()).toBe(200);
+    const approvedSession = cashRegisterSessionResponseDTOSchema.parse(
+      await approveResponse.json(),
+    );
+    expect(approvedSession.status).toBe("closed");
+    expect(approvedSession.closedByDisplayName).toBe("Bruno");
+    expect(approvedSession.discrepancyApprovedByDisplayName).toBe("Bruno");
+    expect(approvedSession.discrepancyApprovalNotes).toBe(
+      "diferencia validada por supervisor",
+    );
 
     const clearedActiveSessionResponse = await request.get(
       `/api/v1/cash-registers/${register!.id}/active-session`,

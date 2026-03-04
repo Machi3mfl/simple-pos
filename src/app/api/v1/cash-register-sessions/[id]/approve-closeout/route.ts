@@ -8,7 +8,7 @@ import {
 } from "@/modules/cash-management/domain/errors/CashManagementDomainError";
 import { createCashManagementRuntime } from "@/modules/cash-management/infrastructure/runtime/cashManagementRuntime";
 import { cashRegisterSessionResponseDTOSchema } from "@/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
-import { closeCashRegisterSessionDTOSchema } from "@/modules/cash-management/presentation/dtos/close-cash-register-session.dto";
+import { approveCashRegisterCloseoutDTOSchema } from "@/modules/cash-management/presentation/dtos/approve-cash-register-closeout.dto";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,10 +36,14 @@ export async function POST(
   context: { params: { id: string } },
 ): Promise<Response> {
   const actorSnapshot = await resolveActorSnapshotForRequest(request);
-  if (!actorSnapshot.permissionSnapshot.workspaces.cashRegister.canCloseSession) {
+  if (
+    !actorSnapshot.permissionSnapshot.workspaces.cashRegister
+      .canApproveDiscrepancyClose
+  ) {
     return errorResponse(403, {
       code: "forbidden",
-      message: "El operador actual no tiene permiso para cerrar caja.",
+      message:
+        "El operador actual no tiene permiso para aprobar cierres con diferencia.",
     });
   }
 
@@ -54,11 +58,11 @@ export async function POST(
     });
   }
 
-  const parsedBody = closeCashRegisterSessionDTOSchema.safeParse(payload);
+  const parsedBody = approveCashRegisterCloseoutDTOSchema.safeParse(payload);
   if (!parsedBody.success) {
     return errorResponse(400, {
       code: "validation_error",
-      message: "La validación de cierre de caja falló.",
+      message: "La validación de aprobación de cierre falló.",
       details: parsedBody.error.issues.map((issue) => ({
         field: issue.path.join(".") || "body",
         message: issue.message,
@@ -67,23 +71,20 @@ export async function POST(
   }
 
   try {
-    const { closeCashRegisterSessionUseCase } = createCashManagementRuntime();
-    const session = await closeCashRegisterSessionUseCase.execute({
+    const { approveCashRegisterSessionCloseoutUseCase } =
+      createCashManagementRuntime();
+    const session = await approveCashRegisterSessionCloseoutUseCase.execute({
       sessionId: context.params.id,
-      countedClosingAmount: parsedBody.data.countedClosingAmount,
-      closingNotes: parsedBody.data.closingNotes,
       actorId: actorSnapshot.actor.actorId,
+      approvalNotes: parsedBody.data.approvalNotes,
       accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
-      canApproveDiscrepancyClose:
-        actorSnapshot.permissionSnapshot.workspaces.cashRegister
-          .canApproveDiscrepancyClose,
     });
 
     const parsedResponse = cashRegisterSessionResponseDTOSchema.safeParse(session);
     if (!parsedResponse.success) {
       return errorResponse(500, {
         code: "response_contract_error",
-        message: "La respuesta de cierre de caja viola el contrato.",
+        message: "La respuesta de aprobación de cierre viola el contrato.",
       });
     }
 
@@ -112,7 +113,7 @@ export async function POST(
 
     return errorResponse(500, {
       code: "internal_error",
-      message: "No se pudo cerrar la caja.",
+      message: "No se pudo aprobar el cierre de caja.",
     });
   }
 }

@@ -38,6 +38,9 @@ test.describe("access control api", () => {
     expect(
       cashierMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
     ).toBe(false);
+    expect(
+      cashierMe.permissionSnapshot.workspaces.cashRegister.canApproveDiscrepancyClose,
+    ).toBe(false);
 
     const cashierProductsImportResponse = await request.post("/api/v1/products/import", {
       data: {
@@ -69,6 +72,10 @@ test.describe("access control api", () => {
     expect(
       supervisorMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
     ).toBe(true);
+    expect(
+      supervisorMe.permissionSnapshot.workspaces.cashRegister
+        .canApproveDiscrepancyClose,
+    ).toBe(true);
 
     const supervisorTopProductsResponse = await request.get("/api/v1/reports/top-products");
     expect(supervisorTopProductsResponse.status()).toBe(200);
@@ -91,6 +98,10 @@ test.describe("access control api", () => {
     expect(catalogManagerMe.actor.roleCodes).toContain("catalog_manager");
     expect(catalogManagerMe.permissionSnapshot.workspaces.products.canView).toBe(true);
     expect(catalogManagerMe.permissionSnapshot.workspaces.cashRegister.canView).toBe(false);
+    expect(
+      catalogManagerMe.permissionSnapshot.workspaces.cashRegister
+        .canApproveDiscrepancyClose,
+    ).toBe(false);
 
     const catalogManagerReceivablesResponse = await request.get("/api/v1/receivables");
     expect(catalogManagerReceivablesResponse.status()).toBe(403);

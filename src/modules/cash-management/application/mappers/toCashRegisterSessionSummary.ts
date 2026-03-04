@@ -14,9 +14,16 @@ export interface CashRegisterSessionSummary {
   readonly openedAt: string;
   readonly openedByUserId: string;
   readonly openedByDisplayName: string;
+  readonly closeoutSubmittedAt?: string;
+  readonly closeoutSubmittedByUserId?: string;
+  readonly closeoutSubmittedByDisplayName?: string;
   readonly closedAt?: string;
   readonly closedByUserId?: string;
   readonly closedByDisplayName?: string;
+  readonly discrepancyApprovedAt?: string;
+  readonly discrepancyApprovedByUserId?: string;
+  readonly discrepancyApprovedByDisplayName?: string;
+  readonly discrepancyApprovalNotes?: string;
   readonly openingNotes?: string;
   readonly closingNotes?: string;
 }
@@ -29,9 +36,19 @@ export async function toCashRegisterSessionSummary(
   const openedByDisplayName =
     (await resolveActorDisplayName(actorAccessRepository, primitives.openedByUserId)) ??
     primitives.openedByUserId;
+  const closeoutSubmittedByDisplayName =
+    (await resolveActorDisplayName(
+      actorAccessRepository,
+      primitives.closeoutSubmittedByUserId,
+    )) ?? primitives.closeoutSubmittedByUserId;
   const closedByDisplayName =
     (await resolveActorDisplayName(actorAccessRepository, primitives.closedByUserId)) ??
     primitives.closedByUserId;
+  const discrepancyApprovedByDisplayName =
+    (await resolveActorDisplayName(
+      actorAccessRepository,
+      primitives.discrepancyApprovedByUserId,
+    )) ?? primitives.discrepancyApprovedByUserId;
 
   return {
     id: primitives.id,
@@ -44,9 +61,16 @@ export async function toCashRegisterSessionSummary(
     openedAt: primitives.openedAt.toISOString(),
     openedByUserId: primitives.openedByUserId,
     openedByDisplayName,
+    closeoutSubmittedAt: primitives.closeoutSubmittedAt?.toISOString(),
+    closeoutSubmittedByUserId: primitives.closeoutSubmittedByUserId,
+    closeoutSubmittedByDisplayName,
     closedAt: primitives.closedAt?.toISOString(),
     closedByUserId: primitives.closedByUserId,
     closedByDisplayName,
+    discrepancyApprovedAt: primitives.discrepancyApprovedAt?.toISOString(),
+    discrepancyApprovedByUserId: primitives.discrepancyApprovedByUserId,
+    discrepancyApprovedByDisplayName,
+    discrepancyApprovalNotes: primitives.discrepancyApprovalNotes,
     openingNotes: primitives.openingNotes,
     closingNotes: primitives.closingNotes,
   };

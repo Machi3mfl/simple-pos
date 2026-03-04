@@ -21,6 +21,7 @@ export const workspaceAccessDTOSchema = z
         canOpenSession: z.boolean(),
         canCloseSession: z.boolean(),
         canRecordManualCashMovement: z.boolean(),
+        canApproveDiscrepancyClose: z.boolean(),
       })
       .strict(),
     sales: z

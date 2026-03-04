@@ -17,6 +17,7 @@ export interface WorkspaceAccessSnapshot {
     readonly canOpenSession: boolean;
     readonly canCloseSession: boolean;
     readonly canRecordManualCashMovement: boolean;
+    readonly canApproveDiscrepancyClose: boolean;
   };
   readonly sales: {
     readonly canView: boolean;

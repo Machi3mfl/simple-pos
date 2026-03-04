@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { Input } from "@/components/ui/input";
-import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
+import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import type {
@@ -42,6 +42,7 @@ interface CashRegisterSessionPanelProps {
   readonly canOpenSession: boolean;
   readonly canCloseSession: boolean;
   readonly canRecordManualCashMovement: boolean;
+  readonly canApproveDiscrepancyClose: boolean;
 }
 
 interface ApiErrorResponse {
@@ -97,6 +98,7 @@ export function CashRegisterSessionPanel({
   canOpenSession,
   canCloseSession,
   canRecordManualCashMovement,
+  canApproveDiscrepancyClose,
 }: CashRegisterSessionPanelProps): JSX.Element {
   const { messages } = useI18n();
   const cashSessionMessages = messages.sales.cashSession;
@@ -117,8 +119,12 @@ export function CashRegisterSessionPanel({
   const [isOpening, setIsOpening] = useState<boolean>(false);
   const [isClosing, setIsClosing] = useState<boolean>(false);
   const [isRecordingMovement, setIsRecordingMovement] = useState<boolean>(false);
+  const [isApprovingCloseout, setIsApprovingCloseout] = useState<boolean>(false);
+  const [isReopeningForRecount, setIsReopeningForRecount] = useState<boolean>(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState<boolean>(false);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState<boolean>(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
+  const [approvalNotes, setApprovalNotes] = useState<string>("");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadRegisters = useCallback(async (): Promise<void> => {
@@ -191,6 +197,8 @@ export function CashRegisterSessionPanel({
     return Number((countedClosingValue - activeSession.expectedBalanceAmount).toFixed(2));
   }, [activeSession, countedClosingValue]);
   const movementItems = activeSessionDetail?.movements ?? [];
+  const isReviewRequiredSession = activeSession?.status === "closing_review_required";
+  const isOpenSession = activeSession?.status === "open";
 
   const loadActiveSession = useCallback(
     async (registerId: string): Promise<void> => {
@@ -334,10 +342,16 @@ export function CashRegisterSessionPanel({
       setCountedClosingAmount("");
       setClosingNotes("");
       setIsCloseModalOpen(false);
-      setActiveSessionDetail(null);
-      showSuccessToast({
-        description: cashSessionMessages.closeSuccess(selectedRegister.name),
-      });
+      if (parsed.data.status === "closing_review_required") {
+        showInfoToast({
+          description: cashSessionMessages.closeReviewRequired(selectedRegister.name),
+        });
+      } else {
+        setActiveSessionDetail(null);
+        showSuccessToast({
+          description: cashSessionMessages.closeSuccess(selectedRegister.name),
+        });
+      }
       await loadRegisters();
       await loadActiveSession(selectedRegister.id);
     } finally {
@@ -349,6 +363,115 @@ export function CashRegisterSessionPanel({
     closingNotes,
     countedClosingValue,
     loadActiveSession,
+    loadRegisters,
+    selectedRegister,
+  ]);
+
+  const handleApproveCloseout = useCallback(async (): Promise<void> => {
+    if (!activeSession || !selectedRegister || !isReviewRequiredSession) {
+      showErrorToast({ description: cashSessionMessages.approveErrorFallback });
+      return;
+    }
+
+    setIsApprovingCloseout(true);
+    try {
+      const response = await fetch(
+        `/api/v1/cash-register-sessions/${activeSession.id}/approve-closeout`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            approvalNotes: approvalNotes.trim() || undefined,
+          }),
+        },
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        showErrorToast({
+          description: resolveApiErrorMessage(
+            payload,
+            cashSessionMessages.approveErrorFallback,
+          ),
+        });
+        return;
+      }
+
+      const parsed = cashRegisterSessionResponseDTOSchema.safeParse(payload);
+      if (!parsed.success) {
+        showErrorToast({ description: cashSessionMessages.approveErrorFallback });
+        return;
+      }
+
+      setApprovalNotes("");
+      setIsReviewModalOpen(false);
+      setActiveSessionDetail(null);
+      showSuccessToast({
+        description: cashSessionMessages.closeApprovalSuccess(selectedRegister.name),
+      });
+      await loadRegisters();
+      await loadActiveSession(selectedRegister.id);
+    } finally {
+      setIsApprovingCloseout(false);
+    }
+  }, [
+    activeSession,
+    approvalNotes,
+    cashSessionMessages,
+    isReviewRequiredSession,
+    loadActiveSession,
+    loadRegisters,
+    selectedRegister,
+  ]);
+
+  const handleReopenForRecount = useCallback(async (): Promise<void> => {
+    if (!activeSession || !selectedRegister || !isReviewRequiredSession) {
+      showErrorToast({ description: cashSessionMessages.reopenErrorFallback });
+      return;
+    }
+
+    setIsReopeningForRecount(true);
+    try {
+      const response = await fetch(
+        `/api/v1/cash-register-sessions/${activeSession.id}/reopen`,
+        {
+          method: "POST",
+        },
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        showErrorToast({
+          description: resolveApiErrorMessage(
+            payload,
+            cashSessionMessages.reopenErrorFallback,
+          ),
+        });
+        return;
+      }
+
+      const parsed = cashRegisterSessionDetailResponseDTOSchema.safeParse(payload);
+      if (!parsed.success) {
+        showErrorToast({ description: cashSessionMessages.reopenErrorFallback });
+        return;
+      }
+
+      setApprovalNotes("");
+      setIsReviewModalOpen(false);
+      setActiveSessionDetail(parsed.data);
+      showSuccessToast({
+        description: cashSessionMessages.closeReopenedSuccess(selectedRegister.name),
+      });
+      await loadRegisters();
+    } finally {
+      setIsReopeningForRecount(false);
+    }
+  }, [
+    activeSession,
+    cashSessionMessages,
+    isReviewRequiredSession,
     loadRegisters,
     selectedRegister,
   ]);
@@ -435,12 +558,16 @@ export function CashRegisterSessionPanel({
           </p>
           <h2 className="mt-2 text-[1.6rem] font-semibold tracking-tight text-slate-900">
             {activeSession
-              ? cashSessionMessages.activeSessionTitle
+              ? isReviewRequiredSession
+                ? cashSessionMessages.reviewRequiredTitle
+                : cashSessionMessages.activeSessionTitle
               : cashSessionMessages.noSessionTitle}
           </h2>
           <p className="mt-1 max-w-[48rem] text-sm text-slate-500">
             {activeSession
-              ? cashSessionMessages.activeSessionDescription
+              ? isReviewRequiredSession
+                ? cashSessionMessages.reviewRequiredDescription
+                : cashSessionMessages.activeSessionDescription
               : cashSessionMessages.noSessionDescription}
           </p>
         </div>
@@ -512,37 +639,129 @@ export function CashRegisterSessionPanel({
                   </div>
                 </div>
 
-                {activeSession.openingNotes ? (
+                {isReviewRequiredSession ? (
+                  <div
+                    data-testid="cash-session-review-required-banner"
+                    className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-4"
+                  >
+                    <p className="text-sm font-semibold text-amber-900">
+                      {cashSessionMessages.closeoutPendingHint}
+                    </p>
+                    <div className="mt-3 grid gap-2 text-sm text-amber-900 sm:grid-cols-2">
+                      <p>
+                        <span className="font-semibold">
+                          {cashSessionMessages.closeoutSubmittedByLabel}:
+                        </span>{" "}
+                        {activeSession.closeoutSubmittedByDisplayName ??
+                          activeSession.closeoutSubmittedByUserId ??
+                          activeSession.openedByDisplayName}
+                      </p>
+                      {activeSession.closeoutSubmittedAt ? (
+                        <p>
+                          <span className="font-semibold">
+                            {cashSessionMessages.closeoutSubmittedAtLabel}:
+                          </span>{" "}
+                          {formatDateTime(activeSession.closeoutSubmittedAt)}
+                        </p>
+                      ) : null}
+                    </div>
+                    {activeSession.closingNotes ? (
+                      <p className="mt-3 text-sm text-amber-900">
+                        {activeSession.closingNotes}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : activeSession.openingNotes ? (
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                     {activeSession.openingNotes}
                   </div>
                 ) : null}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
-                <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {cashSessionMessages.openingFloatLabel}
-                  </p>
-                  <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-slate-900">
-                    {currency(activeSession.openingFloatAmount)}
-                  </p>
+              {isReviewRequiredSession ? (
+                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      {cashSessionMessages.expectedBalanceLabel}
+                    </p>
+                    <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-slate-900">
+                      {currency(activeSession.expectedBalanceAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-sky-200 bg-sky-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+                      {cashSessionMessages.closingCountedLabel}
+                    </p>
+                    <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-sky-700">
+                      {currency(activeSession.countedClosingAmount ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                      {cashSessionMessages.discrepancyLabel}
+                    </p>
+                    <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-amber-700">
+                      {currency(activeSession.discrepancyAmount ?? 0)}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                    {cashSessionMessages.expectedBalanceLabel}
-                  </p>
-                  <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-emerald-700">
-                    {currency(activeSession.expectedBalanceAmount)}
-                  </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      {cashSessionMessages.openingFloatLabel}
+                    </p>
+                    <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-slate-900">
+                      {currency(activeSession.openingFloatAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      {cashSessionMessages.expectedBalanceLabel}
+                    </p>
+                    <p className="mt-2 text-[1.75rem] font-bold tracking-tight text-emerald-700">
+                      {currency(activeSession.expectedBalanceAmount)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {!canCloseSession ? (
               <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600">
                 {cashSessionMessages.readOnlyHint}
               </div>
+            ) : isReviewRequiredSession ? (
+              canApproveDiscrepancyClose ? (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    data-testid="cash-session-review-approve-button"
+                    onClick={() => {
+                      setApprovalNotes("");
+                      setIsReviewModalOpen(true);
+                    }}
+                    className="min-h-[52px] rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_16px_26px_rgba(28,109,234,0.28)]"
+                  >
+                    {cashSessionMessages.approveCloseoutAction}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="cash-session-review-reopen-button"
+                    disabled={isReopeningForRecount}
+                    onClick={() => {
+                      void handleReopenForRecount();
+                    }}
+                    className="min-h-[52px] rounded-2xl border border-slate-200 bg-white px-5 text-[0.98rem] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cashSessionMessages.reopenForRecountAction}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                  {cashSessionMessages.closeoutPendingReadOnlyHint}
+                </div>
+              )
             ) : (
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 {canRecordManualCashMovement ? (
@@ -932,6 +1151,140 @@ export function CashRegisterSessionPanel({
                     className="min-h-[52px] rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_16px_26px_rgba(28,109,234,0.28)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
                   >
                     {isClosing ? messages.common.states.saving : cashSessionMessages.closeAction}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isReviewModalOpen && activeSession && isReviewRequiredSession ? (
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4"
+          onClick={() => setIsReviewModalOpen(false)}
+        >
+          <div className="relative flex min-h-full items-center justify-center">
+            <FloatingModalCloseButton
+              ariaLabel={messages.common.actions.close}
+              onClick={() => setIsReviewModalOpen(false)}
+            />
+
+            <div
+              role="dialog"
+              aria-modal="true"
+              data-testid="cash-session-review-modal"
+              className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[34rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-[#fbfbfc] shadow-[0_32px_80px_rgba(15,23,42,0.24)] md:max-h-[calc(100dvh-2rem)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="border-b border-slate-200/80 px-5 py-4 lg:px-6 lg:py-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  {cashSessionMessages.title}
+                </p>
+                <h3 className="mt-1 text-[1.7rem] font-semibold tracking-tight text-slate-900">
+                  {cashSessionMessages.reviewModalTitle}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {cashSessionMessages.reviewModalDescription}
+                </p>
+              </div>
+
+              <div className="min-h-0 overflow-y-auto px-5 py-4 lg:px-6 lg:py-5">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      {cashSessionMessages.expectedBalanceLabel}
+                    </p>
+                    <p className="mt-2 text-[1.65rem] font-bold tracking-tight text-slate-900">
+                      {currency(activeSession.expectedBalanceAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-sky-200 bg-sky-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+                      {cashSessionMessages.closingCountedLabel}
+                    </p>
+                    <p className="mt-2 text-[1.65rem] font-bold tracking-tight text-sky-700">
+                      {currency(activeSession.countedClosingAmount ?? 0)}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
+                      {cashSessionMessages.discrepancyLabel}
+                    </p>
+                    <p className="mt-2 text-[1.65rem] font-bold tracking-tight text-amber-700">
+                      {currency(activeSession.discrepancyAmount ?? 0)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
+                  <p>
+                    <span className="font-semibold text-slate-900">
+                      {cashSessionMessages.closeoutSubmittedByLabel}:
+                    </span>{" "}
+                    {activeSession.closeoutSubmittedByDisplayName ??
+                      activeSession.closeoutSubmittedByUserId ??
+                      activeSession.openedByDisplayName}
+                  </p>
+                  {activeSession.closeoutSubmittedAt ? (
+                    <p className="mt-2">
+                      <span className="font-semibold text-slate-900">
+                        {cashSessionMessages.closeoutSubmittedAtLabel}:
+                      </span>{" "}
+                      {formatDateTime(activeSession.closeoutSubmittedAt)}
+                    </p>
+                  ) : null}
+                  {activeSession.closingNotes ? (
+                    <p className="mt-3 text-slate-700">{activeSession.closingNotes}</p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {cashSessionMessages.approvalNotesLabel}
+                  </label>
+                  <Input
+                    data-testid="cash-session-approval-notes-input"
+                    value={approvalNotes}
+                    onChange={(event) => setApprovalNotes(event.target.value)}
+                    placeholder={cashSessionMessages.approvalNotePlaceholder}
+                    className="mt-2 min-h-[52px] rounded-2xl border-slate-200 bg-white text-[1rem]"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/80 px-5 py-4 lg:px-6 lg:py-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewModalOpen(false)}
+                    className="min-h-[52px] rounded-2xl border border-slate-200 bg-white px-5 text-[0.98rem] font-semibold text-slate-700"
+                  >
+                    {messages.common.actions.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="cash-session-review-modal-reopen-button"
+                    disabled={isReopeningForRecount}
+                    onClick={() => {
+                      void handleReopenForRecount();
+                    }}
+                    className="min-h-[52px] rounded-2xl border border-slate-200 bg-white px-5 text-[0.98rem] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cashSessionMessages.reopenForRecountAction}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="cash-session-review-modal-approve-button"
+                    disabled={isApprovingCloseout}
+                    onClick={() => {
+                      void handleApproveCloseout();
+                    }}
+                    className="min-h-[52px] rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_16px_26px_rgba(28,109,234,0.28)] disabled:cursor-not-allowed disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none"
+                  >
+                    {isApprovingCloseout
+                      ? messages.common.states.saving
+                      : cashSessionMessages.approveCloseoutAction}
                   </button>
                 </div>
               </div>

@@ -214,17 +214,28 @@ const spanishMessages = {
       activeSessionTitle: "Caja abierta",
       activeSessionDescription:
         "La apertura y el cierre ya quedan atribuidos al operador con saldo esperado visible.",
+      reviewRequiredTitle: "Cierre pendiente de revisión",
+      reviewRequiredDescription:
+        "La diferencia supera la tolerancia operativa y necesita aprobación de un rol de mayor confianza.",
       openingFloatLabel: "Cambio inicial",
       openingNotesLabel: "Notas de apertura",
       closingCountedLabel: "Total contado",
       closingNotesLabel: "Notas de cierre",
+      approvalNotesLabel: "Nota de aprobación",
       expectedBalanceLabel: "Esperado",
       discrepancyLabel: "Diferencia",
       openedByLabel: "Abierta por",
       openedAtLabel: "Abierta",
+      closeoutSubmittedByLabel: "Conteo cargado por",
+      closeoutSubmittedAtLabel: "Solicitado",
+      reviewedByLabel: "Aprobado por",
+      reviewedAtLabel: "Aprobado",
       closeModalTitle: "Cerrar caja",
       closeModalDescription:
         "Ingresá el efectivo contado para comparar contra el saldo esperado.",
+      reviewModalTitle: "Revisar cierre con diferencia",
+      reviewModalDescription:
+        "Validá el conteo cargado y decidí si corresponde aprobar el cierre o devolverlo a reconteo.",
       movementsTitle: "Movimientos del turno",
       movementsDescription:
         "Cada movimiento ajusta el saldo esperado y deja trazabilidad del operador.",
@@ -241,6 +252,10 @@ const spanishMessages = {
       movementSaveAction: "Guardar movimiento",
       movementReadOnlyHint:
         "Tu perfil puede ver la sesión, pero no registrar movimientos manuales.",
+      closeoutPendingHint:
+        "El conteo quedó pendiente de revisión. No se pueden registrar más movimientos hasta resolver el cierre.",
+      closeoutPendingReadOnlyHint:
+        "El cierre quedó pendiente de revisión y tu perfil no puede aprobar diferencias.",
       movementErrorFallback: "No se pudo registrar el movimiento de caja.",
       movementSuccess: "Movimiento de caja registrado correctamente.",
       movementTypeLabels: {
@@ -259,15 +274,26 @@ const spanishMessages = {
       },
       openAction: "Abrir caja",
       closeAction: "Cerrar caja",
+      approveCloseoutAction: "Aprobar cierre",
+      reopenForRecountAction: "Volver a conteo",
       openingNotePlaceholder: "Ej. turno mañana",
       closingNotePlaceholder: "Ej. cierre sin novedades",
+      approvalNotePlaceholder: "Ej. diferencia validada por supervisor",
       openSuccess: (registerName: string): string =>
         `Caja ${registerName} abierta correctamente.`,
       closeSuccess: (registerName: string): string =>
         `Caja ${registerName} cerrada correctamente.`,
+      closeReviewRequired: (registerName: string): string =>
+        `El cierre de ${registerName} quedó pendiente de aprobación por diferencia.`,
+      closeApprovalSuccess: (registerName: string): string =>
+        `El cierre de ${registerName} fue aprobado correctamente.`,
+      closeReopenedSuccess: (registerName: string): string =>
+        `La caja ${registerName} volvió a estado abierto para reconteo.`,
       loadError: "No se pudo cargar el estado de caja.",
       openErrorFallback: "No se pudo abrir la caja.",
       closeErrorFallback: "No se pudo cerrar la caja.",
+      approveErrorFallback: "No se pudo aprobar el cierre de caja.",
+      reopenErrorFallback: "No se pudo devolver el cierre a reconteo.",
       readOnlyHint:
         "Tu perfil puede ver el estado de la caja, pero no abrir ni cerrar sesiones.",
     },
