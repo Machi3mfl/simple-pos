@@ -5,6 +5,7 @@ import {
   CloudOff,
   PackagePlus,
   ReceiptText,
+  ShieldUser,
   ShoppingCart,
   Wallet,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
 import { WorkspaceBlockedState } from "@/modules/access-control/presentation/components/WorkspaceBlockedState";
+import { UsersAdminPanel } from "@/modules/access-control/presentation/components/UsersAdminPanel";
 import { canAccessWorkspace } from "@/modules/access-control/presentation/workspaceAccess";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
@@ -156,6 +158,7 @@ export function PosLayout({
       { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
+      { id: "users-admin", label: messages.shell.nav.usersAdmin, icon: ShieldUser },
       { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
     ].filter((item) =>
       isPosWorkspaceId(item.id)
@@ -400,6 +403,20 @@ export function PosLayout({
             }
           />
         </section>
+      );
+    }
+
+    if (currentWorkspace === "users-admin") {
+      return (
+        <UsersAdminPanel
+          canManageRoles={
+            permissionSnapshot?.workspaces.usersAdmin.canManageRoles ?? false
+          }
+          canManageUsers={
+            (permissionSnapshot?.workspaces.usersAdmin.canAssignRoles ?? false) ||
+            (permissionSnapshot?.workspaces.usersAdmin.canManageUsers ?? false)
+          }
+        />
       );
     }
 

@@ -5,6 +5,7 @@ import {
   CloudOff,
   PackagePlus,
   ReceiptText,
+  ShieldUser,
   ShoppingCart,
   Wallet,
 } from "lucide-react";
@@ -42,6 +43,7 @@ export function PosWorkspaceShell({
       { id: "products", label: messages.shell.nav.products, icon: PackagePlus },
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
+      { id: "users-admin", label: messages.shell.nav.usersAdmin, icon: ShieldUser },
       { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
     ].filter((item) =>
       isPosWorkspaceId(item.id)

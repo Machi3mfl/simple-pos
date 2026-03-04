@@ -67,6 +67,7 @@ export const workspaceAccessDTOSchema = z
         canView: z.boolean(),
         canAssignRoles: z.boolean(),
         canManageUsers: z.boolean(),
+        canManageRoles: z.boolean(),
       })
       .strict(),
   })

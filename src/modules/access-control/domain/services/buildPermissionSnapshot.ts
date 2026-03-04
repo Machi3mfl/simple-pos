@@ -30,7 +30,8 @@ export function buildPermissionSnapshot(
   const canViewSync = hasPermission(permissionSet, "sync.view");
   const canViewUsersAdmin =
     hasPermission(permissionSet, "users.manage") ||
-    hasPermission(permissionSet, "roles.assign");
+    hasPermission(permissionSet, "roles.assign") ||
+    hasPermission(permissionSet, "roles.manage");
   const canViewInventoryCost = hasPermission(permissionSet, "inventory.cost.view");
   const canViewProfitMetrics = hasPermission(permissionSet, "reporting.margin.view");
   const canViewAuditMetadata = hasPermission(permissionSet, "audit.view");
@@ -114,6 +115,7 @@ export function buildPermissionSnapshot(
         canView: canViewUsersAdmin,
         canAssignRoles: hasPermission(permissionSet, "roles.assign"),
         canManageUsers: hasPermission(permissionSet, "users.manage"),
+        canManageRoles: hasPermission(permissionSet, "roles.manage"),
       },
     },
     dataVisibility: {

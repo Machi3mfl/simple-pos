@@ -51,6 +51,7 @@ export interface WorkspaceAccessSnapshot {
     readonly canView: boolean;
     readonly canAssignRoles: boolean;
     readonly canManageUsers: boolean;
+    readonly canManageRoles: boolean;
   };
 }
 

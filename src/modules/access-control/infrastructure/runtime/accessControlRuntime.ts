@@ -1,16 +1,31 @@
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 
+import { CreateCustomRoleUseCase } from "../../application/use-cases/CreateCustomRoleUseCase";
+import { DeleteCustomRoleUseCase } from "../../application/use-cases/DeleteCustomRoleUseCase";
 import { AssumeSelectableActorUseCase } from "../../application/use-cases/AssumeSelectableActorUseCase";
 import { GetCurrentActorSnapshotUseCase } from "../../application/use-cases/GetCurrentActorSnapshotUseCase";
+import { GetAccessControlWorkspaceSnapshotUseCase } from "../../application/use-cases/GetAccessControlWorkspaceSnapshotUseCase";
 import { ListSelectableActorsUseCase } from "../../application/use-cases/ListSelectableActorsUseCase";
+import { ReplaceUserRolesUseCase } from "../../application/use-cases/ReplaceUserRolesUseCase";
+import { UpdateCustomRoleUseCase } from "../../application/use-cases/UpdateCustomRoleUseCase";
 import { SupabaseActorAccessRepository } from "../repositories/SupabaseActorAccessRepository";
+import { SupabaseRoleAdministrationRepository } from "../repositories/SupabaseRoleAdministrationRepository";
 
 export function createAccessControlRuntime(): {
   readonly getCurrentActorSnapshotUseCase: GetCurrentActorSnapshotUseCase;
   readonly listSelectableActorsUseCase: ListSelectableActorsUseCase;
   readonly assumeSelectableActorUseCase: AssumeSelectableActorUseCase;
+  readonly getAccessControlWorkspaceSnapshotUseCase: GetAccessControlWorkspaceSnapshotUseCase;
+  readonly createCustomRoleUseCase: CreateCustomRoleUseCase;
+  readonly updateCustomRoleUseCase: UpdateCustomRoleUseCase;
+  readonly deleteCustomRoleUseCase: DeleteCustomRoleUseCase;
+  readonly replaceUserRolesUseCase: ReplaceUserRolesUseCase;
 } {
-  const actorAccessRepository = new SupabaseActorAccessRepository(getSupabaseServerClient());
+  const supabaseClient = getSupabaseServerClient();
+  const actorAccessRepository = new SupabaseActorAccessRepository(supabaseClient);
+  const roleAdministrationRepository = new SupabaseRoleAdministrationRepository(
+    supabaseClient,
+  );
 
   return {
     getCurrentActorSnapshotUseCase: new GetCurrentActorSnapshotUseCase(
@@ -18,5 +33,19 @@ export function createAccessControlRuntime(): {
     ),
     listSelectableActorsUseCase: new ListSelectableActorsUseCase(actorAccessRepository),
     assumeSelectableActorUseCase: new AssumeSelectableActorUseCase(actorAccessRepository),
+    getAccessControlWorkspaceSnapshotUseCase:
+      new GetAccessControlWorkspaceSnapshotUseCase(roleAdministrationRepository),
+    createCustomRoleUseCase: new CreateCustomRoleUseCase(
+      roleAdministrationRepository,
+    ),
+    updateCustomRoleUseCase: new UpdateCustomRoleUseCase(
+      roleAdministrationRepository,
+    ),
+    deleteCustomRoleUseCase: new DeleteCustomRoleUseCase(
+      roleAdministrationRepository,
+    ),
+    replaceUserRolesUseCase: new ReplaceUserRolesUseCase(
+      roleAdministrationRepository,
+    ),
   };
 }

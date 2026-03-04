@@ -108,6 +108,137 @@ paths:
                   ok:
                     type: boolean
 
+  /access-control/workspace:
+    get:
+      tags: [AccessControl]
+      operationId: getAccessControlWorkspace
+      summary: Get the role catalog, permission catalog, and user assignments for access administration
+      responses:
+        '200':
+          description: Access-control workspace snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessControlWorkspaceResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /access-control/roles:
+    post:
+      tags: [AccessControl]
+      operationId: createCustomRole
+      summary: Create a custom role by bundling existing permission codes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertRoleRequest'
+      responses:
+        '201':
+          description: Custom role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessControlRole'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /access-control/roles/{id}:
+    put:
+      tags: [AccessControl]
+      operationId: updateCustomRole
+      summary: Update a mutable custom role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertRoleRequest'
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessControlRole'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags: [AccessControl]
+      operationId: deleteCustomRole
+      summary: Delete a mutable custom role with no remaining assignments
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /access-control/users/{id}/roles:
+    put:
+      tags: [AccessControl]
+      operationId: replaceUserRoleAssignments
+      summary: Replace the role assignments for one application user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceUserRolesRequest'
+      responses:
+        '200':
+          description: User role assignments replaced
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
   /cash-registers:
     get:
       tags: [CashManagement]
@@ -1120,13 +1251,15 @@ components:
 
     PermissionSnapshotWorkspaceUsersAdmin:
       type: object
-      required: [canView, canAssignRoles, canManageUsers]
+      required: [canView, canAssignRoles, canManageUsers, canManageRoles]
       properties:
         canView:
           type: boolean
         canAssignRoles:
           type: boolean
         canManageUsers:
+          type: boolean
+        canManageRoles:
           type: boolean
 
     PermissionSnapshotWorkspaces:
@@ -1212,6 +1345,169 @@ components:
           $ref: '#/components/schemas/MeResponseActor'
         permissionSnapshot:
           $ref: '#/components/schemas/PermissionSnapshot'
+
+    AccessControlPermission:
+      type: object
+      required: [id, code, name, groupCode, groupLabel, groupDescription]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        groupCode:
+          type: string
+        groupLabel:
+          type: string
+        groupDescription:
+          type: string
+
+    AccessControlPermissionGroup:
+      type: object
+      required: [code, label, description, permissionCodes]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        permissionCodes:
+          type: array
+          items:
+            type: string
+
+    AccessControlRole:
+      type: object
+      required:
+        [
+          id,
+          code,
+          name,
+          isSystem,
+          isLocked,
+          permissionCodes,
+          assignedUserCount,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        isSystem:
+          type: boolean
+        isLocked:
+          type: boolean
+        clonedFromRoleId:
+          type: string
+        permissionCodes:
+          type: array
+          items:
+            type: string
+        assignedUserCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        createdByUserId:
+          type: string
+        createdByDisplayName:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        updatedByUserId:
+          type: string
+        updatedByDisplayName:
+          type: string
+
+    AccessControlUser:
+      type: object
+      required:
+        [userId, displayName, actorKind, isActive, roleIds, roleCodes, roleNames, assignedRegisterIds]
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: string
+        actorKind:
+          type: string
+          enum: [human, system]
+        isActive:
+          type: boolean
+        roleIds:
+          type: array
+          items:
+            type: string
+        roleCodes:
+          type: array
+          items:
+            type: string
+        roleNames:
+          type: array
+          items:
+            type: string
+        assignedRegisterIds:
+          type: array
+          items:
+            type: string
+
+    AccessControlWorkspaceResponse:
+      type: object
+      required: [roles, users, permissions, permissionGroups]
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessControlRole'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessControlUser'
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessControlPermission'
+        permissionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccessControlPermissionGroup'
+
+    UpsertRoleRequest:
+      type: object
+      required: [name, permissionCodes]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 240
+        permissionCodes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        clonedFromRoleId:
+          type: string
+
+    ReplaceUserRolesRequest:
+      type: object
+      required: [roleIds]
+      properties:
+        roleIds:
+          type: array
+          items:
+            type: string
 
     CashRegisterSession:
       type: object

@@ -22,6 +22,8 @@ export function canAccessWorkspace(
       return permissionSnapshot.workspaces.reporting.canView;
     case "sync":
       return permissionSnapshot.workspaces.sync.canView;
+    case "users-admin":
+      return permissionSnapshot.workspaces.usersAdmin.canView;
     default:
       return false;
   }

@@ -4,6 +4,7 @@ export type PosWorkspaceId =
   | "products"
   | "receivables"
   | "reporting"
+  | "users-admin"
   | "sync";
 
 export const posWorkspaceIds: readonly PosWorkspaceId[] = [
@@ -12,6 +13,7 @@ export const posWorkspaceIds: readonly PosWorkspaceId[] = [
   "products",
   "receivables",
   "reporting",
+  "users-admin",
   "sync",
 ];
 
@@ -21,6 +23,7 @@ export const workspacePathById: Record<PosWorkspaceId, string> = {
   products: "/products",
   receivables: "/receivables",
   reporting: "/reporting",
+  "users-admin": "/users-admin",
   sync: "/sync",
 };
 

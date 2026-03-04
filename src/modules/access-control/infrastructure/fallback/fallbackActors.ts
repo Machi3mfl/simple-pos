@@ -140,6 +140,7 @@ export const fallbackActorAccessRecords: readonly ActorAccessRecord[] = [
     permissionCodes: [
       "users.manage",
       "roles.assign",
+      "roles.manage",
       "audit.view",
       "system.support.override",
       "sync.view",

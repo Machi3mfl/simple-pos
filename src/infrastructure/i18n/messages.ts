@@ -15,6 +15,7 @@ const spanishMessages = {
       inventory: "Inventario",
       receivables: "Deudas",
       reporting: "Reportes",
+      usersAdmin: "Accesos",
       sync: "Sincronización",
     },
   },
@@ -53,6 +54,8 @@ const spanishMessages = {
               ? "Deudas restringidas"
               : workspaceId === "reporting"
                 ? "Reportes restringidos"
+                : workspaceId === "users-admin"
+                  ? "Accesos restringidos"
                 : workspaceId === "sync"
                   ? "Sincronización restringida"
                   : "Acceso restringido",
@@ -67,9 +70,64 @@ const spanishMessages = {
               ? "Tu perfil no puede revisar ni gestionar la cartera de deudas."
               : workspaceId === "reporting"
                 ? "Tu perfil no tiene permiso para ver métricas estratégicas del negocio."
+                : workspaceId === "users-admin"
+                  ? "Tu perfil no puede entrar a la administración de usuarios, roles y permisos."
                 : workspaceId === "sync"
                   ? "Tu perfil no puede acceder al panel de sincronización."
                   : "No tenés acceso a esta pantalla con el operador actual.",
+  },
+  usersAdmin: {
+    title: "Usuarios, roles y permisos",
+    description:
+      "Configurá bundles de acceso del negocio sin tocar código y verificá el impacto real desde el operador actual.",
+    metrics: {
+      lockedRoles: "Roles base",
+      customRoles: "Roles custom",
+      activeUsers: "Usuarios activos",
+      permissions: "Permisos",
+    },
+    catalogTitle: "Catálogo de roles",
+    catalogDescription:
+      "Los roles base están bloqueados. Podés clonarlos y adaptar permisos para tu operación real.",
+    presetsBadge: "Base",
+    customBadge: "Custom",
+    lockedBadge: "Bloqueado",
+    cloneAction: "Clonar preset",
+    editAction: "Editar rol",
+    emptyRoleTitle: "Todavía no hay roles custom",
+    emptyRoleDescription:
+      "Cloná un preset para empezar a armar bundles propios del negocio.",
+    newRoleAction: "Nuevo rol vacío",
+    composerTitle: "Composer de permisos",
+    createRoleTitle: "Crear rol custom",
+    editRoleTitle: "Editar rol custom",
+    createRoleDescription:
+      "Agrupá permisos por dominio y armá un rol nuevo sin modificar los presets base.",
+    lockedRoleDescription:
+      "Este rol forma parte del catálogo seed y no se edita directamente. Clonalo para crear una variante.",
+    roleNameLabel: "Nombre del rol",
+    roleDescriptionLabel: "Descripción",
+    permissionGroupsTitle: "Permisos por dominio",
+    permissionCount: (count: number): string =>
+      `${count} ${count === 1 ? "permiso" : "permisos"}`,
+    selectedPermissions: "Permisos seleccionados",
+    noPermissionsSelected: "Todavía no elegiste permisos para este rol.",
+    saveRoleAction: "Guardar rol",
+    deleteRoleAction: "Eliminar rol",
+    usersTitle: "Asignación de usuarios",
+    usersDescription:
+      "Seleccioná un usuario, ajustá sus roles y probá el resultado cambiando de operador.",
+    searchUsersPlaceholder: "Buscar por nombre o rol",
+    assignRolesAction: "Guardar asignación",
+    tryRoleAction: "Probar operador",
+    noUserSelectedTitle: "Elegí un usuario",
+    noUserSelectedDescription:
+      "Desde acá podés combinar roles y validar el rail o los datos visibles con el snapshot actual.",
+    userRolesLabel: "Roles asignados",
+    assignmentReadOnlyHint:
+      "Este perfil puede revisar el catálogo, pero no reasignar roles a usuarios.",
+    managementReadOnlyHint:
+      "Este perfil puede entrar al workspace, pero no crear ni editar roles custom.",
   },
   common: {
     labels: {
