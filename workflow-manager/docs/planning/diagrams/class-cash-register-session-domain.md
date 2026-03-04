@@ -42,10 +42,35 @@ namespace Identity {
     +name: string
   }
 
+  class Permission {
+    +id: string
+    +code: string
+    +name: string
+  }
+
   class UserRoleAssignment {
     +userId: ActorId
     +roleId: string
     +assignedAt: Timestamp
+  }
+
+  class RolePermissionAssignment {
+    +roleId: string
+    +permissionId: string
+  }
+
+  class CashRegisterUserAssignment {
+    +cashRegisterId: string
+    +userId: ActorId
+    +assignedAt: Timestamp
+  }
+
+  class PermissionSnapshot {
+    <<value-object>>
+    +permissionCodes: string[]
+    +navigation: NavigationAccess
+    +workspaceAccess: WorkspaceAccess
+    +dataVisibility: DataVisibility
   }
 }
 
@@ -140,15 +165,29 @@ namespace CashManagement {
     <<port-interface>>
     +assertCanCloseWithDiscrepancy(actorId: ActorId, discrepancy: Money) void
   }
+
+  class ActorContext {
+    <<value-object>>
+    +actorId: ActorId
+    +roleCodes: string[]
+    +permissionCodes: string[]
+    +correlationId: string
+  }
 }
 
 CashRegisterSession --> CashRegister : belongs to
 CashRegisterSession --> CashCount : uses at close
 CashRegisterSession --> CashMovement : emits
 CashRegisterSession --> AuthorizationService : depends on
+CashRegisterSession --> ActorContext : receives from app layer
 CashMovement --> AppUser : performed by
 UserRoleAssignment --> AppUser
 UserRoleAssignment --> Role
+RolePermissionAssignment --> Role
+RolePermissionAssignment --> Permission
+CashRegisterUserAssignment --> AppUser
+CashRegisterUserAssignment --> CashRegister
+PermissionSnapshot --> Permission
 DenominationCount --> Money
 CashCount --> DenominationCount
 ```

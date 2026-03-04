@@ -10,7 +10,7 @@
 **Author**: `maxi`  
 **Version**: `0.4`
 **Created At**: `2026-03-01`  
-**Last Updated**: `2026-03-02`  
+**Last Updated**: `2026-03-03`
 **Source Docs**: `001`, `002`, `003`, `004`, `005`, `006`  
 
 ---
@@ -36,7 +36,7 @@
 | Feature | Status |
 | --- | --- |
 | POS-001 | done |
-| POS-002 | planning |
+| POS-002 | in_progress |
 | API-001 | done |
 | CATALOG-001 | done |
 | INVENTORY-001 | done |
@@ -82,22 +82,32 @@
 Open planning item:
 
 - `POS-002` cash register sessions and actor audit:
-  - status: `planning`
+  - status: `in_progress`
   - scope:
     - open/close one cash register session per drawer/device,
     - capture opening float and closing counted cash,
     - reconcile expected versus counted balance,
     - record manual cash events such as `paid in`, `paid out`, and `safe drop`,
-    - establish a scalable actor model through `app_users` plus future role assignments
+    - establish a scalable actor model through `app_users` plus future role assignments,
+    - define restrictive role bundles and permission codes so UI surfaces and sensitive data are protected by default,
+    - separate operational, managerial, executive, and technical access without coupling business approvals to `system_admin`
   - architecture direction:
     - `CashRegister` + `CashRegisterSession` aggregate lifecycle
     - immutable `CashMovement` ledger for every cash-affecting event
     - `ActorContext` passed into command use cases instead of ad hoc headers
+    - permission-code based authorization under business-facing role bundles
+    - role-aware UI/data guards across `/cash-register`, `/sales`, `/products`, `/receivables`, and `/reporting`
     - request-scoped auth later mapped into `app_users`, while service-role access stays reserved for trusted internal jobs
+  - current design depth:
+    - `Slice 0` identity/permission bootstrap is now implemented
+    - includes tables, DTOs, `GET /api/v1/me`, `GET /api/v1/app-users`, temporary `assume-user` bridge, permission snapshot contract, and initial per-screen permission matrix
+    - shell and workspaces already react through operator selection, filtered rail, blocked states, and first server-side route guards
+    - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
     - `workflow-manager/docs/planning/diagrams/class-cash-register-session-domain.md`
     - `workflow-manager/docs/planning/diagrams/sequence-cash-register-open-close.md`
+    - `workflow-manager/docs/planning/diagrams/sequence-identity-and-permission-bootstrap.md`
     - `workflow-manager/docs/planning/diagrams/activity-cash-register-day.md`
     - `workflow-manager/docs/planning/diagrams/state-cash-register-session.md`
 
@@ -177,6 +187,7 @@ Resolved cross-cutting planning item:
 
 - Real-backend module suite: `npm run test:e2e:ui:real:modules` -> passing.
 - Real-backend release gate: `npm run test:e2e:release-gate:real` -> passing.
+- Access-control Slice 0 verification: `tests/e2e/access-control-api.spec.ts` and `tests/e2e/access-control-shell-ui.spec.ts` cover operator selection, `/api/v1/me`, permission-filtered rail visibility, blocked workspaces, and 403 enforcement on protected routes.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

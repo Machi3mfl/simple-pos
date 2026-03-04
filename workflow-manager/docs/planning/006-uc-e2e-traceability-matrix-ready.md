@@ -28,6 +28,21 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 | `UC-010` | Unified products and inventory workspace (`/products`) with reusable infinite-scroll product listing, EAN-aware search/detail, overflow admin actions, and managed image replacement in edit flows | `GET /api/v1/products/workspace`, `POST /api/v1/products`, `PATCH /api/v1/products/{id}`, `POST /api/v1/products/price-batches`, `POST /api/v1/products/import`, `POST /api/v1/stock-movements/import` | [tests/e2e/products-workspace-ui.spec.ts](../../../tests/e2e/products-workspace-ui.spec.ts), [tests/e2e/products-workspace-infinite-scroll-ui.spec.ts](../../../tests/e2e/products-workspace-infinite-scroll-ui.spec.ts), [tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts](../../../tests/e2e/catalog-ui-onboarding-and-bulk-update.spec.ts), [tests/e2e/inventory-ui-stock-movement.spec.ts](../../../tests/e2e/inventory-ui-stock-movement.spec.ts), [tests/e2e/ui-vertical-slices-smoke.spec.ts](../../../tests/e2e/ui-vertical-slices-smoke.spec.ts) | [tests/e2e/products-workspace-api.spec.ts](../../../tests/e2e/products-workspace-api.spec.ts), [tests/e2e/products-workspace-orchestration-unit.spec.ts](../../../tests/e2e/products-workspace-orchestration-unit.spec.ts), [tests/e2e/release-gate-real-backend.spec.ts](../../../tests/e2e/release-gate-real-backend.spec.ts) | `supabase` |
 | `UC-011` | External product sourcing and assisted import (`/products/sourcing`) with shared shell navigation, infinite-scroll search loading, managed image persistence, source traceability, canonical category entry, persisted category mapping reuse/management, recent import history, hardened provider access, responsive tablet/mobile validation, actionable partial-failure handling, resume-state recovery across reloads, and a persistent failed-import queue across sessions | `GET /api/v1/product-sourcing/search`, `POST /api/v1/product-sourcing/import`, `GET/PATCH/DELETE /api/v1/product-sourcing/category-mappings`, `GET /api/v1/product-sourcing/import-history` | [tests/e2e/product-sourcing-ui.spec.ts](../../../tests/e2e/product-sourcing-ui.spec.ts), [tests/e2e/product-sourcing-resume-state-ui.spec.ts](../../../tests/e2e/product-sourcing-resume-state-ui.spec.ts), [tests/e2e/product-sourcing-failed-queue-ui.spec.ts](../../../tests/e2e/product-sourcing-failed-queue-ui.spec.ts), [tests/e2e/product-sourcing-responsive-ui.spec.ts](../../../tests/e2e/product-sourcing-responsive-ui.spec.ts), [tests/e2e/product-sourcing-import-ui.spec.ts](../../../tests/e2e/product-sourcing-import-ui.spec.ts), [tests/e2e/product-sourcing-category-mapping-ui.spec.ts](../../../tests/e2e/product-sourcing-category-mapping-ui.spec.ts), [tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts](../../../tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts) | [tests/e2e/product-sourcing-search-use-case.spec.ts](../../../tests/e2e/product-sourcing-search-use-case.spec.ts), [tests/e2e/product-sourcing-carrefour-provider.spec.ts](../../../tests/e2e/product-sourcing-carrefour-provider.spec.ts), [tests/e2e/product-sourcing-search-handler.spec.ts](../../../tests/e2e/product-sourcing-search-handler.spec.ts), [tests/e2e/product-sourcing-import-use-case.spec.ts](../../../tests/e2e/product-sourcing-import-use-case.spec.ts), [tests/e2e/product-sourcing-category-mappings-use-cases.spec.ts](../../../tests/e2e/product-sourcing-category-mappings-use-cases.spec.ts), [tests/e2e/product-sourcing-import-history-use-case.spec.ts](../../../tests/e2e/product-sourcing-import-history-use-case.spec.ts), [tests/e2e/product-sourcing-provider-hardening.spec.ts](../../../tests/e2e/product-sourcing-provider-hardening.spec.ts) | `mock` + `supabase` |
 
+## Cross-cutting Access Control Bootstrap
+
+`POS-002 Slice 0` introduces shared identity/permission bootstrap contracts that cut across the functional use cases above.
+
+- Main contracts:
+  - `GET /api/v1/me`
+  - `GET /api/v1/app-users`
+  - `POST /api/v1/me/assume-user`
+  - `DELETE /api/v1/me/assume-user`
+- Coverage:
+  - UI: [tests/e2e/access-control-shell-ui.spec.ts](../../../tests/e2e/access-control-shell-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts)
+- Runtime mode:
+  - `mock` + `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -63,3 +78,5 @@ Since `2026-03-03`, [tests/e2e/orders-ui-sales-snapshot.spec.ts](../../../tests/
 Since `2026-03-03`, `UC-007` also validates the redesigned `/receivables` snapshot workspace: debtors are discovered from `GET /api/v1/receivables`, filtered from a card list, and settled inside a centered modal backed by the enriched `GET /api/v1/customers/{id}/debt` response, which now includes order-level item detail with product imagery for each pending sale.
 
 Since `2026-03-03`, `UC-004` also validates the redesigned `/reporting` executive dashboard, which blends `sales-history`, `top-products`, `profit-summary`, `products/workspace`, and `receivables` into a single CEO-facing snapshot with charts, current-credit visibility, and inventory-health metrics.
+
+Since `2026-03-03`, the cross-cutting actor bootstrap of `POS-002 Slice 0` is also part of traceability: the app now exposes real operator selection, `/api/v1/me` permission snapshots, workspace-level blocked states, and first 403 guards across checkout, receivables, products, inventory, reporting, and sourcing.
