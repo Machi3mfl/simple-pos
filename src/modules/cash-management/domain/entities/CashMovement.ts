@@ -11,6 +11,11 @@ export type CashMovementType =
   | "adjustment";
 
 export type CashMovementDirection = "inbound" | "outbound";
+export type ManualCashMovementType =
+  | "cash_paid_in"
+  | "cash_paid_out"
+  | "safe_drop"
+  | "adjustment";
 
 export interface CashMovementPrimitives {
   readonly id: string;
@@ -29,6 +34,27 @@ export interface CashMovementPrimitives {
 
 function roundMonetaryAmount(amount: number): number {
   return Number(amount.toFixed(4));
+}
+
+function isAllowedDirectionForMovementType(
+  movementType: CashMovementType,
+  direction: CashMovementDirection,
+): boolean {
+  switch (movementType) {
+    case "opening_float":
+    case "cash_sale":
+    case "debt_payment_cash":
+    case "cash_paid_in":
+      return direction === "inbound";
+    case "cash_paid_out":
+    case "safe_drop":
+    case "refund_cash":
+      return direction === "outbound";
+    case "adjustment":
+      return direction === "inbound" || direction === "outbound";
+    default:
+      return false;
+  }
 }
 
 export class CashMovement {
@@ -60,6 +86,12 @@ export class CashMovement {
     if (!Number.isFinite(input.amount) || input.amount < 0) {
       throw new CashManagementDomainError(
         "El monto del movimiento de caja debe ser mayor o igual a cero.",
+      );
+    }
+
+    if (!isAllowedDirectionForMovementType(input.movementType, input.direction)) {
+      throw new CashManagementDomainError(
+        "La dirección del movimiento no coincide con el tipo de movimiento de caja.",
       );
     }
 

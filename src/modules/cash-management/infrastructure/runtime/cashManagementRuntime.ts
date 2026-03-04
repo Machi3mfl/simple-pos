@@ -5,6 +5,7 @@ import { CloseCashRegisterSessionUseCase } from "../../application/use-cases/Clo
 import { GetActiveCashRegisterSessionUseCase } from "../../application/use-cases/GetActiveCashRegisterSessionUseCase";
 import { ListAccessibleCashRegistersUseCase } from "../../application/use-cases/ListAccessibleCashRegistersUseCase";
 import { OpenCashRegisterSessionUseCase } from "../../application/use-cases/OpenCashRegisterSessionUseCase";
+import { RecordCashMovementUseCase } from "../../application/use-cases/RecordCashMovementUseCase";
 import { SupabaseCashMovementRepository } from "../repositories/SupabaseCashMovementRepository";
 import { SupabaseCashRegisterRepository } from "../repositories/SupabaseCashRegisterRepository";
 import { SupabaseCashRegisterSessionRepository } from "../repositories/SupabaseCashRegisterSessionRepository";
@@ -14,6 +15,7 @@ export function createCashManagementRuntime(): {
   readonly getActiveCashRegisterSessionUseCase: GetActiveCashRegisterSessionUseCase;
   readonly openCashRegisterSessionUseCase: OpenCashRegisterSessionUseCase;
   readonly closeCashRegisterSessionUseCase: CloseCashRegisterSessionUseCase;
+  readonly recordCashMovementUseCase: RecordCashMovementUseCase;
 } {
   const client = getSupabaseServerClient();
   const cashRegisterRepository = new SupabaseCashRegisterRepository(client);
@@ -30,6 +32,7 @@ export function createCashManagementRuntime(): {
     getActiveCashRegisterSessionUseCase: new GetActiveCashRegisterSessionUseCase(
       cashRegisterRepository,
       cashRegisterSessionRepository,
+      cashMovementRepository,
       actorAccessRepository,
     ),
     openCashRegisterSessionUseCase: new OpenCashRegisterSessionUseCase(
@@ -40,6 +43,11 @@ export function createCashManagementRuntime(): {
     ),
     closeCashRegisterSessionUseCase: new CloseCashRegisterSessionUseCase(
       cashRegisterSessionRepository,
+      actorAccessRepository,
+    ),
+    recordCashMovementUseCase: new RecordCashMovementUseCase(
+      cashRegisterSessionRepository,
+      cashMovementRepository,
       actorAccessRepository,
     ),
   };

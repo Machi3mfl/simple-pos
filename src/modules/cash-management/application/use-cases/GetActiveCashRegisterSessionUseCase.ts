@@ -5,9 +5,13 @@ import {
   CashRegisterInactiveError,
   CashRegisterNotFoundError,
 } from "../../domain/errors/CashManagementDomainError";
+import type { CashMovementRepository } from "../../domain/repositories/CashMovementRepository";
 import type { CashRegisterRepository } from "../../domain/repositories/CashRegisterRepository";
 import type { CashRegisterSessionRepository } from "../../domain/repositories/CashRegisterSessionRepository";
-import { toCashRegisterSessionSummary, type CashRegisterSessionSummary } from "../mappers/toCashRegisterSessionSummary";
+import {
+  toCashRegisterSessionDetail,
+  type CashRegisterSessionDetail,
+} from "../mappers/toCashRegisterSessionDetail";
 
 export interface GetActiveCashRegisterSessionUseCaseInput {
   readonly cashRegisterId: string;
@@ -18,12 +22,13 @@ export class GetActiveCashRegisterSessionUseCase {
   constructor(
     private readonly cashRegisterRepository: CashRegisterRepository,
     private readonly cashRegisterSessionRepository: CashRegisterSessionRepository,
+    private readonly cashMovementRepository: CashMovementRepository,
     private readonly actorAccessRepository: ActorAccessRepository,
   ) {}
 
   async execute(
     input: GetActiveCashRegisterSessionUseCaseInput,
-  ): Promise<CashRegisterSessionSummary | null> {
+  ): Promise<CashRegisterSessionDetail | null> {
     const accessibleRegisterIds = new Set(input.accessibleRegisterIds ?? []);
     if (
       accessibleRegisterIds.size > 0 &&
@@ -45,8 +50,18 @@ export class GetActiveCashRegisterSessionUseCase {
       input.cashRegisterId,
     );
 
-    return activeSession
-      ? toCashRegisterSessionSummary(activeSession, this.actorAccessRepository)
-      : null;
+    if (!activeSession) {
+      return null;
+    }
+
+    const movements = await this.cashMovementRepository.listBySessionId(
+      activeSession.getId(),
+    );
+
+    return toCashRegisterSessionDetail(
+      activeSession,
+      movements,
+      this.actorAccessRepository,
+    );
   }
 }

@@ -225,6 +225,38 @@ const spanishMessages = {
       closeModalTitle: "Cerrar caja",
       closeModalDescription:
         "Ingresá el efectivo contado para comparar contra el saldo esperado.",
+      movementsTitle: "Movimientos del turno",
+      movementsDescription:
+        "Cada movimiento ajusta el saldo esperado y deja trazabilidad del operador.",
+      movementsEmpty: "Todavía no hay movimientos registrados para esta sesión.",
+      recordMovementAction: "Registrar movimiento",
+      movementModalTitle: "Registrar movimiento de caja",
+      movementModalDescription:
+        "Usá este registro para ingresos, salidas, retiros a caja fuerte o ajustes manuales.",
+      movementTypeLabel: "Tipo de movimiento",
+      movementAmountLabel: "Monto",
+      movementDirectionLabel: "Impacto del ajuste",
+      movementNotesLabel: "Nota",
+      movementNotesPlaceholder: "Ej. retiro para gastos menores",
+      movementSaveAction: "Guardar movimiento",
+      movementReadOnlyHint:
+        "Tu perfil puede ver la sesión, pero no registrar movimientos manuales.",
+      movementErrorFallback: "No se pudo registrar el movimiento de caja.",
+      movementSuccess: "Movimiento de caja registrado correctamente.",
+      movementTypeLabels: {
+        opening_float: "Cambio inicial",
+        cash_sale: "Venta en efectivo",
+        debt_payment_cash: "Cobro de deuda",
+        cash_paid_in: "Ingreso manual",
+        cash_paid_out: "Salida manual",
+        safe_drop: "Retiro a caja fuerte",
+        refund_cash: "Devolución en efectivo",
+        adjustment: "Ajuste manual",
+      },
+      movementDirectionLabels: {
+        inbound: "Suma efectivo",
+        outbound: "Resta efectivo",
+      },
       openAction: "Abrir caja",
       closeAction: "Cerrar caja",
       openingNotePlaceholder: "Ej. turno mañana",

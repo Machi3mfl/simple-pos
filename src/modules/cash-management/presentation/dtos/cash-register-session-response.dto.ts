@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cashMovementResponseDTOSchema } from "./cash-movement-response.dto";
+
 export const cashRegisterSessionStatusDTOSchema = z.enum([
   "open",
   "closing_review_required",
@@ -27,12 +29,25 @@ export const cashRegisterSessionResponseDTOSchema = z
   })
   .strict();
 
+export const cashRegisterSessionDetailResponseDTOSchema =
+  cashRegisterSessionResponseDTOSchema
+    .extend({
+      movements: z.array(cashMovementResponseDTOSchema),
+    })
+    .strict();
+
 export const activeCashRegisterSessionResponseDTOSchema = z
   .object({
-    session: cashRegisterSessionResponseDTOSchema.nullable(),
+    session: cashRegisterSessionDetailResponseDTOSchema.nullable(),
   })
   .strict();
 
 export type CashRegisterSessionResponseDTO = z.infer<
   typeof cashRegisterSessionResponseDTOSchema
+>;
+export type ActiveCashRegisterSessionResponseDTO = z.infer<
+  typeof activeCashRegisterSessionResponseDTOSchema
+>;
+export type CashRegisterSessionDetailResponseDTO = z.infer<
+  typeof cashRegisterSessionDetailResponseDTOSchema
 >;

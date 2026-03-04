@@ -212,6 +212,39 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorResponse'
 
+  /cash-register-sessions/{id}/movements:
+    post:
+      tags: [CashManagement]
+      operationId: recordCashMovement
+      summary: Record a manual cash movement on an open register session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordCashMovementRequest'
+      responses:
+        '201':
+          description: Updated cash register session detail after recording the movement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegisterSessionDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
   /products:
     get:
       tags: [Catalog]
@@ -1164,13 +1197,73 @@ components:
         closingNotes:
           type: string
 
+    CashMovement:
+      type: object
+      required:
+        [
+          id,
+          movementType,
+          direction,
+          amount,
+          occurredAt,
+          performedByUserId,
+          performedByDisplayName,
+        ]
+      properties:
+        id:
+          type: string
+        movementType:
+          type: string
+          enum:
+            [
+              opening_float,
+              cash_sale,
+              debt_payment_cash,
+              cash_paid_in,
+              cash_paid_out,
+              safe_drop,
+              refund_cash,
+              adjustment,
+            ]
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        amount:
+          type: number
+        reasonCode:
+          type: string
+        notes:
+          type: string
+        saleId:
+          type: string
+        debtLedgerEntryId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        performedByUserId:
+          type: string
+        performedByDisplayName:
+          type: string
+
+    CashRegisterSessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/CashRegisterSession'
+        - type: object
+          required: [movements]
+          properties:
+            movements:
+              type: array
+              items:
+                $ref: '#/components/schemas/CashMovement'
+
     ActiveCashRegisterSessionResponse:
       type: object
       required: [session]
       properties:
         session:
           oneOf:
-            - $ref: '#/components/schemas/CashRegisterSession'
+            - $ref: '#/components/schemas/CashRegisterSessionDetail'
             - type: 'null'
 
     CashRegisterListItem:
@@ -1220,6 +1313,23 @@ components:
           type: number
           minimum: 0
         closingNotes:
+          type: string
+          maxLength: 240
+
+    RecordCashMovementRequest:
+      type: object
+      required: [movementType, amount]
+      properties:
+        movementType:
+          type: string
+          enum: [cash_paid_in, cash_paid_out, safe_drop, adjustment]
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        notes:
           type: string
           maxLength: 240
 

@@ -35,6 +35,9 @@ test.describe("access control api", () => {
     expect(cashierMe.permissionSnapshot.workspaces.products.canView).toBe(false);
     expect(cashierMe.permissionSnapshot.workspaces.receivables.canView).toBe(false);
     expect(cashierMe.permissionSnapshot.workspaces.sales.canViewSaleDetail).toBe(false);
+    expect(
+      cashierMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
+    ).toBe(false);
 
     const cashierProductsImportResponse = await request.post("/api/v1/products/import", {
       data: {
@@ -63,6 +66,9 @@ test.describe("access control api", () => {
     expect(supervisorMe.permissionSnapshot.workspaces.reporting.canView).toBe(true);
     expect(supervisorMe.permissionSnapshot.workspaces.reporting.canViewMargin).toBe(false);
     expect(supervisorMe.permissionSnapshot.workspaces.sales.canViewSaleDetail).toBe(true);
+    expect(
+      supervisorMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
+    ).toBe(true);
 
     const supervisorTopProductsResponse = await request.get("/api/v1/reports/top-products");
     expect(supervisorTopProductsResponse.status()).toBe(200);

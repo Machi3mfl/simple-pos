@@ -1,9 +1,28 @@
 import type { ActorAccessRepository } from "@/modules/access-control/domain/repositories/ActorAccessRepository";
 
+import type {
+  CashMovement,
+  CashMovementDirection,
+  CashMovementType,
+} from "../../domain/entities/CashMovement";
 import type { CashRegisterSession } from "../../domain/entities/CashRegisterSession";
 import { resolveActorDisplayName } from "./resolveActorDisplayName";
 
-export interface CashRegisterSessionSummary {
+export interface CashMovementSummary {
+  readonly id: string;
+  readonly movementType: CashMovementType;
+  readonly direction: CashMovementDirection;
+  readonly amount: number;
+  readonly reasonCode?: string;
+  readonly notes?: string;
+  readonly saleId?: string;
+  readonly debtLedgerEntryId?: string;
+  readonly occurredAt: string;
+  readonly performedByUserId: string;
+  readonly performedByDisplayName: string;
+}
+
+export interface CashRegisterSessionDetail {
   readonly id: string;
   readonly cashRegisterId: string;
   readonly status: string;
@@ -19,12 +38,40 @@ export interface CashRegisterSessionSummary {
   readonly closedByDisplayName?: string;
   readonly openingNotes?: string;
   readonly closingNotes?: string;
+  readonly movements: readonly CashMovementSummary[];
 }
 
-export async function toCashRegisterSessionSummary(
-  session: CashRegisterSession,
+async function toCashMovementSummary(
+  movement: CashMovement,
   actorAccessRepository: ActorAccessRepository,
-): Promise<CashRegisterSessionSummary> {
+): Promise<CashMovementSummary> {
+  const primitives = movement.toPrimitives();
+  const performedByDisplayName =
+    (await resolveActorDisplayName(
+      actorAccessRepository,
+      primitives.performedByUserId,
+    )) ?? primitives.performedByUserId;
+
+  return {
+    id: primitives.id,
+    movementType: primitives.movementType,
+    direction: primitives.direction,
+    amount: primitives.amount,
+    reasonCode: primitives.reasonCode,
+    notes: primitives.notes,
+    saleId: primitives.saleId,
+    debtLedgerEntryId: primitives.debtLedgerEntryId,
+    occurredAt: primitives.occurredAt.toISOString(),
+    performedByUserId: primitives.performedByUserId,
+    performedByDisplayName,
+  };
+}
+
+export async function toCashRegisterSessionDetail(
+  session: CashRegisterSession,
+  movements: readonly CashMovement[],
+  actorAccessRepository: ActorAccessRepository,
+): Promise<CashRegisterSessionDetail> {
   const primitives = session.toPrimitives();
   const openedByDisplayName =
     (await resolveActorDisplayName(actorAccessRepository, primitives.openedByUserId)) ??
@@ -49,5 +96,10 @@ export async function toCashRegisterSessionSummary(
     closedByDisplayName,
     openingNotes: primitives.openingNotes,
     closingNotes: primitives.closingNotes,
+    movements: await Promise.all(
+      movements.map((movement) =>
+        toCashMovementSummary(movement, actorAccessRepository),
+      ),
+    ),
   };
 }

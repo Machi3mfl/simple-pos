@@ -433,6 +433,10 @@ export function PosLayout({
                 canCloseSession={
                   permissionSnapshot?.workspaces.cashRegister.canCloseSession ?? false
                 }
+                canRecordManualCashMovement={
+                  permissionSnapshot?.workspaces.cashRegister
+                    .canRecordManualCashMovement ?? false
+                }
               />
             }
             categories={categories}

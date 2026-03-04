@@ -2,6 +2,7 @@ import {
   CashManagementDomainError,
   CashRegisterSessionStatusError,
 } from "../errors/CashManagementDomainError";
+import type { CashMovementDirection } from "./CashMovement";
 
 export type CashRegisterSessionStatus =
   | "open"
@@ -109,6 +110,39 @@ export class CashRegisterSession {
 
   getExpectedBalanceAmount(): number {
     return this.props.expectedBalanceAmount;
+  }
+
+  applyMovement(input: {
+    readonly direction: CashMovementDirection;
+    readonly amount: number;
+  }): CashRegisterSession {
+    if (!this.isOpen()) {
+      throw new CashRegisterSessionStatusError(
+        "Solo se pueden registrar movimientos sobre sesiones de caja abiertas.",
+      );
+    }
+
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      throw new CashManagementDomainError(
+        "El movimiento manual debe tener un monto mayor a cero.",
+      );
+    }
+
+    const delta = input.direction === "inbound" ? input.amount : -input.amount;
+    const nextExpectedBalance = roundMonetaryAmount(
+      this.props.expectedBalanceAmount + delta,
+    );
+
+    if (nextExpectedBalance < 0) {
+      throw new CashManagementDomainError(
+        "El movimiento dejaría la caja con saldo esperado negativo.",
+      );
+    }
+
+    return new CashRegisterSession({
+      ...this.props,
+      expectedBalanceAmount: nextExpectedBalance,
+    });
   }
 
   close(input: {

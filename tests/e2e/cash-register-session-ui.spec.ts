@@ -34,7 +34,7 @@ async function ensureClosedSession(request: APIRequestContext): Promise<void> {
   expect(closeResponse.status()).toBe(200);
 }
 
-test("opens and closes a cash register session from the cash workspace", async ({
+test("opens, records manual movements, and closes a cash register session from the cash workspace", async ({
   page,
   request,
 }) => {
@@ -50,6 +50,19 @@ test("opens and closes a cash register session from the cash workspace", async (
   await expect(activeSummary).toBeVisible();
   await expect(page.getByText("Caja abierta")).toBeVisible();
   await expect(activeSummary).toContainText("$1234.50");
+  await expect(page.getByText("Cambio inicial")).toBeVisible();
+
+  await page.getByTestId("cash-session-add-movement-button").click();
+  await expect(page.getByTestId("cash-session-movement-modal")).toBeVisible();
+  await page.getByTestId("cash-session-movement-type-select").selectOption("safe_drop");
+  await page.getByTestId("cash-session-movement-amount-input").fill("34.50");
+  await page.getByTestId("cash-session-movement-notes-input").fill("retiro ui");
+  await page.getByTestId("cash-session-movement-submit-button").click();
+
+  await expect(page.getByTestId("cash-session-movement-modal")).not.toBeVisible();
+  await expect(activeSummary).toContainText("$1200.00");
+  await expect(page.getByText("Retiro a caja fuerte")).toBeVisible();
+  await expect(page.getByText("retiro ui")).toBeVisible();
 
   await page.getByTestId("cash-session-close-button").click();
   await expect(page.getByTestId("cash-session-close-modal")).toBeVisible();
