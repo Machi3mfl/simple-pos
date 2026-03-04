@@ -38,8 +38,10 @@ export function PosWorkspaceShell({
     currentActor,
     permissionSnapshot,
     sessionSource,
+    isAuthenticated,
     canSwitchActor,
     openOperatorSelector,
+    signOut,
     status,
   } =
     useActorSession();
@@ -80,6 +82,12 @@ export function PosWorkspaceShell({
           : sessionSource === "assumed_user"
             ? messages.accessControl.sessionSourceAssumedUser
             : messages.accessControl.sessionSourceDefaultActor;
+  const authActionLabel =
+    status === "loading"
+      ? undefined
+      : isAuthenticated
+        ? messages.accessControl.signOutAction
+        : messages.accessControl.signInAction;
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
@@ -94,6 +102,17 @@ export function PosWorkspaceShell({
           isLoadingActor={status === "loading"}
           canOpenOperatorSelector={canSwitchActor}
           onOpenOperatorSelector={openOperatorSelector}
+          authActionLabel={authActionLabel}
+          onAuthAction={() => {
+            if (isAuthenticated) {
+              void signOut().then(() => {
+                router.push("/login");
+              });
+              return;
+            }
+
+            router.push("/login");
+          }}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
               router.push(workspacePathById[itemId]);

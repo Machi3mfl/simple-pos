@@ -241,6 +241,35 @@ paths:
         '403':
           $ref: '#/components/responses/ErrorResponse'
 
+  /access-control/users/{id}/auth-credentials:
+    post:
+      tags: [AccessControl]
+      operationId: upsertUserAuthCredentials
+      summary: Create or update real login credentials for one application user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertUserAuthCredentialsRequest'
+      responses:
+        '200':
+          description: User credentials provisioned or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAuthCredentialsResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
   /cash-registers:
     get:
       tags: [CashManagement]
@@ -1449,7 +1478,7 @@ components:
     AccessControlUser:
       type: object
       required:
-        [userId, displayName, actorKind, isActive, roleIds, roleCodes, roleNames, assignedRegisterIds]
+        [userId, displayName, actorKind, isActive, roleIds, roleCodes, roleNames, assignedRegisterIds, authCredentialStatus]
       properties:
         userId:
           type: string
@@ -1476,6 +1505,15 @@ components:
           type: array
           items:
             type: string
+        authUserId:
+          type: string
+          format: uuid
+        authEmail:
+          type: string
+          format: email
+        authCredentialStatus:
+          type: string
+          enum: [not_provisioned, provisioned, stale_mapping]
 
     AccessControlWorkspaceResponse:
       type: object
@@ -1525,6 +1563,34 @@ components:
           type: array
           items:
             type: string
+
+    UpsertUserAuthCredentialsRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    UserAuthCredentialsResponse:
+      type: object
+      required: [userId, displayName, authUserId, authEmail, wasCreated]
+      properties:
+        userId:
+          type: string
+        displayName:
+          type: string
+        authUserId:
+          type: string
+          format: uuid
+        authEmail:
+          type: string
+          format: email
+        wasCreated:
+          type: boolean
 
     CashRegisterSession:
       type: object

@@ -63,6 +63,12 @@ interface AccessControlWorkspaceUser {
   readonly roleCodes: readonly string[];
   readonly roleNames: readonly string[];
   readonly assignedRegisterIds: readonly string[];
+  readonly authUserId?: string;
+  readonly authEmail?: string;
+  readonly authCredentialStatus:
+    | "not_provisioned"
+    | "provisioned"
+    | "stale_mapping";
 }
 
 interface AccessControlWorkspaceResponse {
@@ -70,6 +76,14 @@ interface AccessControlWorkspaceResponse {
   readonly users: readonly AccessControlWorkspaceUser[];
   readonly permissions: readonly AccessControlWorkspacePermission[];
   readonly permissionGroups: readonly AccessControlWorkspacePermissionGroup[];
+}
+
+interface UserAuthCredentialsResponse {
+  readonly userId: string;
+  readonly displayName: string;
+  readonly authUserId: string;
+  readonly authEmail: string;
+  readonly wasCreated: boolean;
 }
 
 interface ApiErrorPayload {
@@ -177,11 +191,15 @@ export function UsersAdminPanel({
   const [isSavingRole, setIsSavingRole] = useState<boolean>(false);
   const [isSavingUserAssignments, setIsSavingUserAssignments] =
     useState<boolean>(false);
+  const [isSavingUserAuthCredentials, setIsSavingUserAuthCredentials] =
+    useState<boolean>(false);
   const [selectedCatalogRoleId, setSelectedCatalogRoleId] = useState<string>("");
   const [roleDraft, setRoleDraft] = useState<RoleDraftState>(emptyRoleDraft);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [userSearchTerm, setUserSearchTerm] = useState<string>("");
   const [userRoleDraftIds, setUserRoleDraftIds] = useState<readonly string[]>([]);
+  const [userAuthEmailDraft, setUserAuthEmailDraft] = useState<string>("");
+  const [userAuthPasswordDraft, setUserAuthPasswordDraft] = useState<string>("");
 
   const loadWorkspace = useCallback(async (mode: "initial" | "refresh"): Promise<void> => {
     if (mode === "initial") {
@@ -270,10 +288,14 @@ export function UsersAdminPanel({
   useEffect(() => {
     if (!selectedUser) {
       setUserRoleDraftIds([]);
+      setUserAuthEmailDraft("");
+      setUserAuthPasswordDraft("");
       return;
     }
 
     setUserRoleDraftIds(selectedUser.roleIds);
+    setUserAuthEmailDraft(selectedUser.authEmail ?? "");
+    setUserAuthPasswordDraft("");
   }, [selectedUser]);
 
   const filteredUsers = useMemo(() => {
@@ -289,6 +311,7 @@ export function UsersAdminPanel({
     return workspace.users.filter((user) => {
       const haystack = [
         user.displayName,
+        user.authEmail ?? "",
         ...user.roleNames,
         ...user.roleCodes,
       ]
@@ -317,6 +340,34 @@ export function UsersAdminPanel({
   );
 
   const canUpdateUserAssignments = canManageUsers;
+  const canManageUserCredentials = canManageUsers;
+
+  const selectedUserAuthStatusTone = useMemo(() => {
+    switch (selectedUser?.authCredentialStatus) {
+      case "provisioned":
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      case "stale_mapping":
+        return "border-amber-200 bg-amber-50 text-amber-700";
+      default:
+        return "border-slate-200 bg-slate-100 text-slate-600";
+    }
+  }, [selectedUser?.authCredentialStatus]);
+
+  const selectedUserAuthStatusLabel = useMemo(() => {
+    switch (selectedUser?.authCredentialStatus) {
+      case "provisioned":
+        return messages.usersAdmin.authProvisionedBadge;
+      case "stale_mapping":
+        return messages.usersAdmin.authStaleBadge;
+      default:
+        return messages.usersAdmin.authMissingBadge;
+    }
+  }, [
+    messages.usersAdmin.authMissingBadge,
+    messages.usersAdmin.authProvisionedBadge,
+    messages.usersAdmin.authStaleBadge,
+    selectedUser?.authCredentialStatus,
+  ]);
 
   const resetToBlankRole = useCallback((): void => {
     setSelectedCatalogRoleId("");
@@ -544,6 +595,79 @@ export function UsersAdminPanel({
     refreshActorSession,
     selectedUser,
     userRoleDraftIds,
+  ]);
+
+  const handleSaveAuthCredentials = useCallback(async (): Promise<void> => {
+    if (!selectedUser) {
+      return;
+    }
+
+    if (!canManageUserCredentials) {
+      showInfoToast({
+        title: "Acceso en solo lectura",
+        description: messages.usersAdmin.assignmentReadOnlyHint,
+      });
+      return;
+    }
+
+    setIsSavingUserAuthCredentials(true);
+    try {
+      const { response, data } = await fetchJsonNoStore<UserAuthCredentialsResponse>(
+        `/api/v1/access-control/users/${selectedUser.userId}/auth-credentials`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userAuthEmailDraft.trim(),
+            password: userAuthPasswordDraft.trim(),
+          }),
+        },
+      );
+
+      if (!response.ok || !data) {
+        throw new Error(
+          resolveApiMessage(
+            data,
+            "No se pudieron guardar las credenciales del usuario.",
+          ),
+        );
+      }
+
+      await loadWorkspace("refresh");
+      await refreshActorSession();
+      setUserAuthEmailDraft(data.authEmail);
+      setUserAuthPasswordDraft("");
+      showSuccessToast({
+        title: data.wasCreated
+          ? "Acceso creado"
+          : "Acceso actualizado",
+        description: data.wasCreated
+          ? `Generaste credenciales reales para ${selectedUser.displayName}.`
+          : `Actualizaste el acceso real de ${selectedUser.displayName}.`,
+        testId: "users-admin-auth-save-success-toast",
+      });
+    } catch (error: unknown) {
+      showErrorToast({
+        title: "No se pudo guardar el acceso",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudieron guardar las credenciales del usuario.",
+        testId: "users-admin-auth-save-error-toast",
+      });
+    } finally {
+      setIsSavingUserAuthCredentials(false);
+    }
+  }, [
+    canManageUserCredentials,
+    loadWorkspace,
+    messages.usersAdmin.assignmentReadOnlyHint,
+    refreshActorSession,
+    selectedUser,
+    userAuthEmailDraft,
+    userAuthPasswordDraft,
   ]);
 
   if (isLoading) {
@@ -1011,6 +1135,94 @@ export function UsersAdminPanel({
                       <UserRoundCog className="size-4" aria-hidden />
                       {messages.usersAdmin.tryRoleAction}
                     </button>
+                  </div>
+
+                  <div className="mt-5 rounded-[1.35rem] border border-slate-200 bg-white px-4 py-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            {messages.usersAdmin.authSectionTitle}
+                          </p>
+                          <span
+                            data-testid="users-admin-auth-status"
+                            className={[
+                              "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold",
+                              selectedUserAuthStatusTone,
+                            ].join(" ")}
+                          >
+                            {selectedUserAuthStatusLabel}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">
+                          {selectedUser.authEmail
+                            ? `${messages.usersAdmin.authCurrentEmailLabel}: ${selectedUser.authEmail}`
+                            : messages.usersAdmin.authMissingDescription}
+                        </p>
+                        {selectedUser.authCredentialStatus === "stale_mapping" ? (
+                          <p className="mt-2 text-sm text-amber-700">
+                            {messages.usersAdmin.authStaleDescription}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.9fr)] lg:min-w-[32rem]">
+                        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                          {messages.usersAdmin.authEmailLabel}
+                          <input
+                            data-testid="users-admin-auth-email-input"
+                            type="email"
+                            value={userAuthEmailDraft}
+                            onChange={(event) => {
+                              setUserAuthEmailDraft(event.target.value);
+                            }}
+                            disabled={!canManageUserCredentials || isSavingUserAuthCredentials}
+                            placeholder="nombre@simple-pos.local"
+                            className="min-h-[3.25rem] rounded-2xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-blue-300"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                          {messages.usersAdmin.authPasswordLabel}
+                          <input
+                            data-testid="users-admin-auth-password-input"
+                            type="password"
+                            value={userAuthPasswordDraft}
+                            onChange={(event) => {
+                              setUserAuthPasswordDraft(event.target.value);
+                            }}
+                            disabled={!canManageUserCredentials || isSavingUserAuthCredentials}
+                            placeholder="********"
+                            className="min-h-[3.25rem] rounded-2xl border border-slate-200 bg-white px-4 text-base text-slate-900 outline-none transition focus:border-blue-300"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm text-slate-500">
+                        {messages.usersAdmin.authSectionHint}
+                      </p>
+                      <button
+                        type="button"
+                        data-testid="users-admin-save-auth-button"
+                        onClick={() => {
+                          void handleSaveAuthCredentials();
+                        }}
+                        disabled={
+                          !canManageUserCredentials ||
+                          isSavingUserAuthCredentials ||
+                          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userAuthEmailDraft.trim()) ||
+                          userAuthPasswordDraft.trim().length < 8
+                        }
+                        className="inline-flex min-h-[3.35rem] items-center justify-center gap-2 rounded-[1.25rem] bg-gradient-to-b from-[#3f8dff] to-[#1768e8] px-5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(23,104,232,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSavingUserAuthCredentials ? (
+                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                        ) : null}
+                        {selectedUser.authCredentialStatus === "provisioned"
+                          ? messages.usersAdmin.authUpdateAction
+                          : messages.usersAdmin.authCreateAction}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-2">

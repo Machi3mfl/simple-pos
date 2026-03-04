@@ -1,6 +1,16 @@
 import type { PermissionSnapshot } from "../domain/types/PermissionSnapshot";
 import type { PosWorkspaceId } from "@/modules/sales/presentation/posWorkspace";
 
+const defaultWorkspacePriority: readonly PosWorkspaceId[] = [
+  "cash-register",
+  "sales",
+  "receivables",
+  "products",
+  "reporting",
+  "users-admin",
+  "sync",
+];
+
 export function canAccessWorkspace(
   workspaceId: PosWorkspaceId,
   permissionSnapshot: PermissionSnapshot | null,
@@ -27,4 +37,16 @@ export function canAccessWorkspace(
     default:
       return false;
   }
+}
+
+export function resolvePreferredWorkspaceId(
+  permissionSnapshot: PermissionSnapshot | null,
+): PosWorkspaceId | null {
+  for (const workspaceId of defaultWorkspacePriority) {
+    if (canAccessWorkspace(workspaceId, permissionSnapshot)) {
+      return workspaceId;
+    }
+  }
+
+  return null;
 }

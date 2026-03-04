@@ -19,6 +19,8 @@ interface LeftNavRailProps {
   readonly isLoadingActor?: boolean;
   readonly canOpenOperatorSelector?: boolean;
   readonly onOpenOperatorSelector: () => void;
+  readonly authActionLabel?: string;
+  readonly onAuthAction?: () => void;
   readonly onItemSelect: (itemId: string) => void;
 }
 
@@ -32,6 +34,8 @@ export function LeftNavRail({
   isLoadingActor = false,
   canOpenOperatorSelector = true,
   onOpenOperatorSelector,
+  authActionLabel,
+  onAuthAction,
   onItemSelect,
 }: LeftNavRailProps): JSX.Element {
   const { messages } = useI18n();
@@ -73,6 +77,17 @@ export function LeftNavRail({
           <ChevronsUpDown size={16} />
         </span>
       </button>
+
+      {authActionLabel && onAuthAction ? (
+        <button
+          type="button"
+          data-testid="actor-auth-action-button"
+          onClick={onAuthAction}
+          className="mt-4 inline-flex min-h-[3rem] w-full items-center justify-center rounded-2xl border border-[#2b3342] bg-[#0f1725] px-4 text-sm font-semibold text-slate-200 transition hover:border-[#3b465a] hover:text-white"
+        >
+          {authActionLabel}
+        </button>
+      ) : null}
 
       <nav className="mt-12 flex gap-3 overflow-x-auto pb-1 lg:mt-12 lg:flex-col lg:overflow-visible">
         {items.map((item) => {

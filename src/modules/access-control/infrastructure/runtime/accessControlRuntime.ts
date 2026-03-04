@@ -7,6 +7,7 @@ import { GetCurrentActorSnapshotUseCase } from "../../application/use-cases/GetC
 import { GetAccessControlWorkspaceSnapshotUseCase } from "../../application/use-cases/GetAccessControlWorkspaceSnapshotUseCase";
 import { ListSelectableActorsUseCase } from "../../application/use-cases/ListSelectableActorsUseCase";
 import { ReplaceUserRolesUseCase } from "../../application/use-cases/ReplaceUserRolesUseCase";
+import { UpsertUserAuthCredentialsUseCase } from "../../application/use-cases/UpsertUserAuthCredentialsUseCase";
 import { UpdateCustomRoleUseCase } from "../../application/use-cases/UpdateCustomRoleUseCase";
 import { SupabaseActorAccessRepository } from "../repositories/SupabaseActorAccessRepository";
 import { SupabaseRoleAdministrationRepository } from "../repositories/SupabaseRoleAdministrationRepository";
@@ -20,6 +21,7 @@ export function createAccessControlRuntime(): {
   readonly updateCustomRoleUseCase: UpdateCustomRoleUseCase;
   readonly deleteCustomRoleUseCase: DeleteCustomRoleUseCase;
   readonly replaceUserRolesUseCase: ReplaceUserRolesUseCase;
+  readonly upsertUserAuthCredentialsUseCase: UpsertUserAuthCredentialsUseCase;
 } {
   const supabaseClient = getSupabaseServerClient();
   const actorAccessRepository = new SupabaseActorAccessRepository(supabaseClient);
@@ -45,6 +47,9 @@ export function createAccessControlRuntime(): {
       roleAdministrationRepository,
     ),
     replaceUserRolesUseCase: new ReplaceUserRolesUseCase(
+      roleAdministrationRepository,
+    ),
+    upsertUserAuthCredentialsUseCase: new UpsertUserAuthCredentialsUseCase(
       roleAdministrationRepository,
     ),
   };

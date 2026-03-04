@@ -129,6 +129,13 @@ Open planning item:
     - request actor resolution now prefers validated Supabase bearer tokens mapped through `app_users.auth_user_id`, while authenticated-but-unmapped requests degrade to zero permissions instead of inheriting the default demo actor
     - the `assume-user` bridge is now controlled by `POS_ENABLE_ASSUME_USER_BRIDGE`, remaining available by default only outside production
     - `/cash-register` now queues manual cash movements offline and can replay them into the real ledger through sync retry without enabling offline open/close flows
+    - `Slice 8` real login checkpoint is also implemented
+    - `/login` now uses Supabase Auth email/password and the same `app_users.auth_user_id` mapping already consumed by `/api/v1/me`
+    - request actor resolution now also reads authenticated SSR cookies, so browser login works across the existing `/api/v1/*` routes without screen-specific auth wiring
+    - the shell now exposes `Iniciar sesión` / `Cerrar sesión`, and authenticated operators are redirected to the first workspace allowed by their permission snapshot
+    - `Slice 9` real credential provisioning is also implemented
+    - `/users-admin` now lets `system_admin` provision or repair real Supabase Auth credentials for existing `app_users` without leaving the workspace
+    - the workspace snapshot now exposes auth credential status/email so missing vs stale mappings can be resolved from the UI before disabling the support bridge
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
@@ -220,6 +227,8 @@ Resolved cross-cutting planning item:
 - Cash movement ledger Slice 3 verification: `tests/e2e/cash-register-session-api.spec.ts`, `tests/e2e/cash-register-session-ui.spec.ts`, and `tests/e2e/api-contract-conformance.spec.ts` cover manual movement recording, active-session ledger detail, expected-balance updates, and the new movement endpoint contract.
 - Discrepancy approval Slice 5 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/cash-register-session-api.spec.ts`, and `tests/e2e/cash-register-session-ui.spec.ts` cover the new override permission, review-required closeouts, supervisor approval, and reopen-for-recount UI flow.
 - Hardening Slice 7 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, and `tests/e2e/offline-cash-movement-recovery.spec.ts` cover authenticated actor precedence over the support bridge, visible session attribution in the rail, and offline manual cash-movement replay into the real ledger.
+- Real-login Slice 8 verification: `tests/e2e/access-control-login-ui.spec.ts` covers Supabase password login, redirect to the permitted workspace, authenticated attribution in the shell, and logout back to `/login`.
+- Credential-provisioning Slice 9 verification: `tests/e2e/access-control-credentials-admin-api.spec.ts` and `tests/e2e/access-control-credentials-admin-ui.spec.ts` cover creating/updating auth credentials for `app_users`, then signing in through `/login` with the provisioned operator.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

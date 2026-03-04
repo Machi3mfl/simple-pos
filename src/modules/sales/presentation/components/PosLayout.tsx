@@ -141,8 +141,10 @@ export function PosLayout({
     currentActor,
     permissionSnapshot,
     sessionSource,
+    isAuthenticated,
     canSwitchActor,
     openOperatorSelector,
+    signOut,
     status,
   } =
     useActorSession();
@@ -195,6 +197,12 @@ export function PosLayout({
           : sessionSource === "assumed_user"
             ? messages.accessControl.sessionSourceAssumedUser
             : messages.accessControl.sessionSourceDefaultActor;
+  const authActionLabel =
+    status === "loading"
+      ? undefined
+      : isAuthenticated
+        ? messages.accessControl.signOutAction
+        : messages.accessControl.signInAction;
   const categories = useMemo(() => {
     const categoryCodes = sortCategoryCodes(
       dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
@@ -544,6 +552,17 @@ export function PosLayout({
           isLoadingActor={status === "loading"}
           canOpenOperatorSelector={canSwitchActor}
           onOpenOperatorSelector={openOperatorSelector}
+          authActionLabel={authActionLabel}
+          onAuthAction={() => {
+            if (isAuthenticated) {
+              void signOut().then(() => {
+                router.push("/login");
+              });
+              return;
+            }
+
+            router.push("/login");
+          }}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
               router.push(workspacePathById[itemId]);

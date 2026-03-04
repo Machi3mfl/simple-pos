@@ -3,6 +3,8 @@ import type {
   AccessRoleDefinition,
   AccessUserDefinition,
   CreateCustomRoleInput,
+  UpsertedUserAuthCredentials,
+  UpsertUserAuthCredentialsInput,
   UpdateCustomRoleInput,
 } from "../types/RoleAdministration";
 
@@ -27,5 +29,8 @@ export interface RoleAdministrationRepository {
     readonly userId: string;
     readonly roleIds: readonly string[];
   }): Promise<void>;
+  upsertUserAuthCredentials(
+    input: UpsertUserAuthCredentialsInput,
+  ): Promise<UpsertedUserAuthCredentials>;
   getUserRoleIds(userId: string): Promise<readonly string[]>;
 }

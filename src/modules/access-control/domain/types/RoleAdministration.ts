@@ -43,6 +43,12 @@ export interface AccessUserDefinition {
   readonly roleCodes: readonly string[];
   readonly roleNames: readonly string[];
   readonly assignedRegisterIds: readonly string[];
+  readonly authUserId?: string;
+  readonly authEmail?: string;
+  readonly authCredentialStatus:
+    | "not_provisioned"
+    | "provisioned"
+    | "stale_mapping";
 }
 
 export interface AccessControlWorkspaceSnapshot {
@@ -72,4 +78,19 @@ export interface ReplaceUserRolesInput {
   readonly actorId: string;
   readonly userId: string;
   readonly roleIds: readonly string[];
+}
+
+export interface UpsertUserAuthCredentialsInput {
+  readonly actorId: string;
+  readonly userId: string;
+  readonly email: string;
+  readonly password: string;
+}
+
+export interface UpsertedUserAuthCredentials {
+  readonly userId: string;
+  readonly displayName: string;
+  readonly authUserId: string;
+  readonly authEmail: string;
+  readonly wasCreated: boolean;
 }

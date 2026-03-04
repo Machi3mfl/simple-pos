@@ -9,6 +9,18 @@ interface AuthenticatedAppUserSession {
   readonly cleanup: () => Promise<void>;
 }
 
+interface ProvisionedAppUserCredentials {
+  readonly email: string;
+  readonly password: string;
+  readonly authUserId: string;
+  readonly cleanup: () => Promise<void>;
+}
+
+interface AppUserAuthLinkSnapshot {
+  readonly appUserId: string;
+  readonly authUserId: string | null;
+}
+
 function readRequiredEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (value) {
@@ -58,12 +70,78 @@ function createAnonClient(): SupabaseClient {
   );
 }
 
-export async function createAuthenticatedSessionForAppUser(params: {
+export async function readAppUserAuthLink(
+  appUserId: string,
+): Promise<AppUserAuthLinkSnapshot> {
+  const adminClient = createServiceRoleClient();
+  const response = await adminClient
+    .from("app_users")
+    .select("auth_user_id")
+    .eq("id", appUserId)
+    .maybeSingle();
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  return {
+    appUserId,
+    authUserId:
+      (response.data?.auth_user_id as string | null | undefined) ?? null,
+  };
+}
+
+export async function restoreAppUserAuthLink(params: {
+  readonly appUserId: string;
+  readonly authUserId: string | null;
+}): Promise<void> {
+  const adminClient = createServiceRoleClient();
+  const response = await adminClient
+    .from("app_users")
+    .update({ auth_user_id: params.authUserId })
+    .eq("id", params.appUserId);
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+}
+
+export async function deleteAuthUserById(authUserId: string): Promise<void> {
+  const adminClient = createServiceRoleClient();
+  const response = await adminClient.auth.admin.deleteUser(authUserId);
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+}
+
+export async function signInWithPassword(params: {
+  readonly email: string;
+  readonly password: string;
+}): Promise<{ readonly accessToken: string; readonly authUserId: string }> {
+  const publicClient = createAnonClient();
+  const signInResponse = await publicClient.auth.signInWithPassword({
+    email: params.email,
+    password: params.password,
+  });
+  if (
+    signInResponse.error ||
+    !signInResponse.data.session?.access_token ||
+    !signInResponse.data.user?.id
+  ) {
+    throw new Error(signInResponse.error?.message ?? "Failed to sign in auth user.");
+  }
+
+  return {
+    accessToken: signInResponse.data.session.access_token,
+    authUserId: signInResponse.data.user.id,
+  };
+}
+
+export async function provisionPasswordCredentialsForAppUser(params: {
   readonly appUserId: string;
   readonly label: string;
-}): Promise<AuthenticatedAppUserSession> {
+}): Promise<ProvisionedAppUserCredentials> {
   const adminClient = createServiceRoleClient();
-  const publicClient = createAnonClient();
   const email = `${params.label}-${Date.now()}@example.com`;
   const password = `Pass-${crypto.randomUUID()}Aa1!`;
 
@@ -101,16 +179,9 @@ export async function createAuthenticatedSessionForAppUser(params: {
     throw new Error(updatedUserResponse.error.message);
   }
 
-  const signInResponse = await publicClient.auth.signInWithPassword({
+  return {
     email,
     password,
-  });
-  if (signInResponse.error || !signInResponse.data.session?.access_token) {
-    throw new Error(signInResponse.error?.message ?? "Failed to sign in auth user.");
-  }
-
-  return {
-    accessToken: signInResponse.data.session.access_token,
     authUserId,
     cleanup: async () => {
       await adminClient
@@ -120,6 +191,28 @@ export async function createAuthenticatedSessionForAppUser(params: {
       await adminClient.auth.admin.deleteUser(authUserId);
     },
   };
+}
+
+export async function createAuthenticatedSessionForAppUser(params: {
+  readonly appUserId: string;
+  readonly label: string;
+}): Promise<AuthenticatedAppUserSession> {
+  const provisionedUser = await provisionPasswordCredentialsForAppUser(params);
+  try {
+    const session = await signInWithPassword({
+      email: provisionedUser.email,
+      password: provisionedUser.password,
+    });
+
+    return {
+      accessToken: session.accessToken,
+      authUserId: provisionedUser.authUserId,
+      cleanup: provisionedUser.cleanup,
+    };
+  } catch (error) {
+    await provisionedUser.cleanup();
+    throw error;
+  }
 }
 
 export async function installApiAuthorizationHeader(

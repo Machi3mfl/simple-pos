@@ -8,11 +8,14 @@ import type {
   AccessRoleDefinition,
   AccessUserDefinition,
   CreateCustomRoleInput,
+  UpsertedUserAuthCredentials,
+  UpsertUserAuthCredentialsInput,
   UpdateCustomRoleInput,
 } from "../../domain/types/RoleAdministration";
 
 interface AppUserRow {
   readonly id: string;
+  readonly auth_user_id: string | null;
   readonly display_name: string;
   readonly actor_kind: "human" | "system";
   readonly is_active: boolean;
@@ -51,6 +54,12 @@ interface RolePermissionAssignmentRow {
 interface RegisterAssignmentRow {
   readonly user_id: string;
   readonly cash_register_id: string;
+}
+
+interface AuthUserProfile {
+  readonly authUserId: string;
+  readonly email?: string;
+  readonly exists: boolean;
 }
 
 const seededRolePriority = [
@@ -116,6 +125,89 @@ export class SupabaseRoleAdministrationRepository
     const users = await this.loadUsers([userId]);
     const builtUsers = await this.buildUsers(users);
     return builtUsers[0] ?? null;
+  }
+
+  async upsertUserAuthCredentials(
+    input: UpsertUserAuthCredentialsInput,
+  ): Promise<UpsertedUserAuthCredentials> {
+    const [user] = await this.loadUsers([input.userId]);
+    if (!user) {
+      throw new Error("No encontramos el usuario seleccionado.");
+    }
+
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const password = input.password.trim();
+    if (normalizedEmail.length === 0) {
+      throw new Error("El correo de acceso no puede quedar vacío.");
+    }
+    if (password.length < 8) {
+      throw new Error("La contraseña temporal debe tener al menos 8 caracteres.");
+    }
+
+    const currentAuthUserId = user.auth_user_id ?? undefined;
+    const currentAuthProfile = currentAuthUserId
+      ? await this.loadAuthUserProfile(currentAuthUserId)
+      : null;
+
+    let authUserId = currentAuthProfile?.exists ? currentAuthUserId : undefined;
+    let wasCreated = false;
+
+    if (authUserId) {
+      const { data, error } = await this.client.auth.admin.updateUserById(authUserId, {
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          app_user_id: user.id,
+          display_name: user.display_name,
+        },
+      });
+
+      if (error || !data.user) {
+        throw new Error(
+          error?.message ??
+            "No se pudieron actualizar las credenciales del usuario.",
+        );
+      }
+    } else {
+      const { data, error } = await this.client.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          app_user_id: user.id,
+          display_name: user.display_name,
+        },
+      });
+
+      if (error || !data.user) {
+        throw new Error(
+          error?.message ?? "No se pudieron crear las credenciales del usuario.",
+        );
+      }
+
+      authUserId = data.user.id;
+      wasCreated = true;
+    }
+
+    const { error: updateUserError } = await this.client
+      .from("app_users")
+      .update({ auth_user_id: authUserId })
+      .eq("id", user.id);
+
+    if (updateUserError) {
+      throw new Error(
+        `Failed to link app user auth credentials in Supabase: ${updateUserError.message}`,
+      );
+    }
+
+    return {
+      userId: user.id,
+      displayName: user.display_name,
+      authUserId: authUserId!,
+      authEmail: normalizedEmail,
+      wasCreated,
+    };
   }
 
   async listPermissions(): Promise<readonly RawAccessPermissionRecord[]> {
@@ -413,6 +505,11 @@ export class SupabaseRoleAdministrationRepository
     ]);
     const roleIds = Array.from(new Set(userRoleAssignments.map((assignment) => assignment.role_id)));
     const roles = roleIds.length > 0 ? await this.loadRoles(roleIds) : [];
+    const authProfilesByAuthUserId = await this.loadAuthUserProfiles(
+      users
+        .map((user) => user.auth_user_id)
+        .filter((authUserId): authUserId is string => Boolean(authUserId)),
+    );
     const rolesById = new Map(roles.map((role) => [role.id, role]));
 
     const roleIdsByUserId = new Map<string, string[]>();
@@ -449,6 +546,17 @@ export class SupabaseRoleAdministrationRepository
           assignedRegisterIds: Array.from(
             new Set(registerIdsByUserId.get(user.id) ?? []),
           ).sort((left, right) => left.localeCompare(right, "es")),
+          authUserId: user.auth_user_id ?? undefined,
+          authEmail:
+            user.auth_user_id
+              ? authProfilesByAuthUserId.get(user.auth_user_id)?.email
+              : undefined,
+          authCredentialStatus:
+            !user.auth_user_id
+              ? "not_provisioned"
+              : authProfilesByAuthUserId.get(user.auth_user_id)?.exists === false
+                ? "stale_mapping"
+                : "provisioned",
         };
       });
   }
@@ -476,7 +584,7 @@ export class SupabaseRoleAdministrationRepository
   private async loadUsers(userIds?: readonly string[]): Promise<readonly AppUserRow[]> {
     let query = this.client
       .from("app_users")
-      .select("id, display_name, actor_kind, is_active");
+      .select("id, auth_user_id, display_name, actor_kind, is_active");
 
     if (userIds && userIds.length > 0) {
       query = query.in("id", [...userIds]);
@@ -489,6 +597,43 @@ export class SupabaseRoleAdministrationRepository
     }
 
     return (data as readonly AppUserRow[] | null) ?? [];
+  }
+
+  private async loadAuthUserProfiles(
+    authUserIds: readonly string[],
+  ): Promise<Map<string, AuthUserProfile>> {
+    const uniqueAuthUserIds = Array.from(new Set(authUserIds));
+    if (uniqueAuthUserIds.length === 0) {
+      return new Map();
+    }
+
+    const profiles = await Promise.all(
+      uniqueAuthUserIds.map(async (authUserId) => {
+        const profile = await this.loadAuthUserProfile(authUserId);
+        return [authUserId, profile] as const;
+      }),
+    );
+
+    return new Map(profiles);
+  }
+
+  private async loadAuthUserProfile(authUserId: string): Promise<AuthUserProfile> {
+    const { data, error } = await this.client.auth.admin.getUserById(authUserId);
+    if (error || !data.user) {
+      return {
+        authUserId,
+        exists: false,
+      };
+    }
+
+    return {
+      authUserId,
+      email:
+        typeof data.user.email === "string" && data.user.email.trim().length > 0
+          ? data.user.email.trim().toLowerCase()
+          : undefined,
+      exists: true,
+    };
   }
 
   private async loadUserRoleAssignments(

@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 
-import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
+import { getSupabaseRequestAuthClient } from "@/infrastructure/config/supabaseServer";
 
 import {
   getActorSessionCookieName,
@@ -60,16 +60,19 @@ async function resolveAuthenticatedActor(
   "authUserId" | "authenticatedDisplayName" | "resolutionSource"
 > | null> {
   const accessToken = readBearerToken(request) ?? readSupabaseAccessTokenHeader(request);
-  if (!accessToken) {
-    return null;
-  }
 
   try {
-    const { data, error } = await getSupabaseServerClient().auth.getUser(accessToken);
+    const authClient = getSupabaseRequestAuthClient(request);
+    const { data, error } = accessToken
+      ? await authClient.auth.getUser(accessToken)
+      : await authClient.auth.getUser();
+
     if (error || !data.user) {
-      return {
-        resolutionSource: "authenticated_unmapped",
-      };
+      return accessToken
+        ? {
+            resolutionSource: "authenticated_unmapped",
+          }
+        : null;
     }
 
     return {
@@ -78,9 +81,11 @@ async function resolveAuthenticatedActor(
       resolutionSource: "authenticated",
     };
   } catch {
-    return {
-      resolutionSource: "authenticated_unmapped",
-    };
+    return accessToken
+      ? {
+          resolutionSource: "authenticated_unmapped",
+        }
+      : null;
   }
 }
 

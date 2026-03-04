@@ -150,6 +150,35 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Real Login UI Checkpoint
+
+`POS-002 Slice 8` adds the first browser-visible Supabase Auth flow on top of the existing actor model so operators can enter with email/password, land on their allowed workspace, and close the session again without relying on the temporary support bridge.
+
+- Main contracts:
+  - `GET /api/v1/me`
+  - `GET /api/v1/app-users`
+  - Supabase Auth browser sign-in/sign-out flow over the existing `app_users.auth_user_id` mapping
+- Coverage:
+  - UI: [tests/e2e/access-control-login-ui.spec.ts](../../../tests/e2e/access-control-login-ui.spec.ts), [tests/e2e/access-control-shell-ui.spec.ts](../../../tests/e2e/access-control-shell-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
+## Real Credential Provisioning for `app_users`
+
+`POS-002 Slice 9` closes the admin loop over real login by letting `system_admin` provision or repair Supabase Auth credentials for existing business users directly from `/users-admin`.
+
+- Main contracts:
+  - `GET /api/v1/access-control/workspace`
+  - `POST /api/v1/access-control/users/{id}/auth-credentials`
+  - `GET /api/v1/me`
+  - `/login` browser sign-in over the provisioned `app_users.auth_user_id` link
+- Coverage:
+  - UI: [tests/e2e/access-control-credentials-admin-ui.spec.ts](../../../tests/e2e/access-control-credentials-admin-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-credentials-admin-api.spec.ts](../../../tests/e2e/access-control-credentials-admin-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:

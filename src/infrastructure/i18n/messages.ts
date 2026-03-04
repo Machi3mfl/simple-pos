@@ -36,10 +36,29 @@ const spanishMessages = {
       `Operador actual: ${displayName}`,
     unknownOperator: "Operador desconocido",
     unmappedActorRole: "Sin rol asignado",
+    signInAction: "Iniciar sesión",
+    signOutAction: "Cerrar sesión",
     sessionSourceAuthenticated: "Login verificado",
     sessionSourceAuthenticatedUnmapped: "Login sin perfil",
     sessionSourceAssumedUser: "Modo soporte",
     sessionSourceDefaultActor: "Preset temporal",
+    loginTitle: "Iniciar sesión",
+    loginDescription:
+      "Entrá con tu usuario real para que la caja, las ventas y los reportes queden atribuidos correctamente.",
+    loginEmailLabel: "Correo electrónico",
+    loginPasswordLabel: "Contraseña",
+    loginSubmitAction: "Entrar",
+    loginSupportAction: "Seguir en modo soporte",
+    loginSupportHint:
+      "Mientras el bridge temporal siga habilitado, todavía podés operar con el preset de soporte para validar el flujo.",
+    loginInvalidCredentials:
+      "No se pudo iniciar sesión. Revisá el correo y la contraseña.",
+    loginUnmappedProfile:
+      "El login es válido, pero todavía no está vinculado a un perfil operativo del sistema.",
+    loginNoWorkspace:
+      "El usuario autenticado no tiene ningún workspace habilitado.",
+    loginAuthenticatedHint:
+      "La sesión ya está validada. Te redirigimos al workspace operativo disponible.",
     readOnlyWorkspaceHint:
       "Este perfil puede consultar la información, pero no tiene permisos para modificarla.",
     salesDetailRestrictedHint:
@@ -125,6 +144,21 @@ const spanishMessages = {
     searchUsersPlaceholder: "Buscar por nombre o rol",
     assignRolesAction: "Guardar asignación",
     tryRoleAction: "Probar operador",
+    authSectionTitle: "Acceso real",
+    authEmailLabel: "Correo de acceso",
+    authPasswordLabel: "Contraseña temporal",
+    authCreateAction: "Generar acceso",
+    authUpdateAction: "Actualizar acceso",
+    authProvisionedBadge: "Acceso listo",
+    authMissingBadge: "Sin acceso",
+    authStaleBadge: "Vinculación rota",
+    authCurrentEmailLabel: "Correo actual",
+    authMissingDescription:
+      "Todavía no hay un login real vinculado a este usuario de aplicación.",
+    authStaleDescription:
+      "La vinculación actual apunta a un usuario auth inexistente. Volvé a generar acceso para repararla.",
+    authSectionHint:
+      "Usá este bloque para dejar un login real de Supabase Auth y probar el flujo sin bridge temporal.",
     noUserSelectedTitle: "Elegí un usuario",
     noUserSelectedDescription:
       "Desde acá podés combinar roles y validar el rail o los datos visibles con el snapshot actual.",

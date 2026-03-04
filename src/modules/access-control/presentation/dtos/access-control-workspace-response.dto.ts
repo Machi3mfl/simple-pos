@@ -50,6 +50,13 @@ export const accessControlUserDTOSchema = z
     roleCodes: z.array(z.string().min(1)),
     roleNames: z.array(z.string().min(1)),
     assignedRegisterIds: z.array(z.string().min(1)),
+    authUserId: z.string().uuid().optional(),
+    authEmail: z.string().email().optional(),
+    authCredentialStatus: z.enum([
+      "not_provisioned",
+      "provisioned",
+      "stale_mapping",
+    ]),
   })
   .strict();
 

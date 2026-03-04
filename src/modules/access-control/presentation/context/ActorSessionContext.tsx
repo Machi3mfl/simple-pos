@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { getSupabaseBrowserClient } from "@/infrastructure/config/supabase";
+
 import type {
   ActorSessionResolutionSource,
   CurrentActorSnapshot,
@@ -24,12 +26,14 @@ interface ActorSessionContextValue {
   readonly currentActor: CurrentActorSnapshot["actor"] | null;
   readonly permissionSnapshot: CurrentActorSnapshot["permissionSnapshot"] | null;
   readonly sessionSource: ActorSessionResolutionSource | null;
+  readonly isAuthenticated: boolean;
   readonly canSwitchActor: boolean;
   readonly errorMessage: string | null;
   readonly openOperatorSelector: () => void;
-  readonly refreshActorSession: () => Promise<void>;
+  readonly refreshActorSession: () => Promise<CurrentActorSnapshot | null>;
   readonly switchActor: (userId: string) => Promise<void>;
   readonly clearAssumedActor: () => Promise<void>;
+  readonly signOut: () => Promise<void>;
 }
 
 interface ActorSessionProviderProps {
@@ -59,6 +63,15 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
 
 const ActorSessionContext = createContext<ActorSessionContextValue | null>(null);
 
+function isAuthenticatedSessionSource(
+  sessionSource: ActorSessionResolutionSource | null,
+): boolean {
+  return (
+    sessionSource === "authenticated" ||
+    sessionSource === "authenticated_unmapped"
+  );
+}
+
 export function ActorSessionProvider({
   children,
 }: ActorSessionProviderProps): JSX.Element {
@@ -73,38 +86,46 @@ export function ActorSessionProvider({
   const [selectorError, setSelectorError] = useState<string | null>(null);
   const [isSwitchingActor, setIsSwitchingActor] = useState<boolean>(false);
 
-  const refreshActorSession = useCallback(async (): Promise<void> => {
-    setStatus((current) => (current === "ready" ? current : "loading"));
-    setErrorMessage(null);
+  const refreshActorSession = useCallback(
+    async (): Promise<CurrentActorSnapshot | null> => {
+      setStatus((current) => (current === "ready" ? current : "loading"));
+      setErrorMessage(null);
 
-    try {
-      const response = await fetch("/api/v1/me", {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-        },
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as CurrentActorSnapshot | ApiErrorPayload;
+      try {
+        const response = await fetch("/api/v1/me", {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+          },
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as
+          | CurrentActorSnapshot
+          | ApiErrorPayload;
 
-      if (!response.ok) {
-        throw new Error(
-          resolveApiMessage(payload, "No se pudo cargar el operador actual."),
+        if (!response.ok) {
+          throw new Error(
+            resolveApiMessage(payload, "No se pudo cargar el operador actual."),
+          );
+        }
+
+        const currentSnapshot = payload as CurrentActorSnapshot;
+        setSnapshot(currentSnapshot);
+        setStatus("ready");
+        return currentSnapshot;
+      } catch (error: unknown) {
+        setSnapshot(null);
+        setStatus("error");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "No se pudo cargar el operador actual.",
         );
+        return null;
       }
-
-      setSnapshot(payload as CurrentActorSnapshot);
-      setStatus("ready");
-    } catch (error: unknown) {
-      setSnapshot(null);
-      setStatus("error");
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "No se pudo cargar el operador actual.",
-      );
-    }
-  }, []);
+    },
+    [],
+  );
 
   const loadSelectableActors = useCallback(async (): Promise<void> => {
     setIsLoadingActors(true);
@@ -142,14 +163,34 @@ export function ActorSessionProvider({
     void refreshActorSession();
   }, [refreshActorSession]);
 
+  useEffect(() => {
+    const browserClient = getSupabaseBrowserClient();
+    const {
+      data: { subscription },
+    } = browserClient.auth.onAuthStateChange(() => {
+      void refreshActorSession();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [refreshActorSession]);
+
   const openOperatorSelector = useCallback((): void => {
-    if (!snapshot?.session.canAssumeUserBridge) {
+    if (
+      !snapshot?.session.canAssumeUserBridge ||
+      isAuthenticatedSessionSource(snapshot.session.resolutionSource)
+    ) {
       return;
     }
 
     setIsSelectorOpen(true);
     void loadSelectableActors();
-  }, [loadSelectableActors, snapshot?.session.canAssumeUserBridge]);
+  }, [
+    loadSelectableActors,
+    snapshot?.session.canAssumeUserBridge,
+    snapshot?.session.resolutionSource,
+  ]);
 
   const switchActor = useCallback(
     async (userId: string): Promise<void> => {
@@ -201,18 +242,53 @@ export function ActorSessionProvider({
     await refreshActorSession();
   }, [refreshActorSession]);
 
+  const signOut = useCallback(async (): Promise<void> => {
+    setErrorMessage(null);
+
+    try {
+      await fetch("/api/v1/me/assume-user", {
+        method: "DELETE",
+        headers: {
+          accept: "application/json",
+        },
+      });
+
+      const { error } = await getSupabaseBrowserClient().auth.signOut();
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await refreshActorSession();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo cerrar la sesión actual.";
+      setErrorMessage(
+        message,
+      );
+      throw new Error(message);
+    }
+  }, [refreshActorSession]);
+
   const value = useMemo<ActorSessionContextValue>(
     () => ({
       status,
       currentActor: snapshot?.actor ?? null,
       permissionSnapshot: snapshot?.permissionSnapshot ?? null,
       sessionSource: snapshot?.session.resolutionSource ?? null,
-      canSwitchActor: snapshot?.session.canAssumeUserBridge ?? false,
+      isAuthenticated: isAuthenticatedSessionSource(
+        snapshot?.session.resolutionSource ?? null,
+      ),
+      canSwitchActor:
+        (snapshot?.session.canAssumeUserBridge ?? false) &&
+        !isAuthenticatedSessionSource(snapshot?.session.resolutionSource ?? null),
       errorMessage,
       openOperatorSelector,
       refreshActorSession,
       switchActor,
       clearAssumedActor,
+      signOut,
     }),
     [
       status,
@@ -222,6 +298,7 @@ export function ActorSessionProvider({
       refreshActorSession,
       switchActor,
       clearAssumedActor,
+      signOut,
     ],
   );
 

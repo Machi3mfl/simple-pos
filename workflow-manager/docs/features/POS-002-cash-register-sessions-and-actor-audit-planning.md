@@ -102,10 +102,21 @@ Delivered so far:
   - `POST /api/v1/cash-register-sessions/{id}/reopen` returns a pending closeout to `open` so the operator can recount without opening a new drawer session
   - the session read model now exposes who submitted the count and who approved the discrepancy, with minimal approval notes for audit context
   - `/cash-register` now shows a review-required state and supervisor approval/reopen flow in the real UI checkpoint
+- `Slice 8`:
+  - `/login` now provides a real Supabase Auth email/password checkpoint over the existing actor model
+  - request actor resolution now reads SSR auth cookies in addition to bearer headers, so browser login works across the same `/api/v1/*` contracts without custom per-screen headers
+  - the shell now exposes `Iniciar sesión` / `Cerrar sesión`, and authenticated operators are redirected to the first workspace allowed by their permission snapshot
+  - when `POS_ENABLE_ASSUME_USER_BRIDGE` is disabled, `/` now resolves to `/login` instead of silently preferring the temporary drawer preset
+- `Slice 9`:
+  - `/users-admin` now lets `system_admin` provision or repair real Supabase Auth credentials for existing `app_users`
+  - the workspace snapshot now exposes auth credential status (`not_provisioned`, `provisioned`, `stale_mapping`) plus the currently linked email
+  - `POST /api/v1/access-control/users/{id}/auth-credentials` now closes the admin workflow for real operator onboarding without test-only helpers
+  - a provisioned operator can now be validated immediately through `/login`, using the same permission snapshot and role guards already active across the shell
 
 Still pending:
 
-- full auth hardening beyond the temporary `assume-user` bridge.
+- removal of the temporary `assume-user` bridge from normal operator flows once business validation is complete,
+- making real-credential provisioning the default onboarding path before the support bridge is disabled in production-like environments.
 
 ---
 
@@ -1288,6 +1299,30 @@ Implemented result:
 - retrying sync from `/cash-register` replays `cash_movement_recorded` into the real cash ledger and refreshes the active-session detail after success,
 - opening and closing a register remain online-first as previously recommended; the hardening slice only adds offline support for manual cash events.
 
+### Slice 8: Real login UI checkpoint
+
+- `/login` now renders a real operator-facing email/password flow backed by Supabase Auth,
+- browser sign-in/sign-out now works against the existing `app_users.auth_user_id` mapping without inventing a second identity model,
+- request actor resolution now accepts authenticated SSR cookies as a first-class source, while bearer tokens still keep precedence for tests and explicit API clients,
+- the shell now shows `Iniciar sesión` when operating under the temporary preset/bridge and `Cerrar sesión` once the operator is authenticated,
+- successful login redirects the operator to the first workspace allowed by the permission snapshot, so `cashier` lands directly in `/cash-register`,
+- logout clears both the Supabase auth session and any leftover assumed-user cookie before returning to `/login`.
+
+Completed UI checkpoint:
+
+- real login page -> authenticated workspace redirect -> logout back to `/login`
+
+### Slice 9: Real credential provisioning for `app_users`
+
+- `/users-admin` now includes a real credential block inside the selected-user panel, so `system_admin` can create or update the Supabase Auth login for an existing business operator without leaving the workspace,
+- the access-control workspace snapshot now exposes `authCredentialStatus`, `authEmail`, and `authUserId` so the UI can surface missing vs stale mappings directly,
+- `POST /api/v1/access-control/users/{id}/auth-credentials` is now the server-enforced contract for provisioning or repairing credentials under `users.manage`,
+- the flow is intentionally UI-first: choose a business user, provision access, then validate the resulting role bundle immediately through `/login`.
+
+Completed UI checkpoint:
+
+- `/users-admin` credential provisioning -> `/login` with the provisioned user -> redirect to the first permitted workspace
+
 ---
 
 ## Acceptance Criteria for the Feature Plan
@@ -1302,6 +1337,8 @@ Implemented result:
 - [x] Roles are implemented as bundles of permission codes, not as hardcoded UI conditionals.
 - [x] `GET /api/v1/me` returns a stable permission snapshot usable directly by the shell/UI.
 - [x] The temporary pre-auth actor bridge is testable from a real UI without resorting to developer-only local storage hacks.
+- [x] The same permission snapshot can now be reached through a real login/logout browser flow backed by Supabase Auth.
+- [x] `system_admin` can provision or repair real login credentials for `app_users` from the admin UI.
 - [x] UI navigation, components, and data blocks are protected by the same permission model.
 - [x] Strategic metrics and sensitive financial fields are hidden from operational roles by default.
 - [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.
