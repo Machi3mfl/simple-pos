@@ -25,6 +25,7 @@ export interface CatalogProduct {
 }
 
 interface ProductCatalogPanelProps {
+  readonly topContent?: React.ReactNode;
   readonly categories: readonly CatalogCategory[];
   readonly activeCategoryId: string;
   readonly products: readonly CatalogProduct[];
@@ -70,6 +71,7 @@ function formatStockCount(stock: number): string {
 }
 
 export function ProductCatalogPanel({
+  topContent,
   categories,
   activeCategoryId,
   products,
@@ -310,6 +312,8 @@ export function ProductCatalogPanel({
       data-testid="sales-catalog-scroll-root"
       className="min-w-0 overflow-y-auto bg-[#f7f7f8] p-5 lg:h-full lg:p-8"
     >
+      {topContent ? <div className="mb-5">{topContent}</div> : null}
+
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="whitespace-nowrap text-[2.45rem] font-semibold tracking-tight text-slate-900">
           {messages.sales.catalog.title}

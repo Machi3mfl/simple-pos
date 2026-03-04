@@ -21,6 +21,7 @@ import { ProductsInventoryPanel } from "@/modules/products/presentation/componen
 import { OrdersPanel } from "@/modules/reporting/presentation/components/OrdersPanel";
 import { ReportingPanel } from "@/modules/reporting/presentation/components/ReportingPanel";
 import { OfflineSyncPanel } from "@/modules/sync/presentation/components/OfflineSyncPanel";
+import { CashRegisterSessionPanel } from "@/modules/cash-management/presentation/components/CashRegisterSessionPanel";
 import {
   isPosWorkspaceId,
   workspacePathById,
@@ -407,6 +408,17 @@ export function PosLayout({
       return (
         <>
           <ProductCatalogPanel
+            topContent={
+              <CashRegisterSessionPanel
+                preferredRegisterIds={currentActor?.assignedRegisterIds ?? []}
+                canOpenSession={
+                  permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
+                }
+                canCloseSession={
+                  permissionSnapshot?.workspaces.cashRegister.canCloseSession ?? false
+                }
+              />
+            }
             categories={categories}
             activeCategoryId={activeCategoryId}
             products={visibleProducts}

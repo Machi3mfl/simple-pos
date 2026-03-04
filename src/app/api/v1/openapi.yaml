@@ -34,6 +34,8 @@ tags:
     description: External catalog search and assisted import orchestration.
   - name: AccessControl
     description: Temporary operator bootstrap and permission snapshot endpoints.
+  - name: CashManagement
+    description: Cash register session lifecycle and drawer state.
 
 paths:
   /app-users:
@@ -105,6 +107,110 @@ paths:
                 properties:
                   ok:
                     type: boolean
+
+  /cash-registers:
+    get:
+      tags: [CashManagement]
+      operationId: listAccessibleCashRegisters
+      summary: List active cash registers visible to the current operator
+      responses:
+        '200':
+          description: Accessible cash registers with current active-session snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCashRegistersResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /cash-registers/{id}/active-session:
+    get:
+      tags: [CashManagement]
+      operationId: getActiveCashRegisterSession
+      summary: Get the active session for one cash register
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active session snapshot for the register
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveCashRegisterSessionResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /cash-register-sessions:
+    post:
+      tags: [CashManagement]
+      operationId: openCashRegisterSession
+      summary: Open a cash register session with the initial float
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenCashRegisterSessionRequest'
+      responses:
+        '201':
+          description: Opened cash register session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegisterSession'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /cash-register-sessions/{id}/close:
+    post:
+      tags: [CashManagement]
+      operationId: closeCashRegisterSession
+      summary: Close a cash register session with counted cash
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseCashRegisterSessionRequest'
+      responses:
+        '200':
+          description: Closed cash register session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegisterSession'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
 
   /products:
     get:
@@ -1009,6 +1115,113 @@ components:
           $ref: '#/components/schemas/MeResponseActor'
         permissionSnapshot:
           $ref: '#/components/schemas/PermissionSnapshot'
+
+    CashRegisterSession:
+      type: object
+      required:
+        [
+          id,
+          cashRegisterId,
+          status,
+          openingFloatAmount,
+          expectedBalanceAmount,
+          openedAt,
+          openedByUserId,
+          openedByDisplayName,
+        ]
+      properties:
+        id:
+          type: string
+        cashRegisterId:
+          type: string
+        status:
+          type: string
+          enum: [open, closing_review_required, closed, voided]
+        openingFloatAmount:
+          type: number
+        expectedBalanceAmount:
+          type: number
+        countedClosingAmount:
+          type: number
+        discrepancyAmount:
+          type: number
+        openedAt:
+          type: string
+          format: date-time
+        openedByUserId:
+          type: string
+        openedByDisplayName:
+          type: string
+        closedAt:
+          type: string
+          format: date-time
+        closedByUserId:
+          type: string
+        closedByDisplayName:
+          type: string
+        openingNotes:
+          type: string
+        closingNotes:
+          type: string
+
+    ActiveCashRegisterSessionResponse:
+      type: object
+      required: [session]
+      properties:
+        session:
+          oneOf:
+            - $ref: '#/components/schemas/CashRegisterSession'
+            - type: 'null'
+
+    CashRegisterListItem:
+      type: object
+      required: [id, name, isActive, activeSession]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        locationCode:
+          type: string
+        isActive:
+          type: boolean
+        activeSession:
+          oneOf:
+            - $ref: '#/components/schemas/CashRegisterSession'
+            - type: 'null'
+
+    ListCashRegistersResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashRegisterListItem'
+
+    OpenCashRegisterSessionRequest:
+      type: object
+      required: [cashRegisterId, openingFloatAmount]
+      properties:
+        cashRegisterId:
+          type: string
+        openingFloatAmount:
+          type: number
+          minimum: 0
+        openingNotes:
+          type: string
+          maxLength: 240
+
+    CloseCashRegisterSessionRequest:
+      type: object
+      required: [countedClosingAmount]
+      properties:
+        countedClosingAmount:
+          type: number
+          minimum: 0
+        closingNotes:
+          type: string
+          maxLength: 240
 
     Product:
       type: object

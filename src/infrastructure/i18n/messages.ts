@@ -200,6 +200,43 @@ const spanishMessages = {
       continueScrolling: "Seguí bajando para ver más productos.",
       endReached: "No hay más productos para este filtro.",
     },
+    cashSession: {
+      title: "Sesión de caja",
+      registerLabel: "Caja",
+      registerPlaceholder: "Seleccionar caja",
+      noRegistersAvailable:
+        "Este operador no tiene cajas disponibles para operar en esta estación.",
+      noSessionTitle: "Caja lista para abrir",
+      noSessionDescription:
+        "Elegí la caja y cargá el cambio inicial para dejar el turno operativo.",
+      activeSessionTitle: "Caja abierta",
+      activeSessionDescription:
+        "La apertura y el cierre ya quedan atribuidos al operador con saldo esperado visible.",
+      openingFloatLabel: "Cambio inicial",
+      openingNotesLabel: "Notas de apertura",
+      closingCountedLabel: "Total contado",
+      closingNotesLabel: "Notas de cierre",
+      expectedBalanceLabel: "Esperado",
+      discrepancyLabel: "Diferencia",
+      openedByLabel: "Abierta por",
+      openedAtLabel: "Abierta",
+      closeModalTitle: "Cerrar caja",
+      closeModalDescription:
+        "Ingresá el efectivo contado para comparar contra el saldo esperado.",
+      openAction: "Abrir caja",
+      closeAction: "Cerrar caja",
+      openingNotePlaceholder: "Ej. turno mañana",
+      closingNotePlaceholder: "Ej. cierre sin novedades",
+      openSuccess: (registerName: string): string =>
+        `Caja ${registerName} abierta correctamente.`,
+      closeSuccess: (registerName: string): string =>
+        `Caja ${registerName} cerrada correctamente.`,
+      loadError: "No se pudo cargar el estado de caja.",
+      openErrorFallback: "No se pudo abrir la caja.",
+      closeErrorFallback: "No se pudo cerrar la caja.",
+      readOnlyHint:
+        "Tu perfil puede ver el estado de la caja, pero no abrir ni cerrar sesiones.",
+    },
     checkout: {
       orderListTitle: "Lista del pedido",
       paymentStepLabel: "Cobro",
