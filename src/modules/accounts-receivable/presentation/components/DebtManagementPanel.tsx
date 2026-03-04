@@ -87,6 +87,8 @@ interface ApiErrorPayload {
 
 interface DebtManagementPanelProps {
   readonly refreshToken?: number;
+  readonly canRegisterPayment?: boolean;
+  readonly canViewSensitiveNotes?: boolean;
 }
 
 interface ReceivablesMetricCardProps {
@@ -107,6 +109,8 @@ interface DebtDetailDialogProps {
   readonly customer: ReceivableSnapshotItem;
   readonly detail: CustomerDebtSummary | null;
   readonly isLoading: boolean;
+  readonly canRegisterPayment: boolean;
+  readonly canViewSensitiveNotes: boolean;
   readonly paymentAmount: string;
   readonly paymentNotes: string;
   readonly isSubmitting: boolean;
@@ -236,6 +240,8 @@ function DebtDetailDialog({
   customer,
   detail,
   isLoading,
+  canRegisterPayment,
+  canViewSensitiveNotes,
   paymentAmount,
   paymentNotes,
   isSubmitting,
@@ -348,21 +354,27 @@ function DebtDetailDialog({
                   />
                 </div>
 
-                <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {messages.receivables.registerPaymentTitle}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-600">
-                        {messages.receivables.registerPaymentHelp}
+                {canRegisterPayment ? (
+                  <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                          {messages.receivables.registerPaymentTitle}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-600">
+                          {messages.receivables.registerPaymentHelp}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-500">
+                        {messages.receivables.summaryCustomer(customer.customerName)}
                       </p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-500">
-                      {messages.receivables.summaryCustomer(customer.customerName)}
-                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 shadow-[0_10px_20px_rgba(15,23,42,0.04)]">
+                    {messages.accessControl.receivablesReadOnlyHint}
+                  </div>
+                )}
 
                 <section className="mt-4 rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_10px_20px_rgba(15,23,42,0.05)]">
                   <div className="border-b border-slate-200 px-4 py-4">
@@ -548,7 +560,7 @@ function DebtDetailDialog({
                               <p className="mt-1 text-sm text-slate-600">
                                 {formatDateTime(entry.occurredAt)}
                               </p>
-                              {entry.notes ? (
+                              {canViewSensitiveNotes && entry.notes ? (
                                 <p className="mt-2 text-sm text-slate-700">{entry.notes}</p>
                               ) : null}
                             </div>
@@ -572,61 +584,71 @@ function DebtDetailDialog({
           </div>
 
           <div className="shrink-0 border-t border-slate-200/80 bg-[#fbfbfc] px-5 py-4 md:px-6">
-            <form
-              className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)_auto_auto]"
-              onSubmit={onSubmitPayment}
-            >
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  {messages.common.labels.paymentAmount}
-                </span>
-                <input
-                  data-testid="debt-payment-amount-input"
-                  type="number"
-                  min="0.01"
-                  max={Number.isFinite(pendingAmount) ? effectiveOutstanding.toFixed(2) : undefined}
-                  step="0.01"
-                  placeholder="0.00"
-                  value={paymentAmount}
-                  onChange={(event) => onPaymentAmountChange(event.target.value)}
+            {canRegisterPayment ? (
+              <form
+                className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)_auto_auto]"
+                onSubmit={onSubmitPayment}
+              >
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-slate-700">
+                    {messages.common.labels.paymentAmount}
+                  </span>
+                  <input
+                    data-testid="debt-payment-amount-input"
+                    type="number"
+                    min="0.01"
+                    max={
+                      Number.isFinite(pendingAmount)
+                        ? effectiveOutstanding.toFixed(2)
+                        : undefined
+                    }
+                    step="0.01"
+                    placeholder="0.00"
+                    value={paymentAmount}
+                    onChange={(event) => onPaymentAmountChange(event.target.value)}
+                    disabled={isSubmitting || isLoading || effectiveOutstanding <= 0}
+                    className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-slate-700">
+                    {messages.common.labels.notesOptional}
+                  </span>
+                  <input
+                    data-testid="debt-payment-notes-input"
+                    value={paymentNotes}
+                    onChange={(event) => onPaymentNotesChange(event.target.value)}
+                    disabled={isSubmitting || isLoading}
+                    className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="mt-auto min-h-[3.4rem] rounded-2xl border border-slate-300 px-6 text-base font-semibold text-slate-700"
+                >
+                  {messages.common.actions.cancel}
+                </button>
+
+                <button
+                  data-testid="debt-register-payment-button"
+                  type="submit"
                   disabled={isSubmitting || isLoading || effectiveOutstanding <= 0}
-                  className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
-                />
-              </label>
-
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-slate-700">
-                  {messages.common.labels.notesOptional}
-                </span>
-                <input
-                  data-testid="debt-payment-notes-input"
-                  value={paymentNotes}
-                  onChange={(event) => onPaymentNotesChange(event.target.value)}
-                  disabled={isSubmitting || isLoading}
-                  className="min-h-[3.4rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400 disabled:bg-slate-100 disabled:text-slate-400"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="mt-auto min-h-[3.4rem] rounded-2xl border border-slate-300 px-6 text-base font-semibold text-slate-700"
-              >
-                {messages.common.actions.cancel}
-              </button>
-
-              <button
-                data-testid="debt-register-payment-button"
-                type="submit"
-                disabled={isSubmitting || isLoading || effectiveOutstanding <= 0}
-                className="mt-auto min-h-[3.4rem] rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-[0_16px_28px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
-              >
-                {isSubmitting
-                  ? messages.common.states.registering
-                  : messages.common.actions.registerPayment}
-              </button>
-            </form>
+                  className="mt-auto min-h-[3.4rem] rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-[0_16px_28px_rgba(37,99,235,0.35)] disabled:bg-slate-400"
+                >
+                  {isSubmitting
+                    ? messages.common.states.registering
+                    : messages.common.actions.registerPayment}
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-[1.4rem] border border-slate-200 bg-white px-4 py-4 text-sm font-medium text-slate-600">
+                {messages.accessControl.readOnlyWorkspaceHint}
+              </div>
+            )}
           </div>
 
           <FloatingModalCloseButton
@@ -642,6 +664,8 @@ function DebtDetailDialog({
 
 export function DebtManagementPanel({
   refreshToken,
+  canRegisterPayment = true,
+  canViewSensitiveNotes = true,
 }: DebtManagementPanelProps): JSX.Element {
   const { messages, formatCurrency, formatDateTime } = useI18n();
   const [receivables, setReceivables] = useState<readonly ReceivableSnapshotItem[]>([]);
@@ -931,6 +955,15 @@ export function DebtManagementPanel({
 
   async function handleRegisterPayment(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (!canRegisterPayment) {
+      publishFeedback({
+        tone: "error",
+        title: "Acción restringida",
+        message: messages.accessControl.receivablesReadOnlyHint,
+      });
+      return;
+    }
 
     if (!activeCustomer) {
       publishFeedback({
@@ -1290,6 +1323,8 @@ export function DebtManagementPanel({
           customer={activeCustomer}
           detail={activeCustomerDetail}
           isLoading={isDetailLoading}
+          canRegisterPayment={canRegisterPayment}
+          canViewSensitiveNotes={canViewSensitiveNotes}
           paymentAmount={paymentAmount}
           paymentNotes={paymentNotes}
           isSubmitting={isSubmitting}

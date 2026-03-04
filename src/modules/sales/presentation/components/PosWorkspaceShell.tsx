@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
+import { canAccessWorkspace } from "@/modules/access-control/presentation/workspaceAccess";
 import {
   isPosWorkspaceId,
   workspacePathById,
@@ -31,6 +33,8 @@ export function PosWorkspaceShell({
 }: PosWorkspaceShellProps): JSX.Element {
   const { messages } = useI18n();
   const router = useRouter();
+  const { currentActor, permissionSnapshot, openOperatorSelector, status } =
+    useActorSession();
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
       { id: "cash-register", label: messages.shell.nav.cashRegister, icon: ShoppingCart },
@@ -39,9 +43,20 @@ export function PosWorkspaceShell({
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
       { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
-    ],
-    [messages],
+    ].filter((item) =>
+      isPosWorkspaceId(item.id)
+        ? canAccessWorkspace(item.id, permissionSnapshot)
+        : false,
+    ),
+    [messages, permissionSnapshot],
   );
+  const actorRoleLabel = currentActor?.roleNames[0] ?? messages.shell.cashierRole;
+  const actorRegisterSummary =
+    currentActor && currentActor.assignedRegisterIds.length > 0
+      ? messages.accessControl.assignedRegistersSummary(
+          currentActor.assignedRegisterIds.length,
+        )
+      : undefined;
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
@@ -49,6 +64,11 @@ export function PosWorkspaceShell({
         <LeftNavRail
           items={navItems}
           activeItemId={activeItemId}
+          actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
+          actorRoleLabel={actorRoleLabel}
+          actorRegisterSummary={actorRegisterSummary}
+          isLoadingActor={status === "loading"}
+          onOpenOperatorSelector={openOperatorSelector}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
               router.push(workspacePathById[itemId]);

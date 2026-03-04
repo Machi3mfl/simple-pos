@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import type { ApplyBulkPriceUpdateUseCaseInput } from "@/modules/catalog/application/use-cases/ApplyBulkPriceUpdateUseCase";
 import {
   BulkPriceUpdateConflictError,
@@ -49,7 +54,14 @@ function resolveScope(input: ReturnType<typeof bulkPriceUpdateDTOSchema.parse>):
   };
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["products.update_price"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para actualizar precios.",
+    );
+  }
+
   const { applyBulkPriceUpdateUseCase } = createCatalogRuntime();
   let payload: unknown;
 
@@ -76,7 +88,7 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  const actorId = request.headers.get("x-actor-id")?.trim() || "system";
+  const actorId = actorSnapshot.actor.actorId;
 
   try {
     const result = await applyBulkPriceUpdateUseCase.execute({

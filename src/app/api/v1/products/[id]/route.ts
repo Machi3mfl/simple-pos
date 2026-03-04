@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import {
   ProductDomainError,
   ProductNotFoundError,
@@ -34,9 +39,22 @@ interface ProductRouteContext {
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: ProductRouteContext,
 ): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (
+    !actorHasAnyPermission(actorSnapshot, [
+      "products.update_price",
+      "inventory.adjust_stock",
+      "products.create_from_sourcing",
+    ])
+  ) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para actualizar productos.",
+    );
+  }
+
   const { updateProductUseCase, persistProductImageUseCase } = createCatalogRuntime();
   const parsedBody = await parseUpdateProductRequest(request);
   if (!parsedBody.success) {

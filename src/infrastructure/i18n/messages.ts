@@ -18,6 +18,57 @@ const spanishMessages = {
       sync: "Sincronización",
     },
   },
+  accessControl: {
+    operatorSessionEyebrow: "Operador",
+    operatorSelectorTitle: "Seleccionar operador",
+    operatorSelectorDescription:
+      "Elegí el perfil con el que vas a trabajar. Esto define qué módulos y datos se muestran en la UI.",
+    currentOperatorBadge: "Actual",
+    loadingActor: "Cargando operador",
+    loadingPermissions: "Estamos preparando la sesión y los permisos del operador.",
+    changeOperatorAction: "Cambiar operador",
+    blockedEyebrow: "Acceso protegido",
+    noRegisterAssignment: "Sin caja asignada",
+    assignedRegistersSummary: (count: number): string =>
+      `${count} ${count === 1 ? "caja asignada" : "cajas asignadas"}`,
+    currentOperatorContext: (displayName: string): string =>
+      `Operador actual: ${displayName}`,
+    unknownOperator: "Operador desconocido",
+    readOnlyWorkspaceHint:
+      "Este perfil puede consultar la información, pero no tiene permisos para modificarla.",
+    receivablesReadOnlyHint:
+      "Este perfil puede revisar saldos y pedidos pendientes, pero no registrar pagos.",
+    blockedProductSourcingDescription:
+      "Solo los perfiles con permiso para alta desde sourcing pueden entrar a esta pantalla.",
+    blockedWorkspaceTitle: (workspaceId: string): string =>
+      workspaceId === "cash-register"
+        ? "Caja restringida"
+        : workspaceId === "sales"
+          ? "Ventas restringidas"
+          : workspaceId === "products"
+            ? "Productos restringidos"
+            : workspaceId === "receivables"
+              ? "Deudas restringidas"
+              : workspaceId === "reporting"
+                ? "Reportes restringidos"
+                : workspaceId === "sync"
+                  ? "Sincronización restringida"
+                  : "Acceso restringido",
+    blockedWorkspaceDescription: (workspaceId: string): string =>
+      workspaceId === "cash-register"
+        ? "Tu perfil no tiene acceso para operar o revisar la caja desde esta estación."
+        : workspaceId === "sales"
+          ? "Tu perfil no tiene permiso para consultar este historial de ventas."
+          : workspaceId === "products"
+            ? "Tu perfil no puede entrar al workspace de productos e inventario."
+            : workspaceId === "receivables"
+              ? "Tu perfil no puede revisar ni gestionar la cartera de deudas."
+              : workspaceId === "reporting"
+                ? "Tu perfil no tiene permiso para ver métricas estratégicas del negocio."
+                : workspaceId === "sync"
+                  ? "Tu perfil no puede acceder al panel de sincronización."
+                  : "No tenés acceso a esta pantalla con el operador actual.",
+  },
   common: {
     labels: {
       subtotal: "Subtotal",

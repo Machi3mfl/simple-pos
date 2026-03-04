@@ -11,6 +11,9 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
+import { WorkspaceBlockedState } from "@/modules/access-control/presentation/components/WorkspaceBlockedState";
+import { canAccessWorkspace } from "@/modules/access-control/presentation/workspaceAccess";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { DebtManagementPanel } from "@/modules/accounts-receivable/presentation/components/DebtManagementPanel";
@@ -131,6 +134,8 @@ export function PosLayout({
   const { messages, labelForCategory } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
+  const { currentActor, permissionSnapshot, openOperatorSelector, status } =
+    useActorSession();
   const [salesRefreshToken, setSalesRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
@@ -149,9 +154,20 @@ export function PosLayout({
       { id: "receivables", label: messages.shell.nav.receivables, icon: Wallet },
       { id: "reporting", label: messages.shell.nav.reporting, icon: BarChart3 },
       { id: "sync", label: messages.shell.nav.sync, icon: CloudOff },
-    ],
-    [messages],
+    ].filter((item) =>
+      isPosWorkspaceId(item.id)
+        ? canAccessWorkspace(item.id, permissionSnapshot)
+        : false,
+    ),
+    [messages, permissionSnapshot],
   );
+  const actorRoleLabel = currentActor?.roleNames[0] ?? messages.shell.cashierRole;
+  const actorRegisterSummary =
+    currentActor && currentActor.assignedRegisterIds.length > 0
+      ? messages.accessControl.assignedRegistersSummary(
+          currentActor.assignedRegisterIds.length,
+        )
+      : undefined;
   const categories = useMemo(() => {
     const categoryCodes = sortCategoryCodes(
       dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
@@ -303,13 +319,36 @@ export function PosLayout({
 
   const renderNonSalesWorkspace = (): JSX.Element => {
     if (currentWorkspace === "products") {
-      return <ProductsInventoryPanel />;
+      return (
+        <ProductsInventoryPanel
+          capabilities={{
+            canCreateFromSourcing:
+              permissionSnapshot?.workspaces.products.canCreateFromSourcing ?? false,
+            canUpdatePrice:
+              permissionSnapshot?.workspaces.products.canUpdatePrice ?? false,
+            canAdjustStock:
+              permissionSnapshot?.workspaces.products.canAdjustStock ?? false,
+            canRunBulkImport:
+              permissionSnapshot?.workspaces.products.canRunBulkImport ?? false,
+            canViewInventoryCost:
+              permissionSnapshot?.workspaces.products.canViewInventoryCost ?? false,
+          }}
+        />
+      );
     }
 
     if (currentWorkspace === "receivables") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
-          <DebtManagementPanel refreshToken={salesRefreshToken} />
+          <DebtManagementPanel
+            refreshToken={salesRefreshToken}
+            canRegisterPayment={
+              permissionSnapshot?.workspaces.receivables.canRegisterPayment ?? false
+            }
+            canViewSensitiveNotes={
+              permissionSnapshot?.workspaces.receivables.canViewSensitiveNotes ?? false
+            }
+          />
         </section>
       );
     }
@@ -337,12 +376,75 @@ export function PosLayout({
     );
   };
 
+  const renderWorkspaceState = (): JSX.Element => {
+    if (status === "loading") {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
+          <div className="flex min-h-[calc(100dvh-6rem)] items-center justify-center rounded-[2rem] border border-slate-200 bg-white text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {messages.accessControl.operatorSessionEyebrow}
+              </p>
+              <p className="mt-3 text-[1.2rem] font-semibold text-slate-900">
+                {messages.accessControl.loadingPermissions}
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    if (!canAccessWorkspace(currentWorkspace, permissionSnapshot)) {
+      return (
+        <WorkspaceBlockedState
+          title={messages.accessControl.blockedWorkspaceTitle(currentWorkspace)}
+          description={messages.accessControl.blockedWorkspaceDescription(currentWorkspace)}
+        />
+      );
+    }
+
+    if (currentWorkspace === "cash-register") {
+      return (
+        <>
+          <ProductCatalogPanel
+            categories={categories}
+            activeCategoryId={activeCategoryId}
+            products={visibleProducts}
+            searchTerm={searchTerm}
+            isLoading={isLoadingProducts}
+            onSearchTermChange={setSearchTerm}
+            onCategorySelect={setActiveCategoryId}
+            onProductSelect={addProductToCart}
+            onOpenCatalogWorkspace={() => {
+              router.push(workspacePathById.products);
+            }}
+          />
+          <CheckoutPanel
+            items={cartItems}
+            subtotal={subtotal}
+            onIncreaseQuantity={increaseQuantity}
+            onDecreaseQuantity={decreaseQuantity}
+            onRemoveItem={removeItem}
+            onCheckoutSuccess={handleCheckoutSuccess}
+          />
+        </>
+      );
+    }
+
+    return renderNonSalesWorkspace();
+  };
+
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
       <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
         <LeftNavRail
           items={navItems}
           activeItemId={currentWorkspace}
+          actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
+          actorRoleLabel={actorRoleLabel}
+          actorRegisterSummary={actorRegisterSummary}
+          isLoadingActor={status === "loading"}
+          onOpenOperatorSelector={openOperatorSelector}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
               router.push(workspacePathById[itemId]);
@@ -350,33 +452,7 @@ export function PosLayout({
           }}
         />
 
-        {currentWorkspace === "cash-register" ? (
-          <>
-            <ProductCatalogPanel
-              categories={categories}
-              activeCategoryId={activeCategoryId}
-              products={visibleProducts}
-              searchTerm={searchTerm}
-              isLoading={isLoadingProducts}
-              onSearchTermChange={setSearchTerm}
-              onCategorySelect={setActiveCategoryId}
-              onProductSelect={addProductToCart}
-              onOpenCatalogWorkspace={() => {
-                router.push(workspacePathById.products);
-              }}
-            />
-            <CheckoutPanel
-              items={cartItems}
-              subtotal={subtotal}
-              onIncreaseQuantity={increaseQuantity}
-              onDecreaseQuantity={decreaseQuantity}
-              onRemoveItem={removeItem}
-              onCheckoutSuccess={handleCheckoutSuccess}
-            />
-          </>
-        ) : (
-          renderNonSalesWorkspace()
-        )}
+        {renderWorkspaceState()}
       </div>
     </main>
   );

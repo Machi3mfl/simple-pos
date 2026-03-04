@@ -1,7 +1,12 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { CustomerNotFoundForDebtError } from "@/modules/accounts-receivable/domain/errors/AccountsReceivableDomainError";
 import { createAccountsReceivableRuntime } from "@/modules/accounts-receivable/infrastructure/runtime/accountsReceivableRuntime";
 import { customerDebtSummaryResponseDTOSchema } from "@/modules/customers/presentation/dtos/customer-debt-summary-response.dto";
@@ -22,10 +27,17 @@ function errorResponse(
 }
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } },
 ): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["receivables.view"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar el detalle de deuda.",
+    );
+  }
+
   const { getCustomerDebtSummaryUseCase } = createAccountsReceivableRuntime();
   const customerId = context.params.id;
   const url = new URL(request.url);
@@ -55,8 +67,17 @@ export async function GET(
       periodStart: periodStart ?? undefined,
       periodEnd: periodEnd ?? undefined,
     });
+    const responseBody = actorHasAnyPermission(actorSnapshot, ["receivables.notes.view"])
+      ? result
+      : {
+          ...result,
+          ledger: result.ledger.map((entry) => ({
+            ...entry,
+            notes: undefined,
+          })),
+        };
 
-    const parsedResponse = customerDebtSummaryResponseDTOSchema.safeParse(result);
+    const parsedResponse = customerDebtSummaryResponseDTOSchema.safeParse(responseBody);
     if (!parsedResponse.success) {
       return errorResponse(500, {
         code: "response_contract_error",

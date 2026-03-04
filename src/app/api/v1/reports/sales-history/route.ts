@@ -1,7 +1,12 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import type { SalePaymentMethod } from "@/modules/sales/domain/entities/Sale";
 import { createReportingRuntime } from "@/modules/reporting/infrastructure/runtime/reportingRuntime";
 import { salesHistoryResponseDTOSchema } from "@/modules/reporting/presentation/dtos/sales-history-response.dto";
@@ -41,8 +46,20 @@ function parsePaymentMethodQueryParam(
   return "invalid";
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (
+    !actorHasAnyPermission(actorSnapshot, [
+      "sales_history.view",
+      "sales_history.view_all_registers",
+    ])
+  ) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar ventas.",
+    );
+  }
+
   const { getSalesHistoryReportUseCase } = createReportingRuntime();
   const url = new URL(request.url);
   const periodStart = parseDateQueryParam(

@@ -174,6 +174,14 @@ interface StockFormState {
   readonly reason: string;
 }
 
+interface ProductsInventoryPanelCapabilities {
+  readonly canCreateFromSourcing: boolean;
+  readonly canUpdatePrice: boolean;
+  readonly canAdjustStock: boolean;
+  readonly canRunBulkImport: boolean;
+  readonly canViewInventoryCost: boolean;
+}
+
 interface WorkspaceLoadOverrides {
   readonly categoryFilter?: string;
   readonly page?: number;
@@ -277,7 +285,17 @@ function mergeWorkspaceItems(
   return merged;
 }
 
-export function ProductsInventoryPanel(): JSX.Element {
+export function ProductsInventoryPanel({
+  capabilities = {
+    canCreateFromSourcing: true,
+    canUpdatePrice: true,
+    canAdjustStock: true,
+    canRunBulkImport: true,
+    canViewInventoryCost: true,
+  },
+}: {
+  readonly capabilities?: ProductsInventoryPanelCapabilities;
+}): JSX.Element {
   const {
     messages,
     formatCurrency,
@@ -827,6 +845,12 @@ export function ProductsInventoryPanel(): JSX.Element {
   }
 
   const workspaceItems = workspace?.items ?? [];
+  const canShowPrimaryActions =
+    capabilities.canCreateFromSourcing || capabilities.canUpdatePrice || capabilities.canRunBulkImport;
+  const canEditProduct =
+    capabilities.canCreateFromSourcing ||
+    capabilities.canUpdatePrice ||
+    capabilities.canAdjustStock;
   const hasMoreWorkspaceItems =
     workspace !== null && workspace.page < workspace.totalPages;
   const loadNextWorkspacePage = useCallback(async (): Promise<void> => {
@@ -885,68 +909,76 @@ export function ProductsInventoryPanel(): JSX.Element {
                 </h1>
               </div>
 
-              <div className="flex flex-wrap gap-2 xl:max-w-[39rem] xl:justify-end">
-                <Link
-                  href="/products/sourcing"
-                  data-testid="products-workspace-open-create-button"
-                  className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
-                >
-                  <Plus size={18} />
-                  {messages.productsWorkspace.actions.newProduct}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setOpenDialog("bulkPrices")}
-                  data-testid="products-workspace-open-bulk-prices-button"
-                  className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800"
-                >
-                  <ArrowUpDown size={18} />
-                  {messages.productsWorkspace.actions.bulkPrices}
-                </button>
-                <Popover open={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}>
-                  <PopoverTrigger asChild>
+              {canShowPrimaryActions ? (
+                <div className="flex flex-wrap gap-2 xl:max-w-[39rem] xl:justify-end">
+                  {capabilities.canCreateFromSourcing ? (
+                    <Link
+                      href="/products/sourcing"
+                      data-testid="products-workspace-open-create-button"
+                      className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
+                    >
+                      <Plus size={18} />
+                      {messages.productsWorkspace.actions.newProduct}
+                    </Link>
+                  ) : null}
+                  {capabilities.canUpdatePrice ? (
                     <button
                       type="button"
-                      data-testid="products-workspace-open-more-actions-button"
-                      className="flex min-h-[4rem] min-w-[4rem] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800"
-                      aria-label={messages.productsWorkspace.actions.more}
+                      onClick={() => setOpenDialog("bulkPrices")}
+                      data-testid="products-workspace-open-bulk-prices-button"
+                      className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800"
                     >
-                      <MoreHorizontal size={20} />
+                      <ArrowUpDown size={18} />
+                      {messages.productsWorkspace.actions.bulkPrices}
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="end"
-                    className="w-[15rem] rounded-[1.5rem] border border-slate-200 bg-white p-2 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMoreActionsOpen(false);
-                          setOpenDialog("bulkProducts");
-                        }}
-                        data-testid="products-workspace-open-bulk-products-button"
-                        className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                  ) : null}
+                  {capabilities.canRunBulkImport ? (
+                    <Popover open={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          data-testid="products-workspace-open-more-actions-button"
+                          className="flex min-h-[4rem] min-w-[4rem] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800"
+                          aria-label={messages.productsWorkspace.actions.more}
+                        >
+                          <MoreHorizontal size={20} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="end"
+                        className="w-[15rem] rounded-[1.5rem] border border-slate-200 bg-white p-2 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
                       >
-                        <Upload size={18} />
-                        {messages.productsWorkspace.actions.bulkProducts}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMoreActionsOpen(false);
-                          setOpenDialog("bulkStock");
-                        }}
-                        data-testid="products-workspace-open-bulk-stock-button"
-                        className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                      >
-                        <PackagePlus size={18} />
-                        {messages.productsWorkspace.actions.bulkStock}
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsMoreActionsOpen(false);
+                              setOpenDialog("bulkProducts");
+                            }}
+                            data-testid="products-workspace-open-bulk-products-button"
+                            className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                          >
+                            <Upload size={18} />
+                            {messages.productsWorkspace.actions.bulkProducts}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsMoreActionsOpen(false);
+                              setOpenDialog("bulkStock");
+                            }}
+                            data-testid="products-workspace-open-bulk-stock-button"
+                            className="flex min-h-[3.2rem] items-center gap-3 rounded-[1.1rem] px-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                          >
+                            <PackagePlus size={18} />
+                            {messages.productsWorkspace.actions.bulkStock}
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1242,14 +1274,16 @@ export function ProductsInventoryPanel(): JSX.Element {
                     {formatCurrency(selectedProduct.price)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    {messages.productsWorkspace.detail.averageCost}
-                  </p>
-                  <p className="mt-2 text-[1.6rem] leading-none font-bold tracking-tight text-slate-900">
-                    {formatCurrency(selectedProduct.averageCost)}
-                  </p>
-                </div>
+                {capabilities.canViewInventoryCost ? (
+                  <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      {messages.productsWorkspace.detail.averageCost}
+                    </p>
+                    <p className="mt-2 text-[1.6rem] leading-none font-bold tracking-tight text-slate-900">
+                      {formatCurrency(selectedProduct.averageCost)}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="rounded-2xl bg-slate-50 px-4 py-3">
                   <p className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-slate-500">
                     {messages.productsWorkspace.detail.minStock}
@@ -1315,50 +1349,64 @@ export function ProductsInventoryPanel(): JSX.Element {
                 <p className="text-sm font-semibold text-slate-700">
                   {messages.productsWorkspace.quickActionsTitle}
                 </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStockForm(defaultStockFormState("inbound"));
-                      setOpenDialog("stock");
-                    }}
-                    data-testid="products-workspace-open-add-stock-button"
-                    className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-base font-semibold text-white"
-                  >
-                    <Boxes size={18} />
-                    {messages.productsWorkspace.actions.addStock}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStockForm(defaultStockFormState("adjustment"));
-                      setOpenDialog("stock");
-                    }}
-                    data-testid="products-workspace-open-adjust-stock-button"
-                    className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                  >
-                    <AlertTriangle size={18} />
-                    {messages.productsWorkspace.actions.adjustStock}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOpenDialog("edit")}
-                    data-testid="products-workspace-open-edit-button"
-                    className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                  >
-                    <Pencil size={18} />
-                    {messages.productsWorkspace.actions.editProduct}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleArchiveProduct()}
-                    data-testid="products-workspace-archive-button"
-                    className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
-                  >
-                    <Archive size={18} />
-                    {messages.productsWorkspace.actions.archiveProduct}
-                  </button>
-                </div>
+                {capabilities.canAdjustStock || canEditProduct ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {capabilities.canAdjustStock ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStockForm(defaultStockFormState("inbound"));
+                            setOpenDialog("stock");
+                          }}
+                          data-testid="products-workspace-open-add-stock-button"
+                          className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-base font-semibold text-white"
+                        >
+                          <Boxes size={18} />
+                          {messages.productsWorkspace.actions.addStock}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStockForm(defaultStockFormState("adjustment"));
+                            setOpenDialog("stock");
+                          }}
+                          data-testid="products-workspace-open-adjust-stock-button"
+                          className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                        >
+                          <AlertTriangle size={18} />
+                          {messages.productsWorkspace.actions.adjustStock}
+                        </button>
+                      </>
+                    ) : null}
+                    {canEditProduct ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setOpenDialog("edit")}
+                          data-testid="products-workspace-open-edit-button"
+                          className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                        >
+                          <Pencil size={18} />
+                          {messages.productsWorkspace.actions.editProduct}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleArchiveProduct()}
+                          data-testid="products-workspace-archive-button"
+                          className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-800"
+                        >
+                          <Archive size={18} />
+                          {messages.productsWorkspace.actions.archiveProduct}
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-500">
+                    {messages.accessControl.readOnlyWorkspaceHint}
+                  </div>
+                )}
               </div>
 
               <article className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5">

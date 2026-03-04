@@ -1,6 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { createProductsRuntime } from "@/modules/products/infrastructure/runtime/productsRuntime";
 import { productsWorkspaceResponseDTOSchema } from "@/modules/products/presentation/dtos/products-workspace-response.dto";
 
@@ -52,8 +57,9 @@ function parsePositiveInt(value: string | null): number | undefined {
   return undefined;
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
   const { listProductsWorkspaceUseCase } = createProductsRuntime();
   const url = new URL(request.url);
   const activeOnlyRaw = url.searchParams.get("activeOnly");
@@ -64,6 +70,12 @@ export async function GET(request: Request): Promise<Response> {
   const pageSize = parsePositiveInt(pageSizeRaw);
   const stockState = url.searchParams.get("stockState");
   const sort = url.searchParams.get("sort");
+  const hasFullProductsAccess = actorHasAnyPermission(actorSnapshot, ["products.view"]);
+  const hasInventorySummaryAccess = actorHasAnyPermission(actorSnapshot, [
+    "inventory.value.view",
+    "reporting.executive.view",
+    "reporting.operational.view",
+  ]);
   const validationDetails: { field: string; message: string }[] = [];
 
   if (activeOnlyRaw !== null && activeOnly === undefined) {
@@ -112,6 +124,24 @@ export async function GET(request: Request): Promise<Response> {
     });
   }
 
+  if (!hasFullProductsAccess && !hasInventorySummaryAccess) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar el workspace de productos.",
+    );
+  }
+
+  const isSummaryOnlyRequest =
+    !url.searchParams.get("q") &&
+    !url.searchParams.get("categoryId") &&
+    (stockState === null || stockState === "all") &&
+    (sort === null || sort === "stock");
+
+  if (!hasFullProductsAccess && !isSummaryOnlyRequest) {
+    return forbiddenPermissionResponse(
+      "El operador actual solo puede consultar el resumen valorizado de inventario.",
+    );
+  }
+
   const result = await listProductsWorkspaceUseCase.execute({
     q: url.searchParams.get("q")?.trim() || undefined,
     categoryId: url.searchParams.get("categoryId")?.trim() || undefined,
@@ -127,8 +157,26 @@ export async function GET(request: Request): Promise<Response> {
     page,
     pageSize,
   });
+  const responseBody = hasFullProductsAccess
+    ? result
+    : {
+        ...result,
+        items: [],
+      };
+  const canViewInventoryCost = actorHasAnyPermission(actorSnapshot, ["inventory.cost.view"]);
+  const sanitizedResponseBody = canViewInventoryCost
+    ? responseBody
+    : {
+        ...responseBody,
+        items: responseBody.items.map((item) => ({
+          ...item,
+          averageCost: 0,
+        })),
+      };
 
-  const parsedResponse = productsWorkspaceResponseDTOSchema.safeParse(result);
+  const parsedResponse = productsWorkspaceResponseDTOSchema.safeParse(
+    sanitizedResponseBody,
+  );
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",

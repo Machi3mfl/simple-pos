@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 
@@ -11,29 +12,54 @@ export interface PosNavItem {
 interface LeftNavRailProps {
   readonly items: readonly PosNavItem[];
   readonly activeItemId: string;
+  readonly actorDisplayName: string;
+  readonly actorRoleLabel: string;
+  readonly actorRegisterSummary?: string;
+  readonly isLoadingActor?: boolean;
+  readonly onOpenOperatorSelector: () => void;
   readonly onItemSelect: (itemId: string) => void;
 }
 
 export function LeftNavRail({
   items,
   activeItemId,
+  actorDisplayName,
+  actorRoleLabel,
+  actorRegisterSummary,
+  isLoadingActor = false,
+  onOpenOperatorSelector,
   onItemSelect,
 }: LeftNavRailProps): JSX.Element {
   const { messages } = useI18n();
 
   return (
     <aside className="overflow-y-auto bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:min-h-0 lg:p-6">
-      <div className="mt-4 flex items-center gap-3 px-1">
+      <button
+        type="button"
+        onClick={onOpenOperatorSelector}
+        data-testid="open-operator-selector-button"
+        className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] px-1 py-1 text-left transition hover:bg-white/5"
+      >
         <div className="flex size-12 items-center justify-center rounded-full bg-[#222b3a] text-sm font-semibold text-slate-200">
           👩🏼
         </div>
-        <div>
-          <p className="text-[2rem] leading-none font-semibold tracking-tight">Putri</p>
-          <p className="mt-1 text-[0.85rem] text-slate-400">
-            {messages.shell.cashierRole}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[2rem] leading-none font-semibold tracking-tight">
+            {isLoadingActor ? messages.accessControl.loadingActor : actorDisplayName}
           </p>
+          <p className="mt-1 text-[0.85rem] text-slate-400">
+            {isLoadingActor ? messages.common.states.loading : actorRoleLabel}
+          </p>
+          {actorRegisterSummary ? (
+            <p className="mt-1 truncate text-[0.78rem] text-slate-500">
+              {actorRegisterSummary}
+            </p>
+          ) : null}
         </div>
-      </div>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#2b3342] bg-[#0f1725] text-slate-300">
+          <ChevronsUpDown size={16} />
+        </span>
+      </button>
 
       <nav className="mt-12 flex gap-3 overflow-x-auto pb-1 lg:mt-12 lg:flex-col lg:overflow-visible">
         {items.map((item) => {

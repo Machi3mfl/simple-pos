@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { createCatalogRuntime } from "@/modules/catalog/infrastructure/runtime/catalogRuntime";
 import {
   bulkCreateProductsDTOSchema,
@@ -22,7 +27,14 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["inventory.bulk_import"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para importar productos en lote.",
+    );
+  }
+
   const { bulkCreateProductsUseCase } = createCatalogRuntime();
   let payload: unknown;
 

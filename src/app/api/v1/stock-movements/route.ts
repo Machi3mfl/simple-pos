@@ -1,6 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { ProductNotFoundError } from "@/modules/catalog/domain/errors/ProductDomainError";
 import { InventoryDomainError } from "@/modules/inventory/domain/errors/InventoryDomainError";
 import { createInventoryRuntime } from "@/modules/inventory/infrastructure/runtime/inventoryRuntime";
@@ -42,8 +47,15 @@ function parseDateQueryParam(value: string | null): Date | null | "invalid" {
   return date;
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["products.view"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar movimientos de stock.",
+    );
+  }
+
   const { listStockMovementsUseCase } = createInventoryRuntime();
   const url = new URL(request.url);
   const productId = url.searchParams.get("productId")?.trim() || undefined;
@@ -99,7 +111,14 @@ export async function GET(request: Request): Promise<Response> {
   return NextResponse.json(parsedResponse.data, { status: 200 });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["inventory.adjust_stock"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para registrar movimientos de stock.",
+    );
+  }
+
   const { registerStockMovementUseCase } = createInventoryRuntime();
   let payload: unknown;
 

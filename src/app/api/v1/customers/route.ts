@@ -1,6 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { SearchCustomersUseCase } from "@/modules/customers/application/use-cases/SearchCustomersUseCase";
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
@@ -33,7 +38,19 @@ function parseLimit(rawValue: string | null): number | undefined {
   return parsedValue;
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (
+    !actorHasAnyPermission(actorSnapshot, [
+      "checkout.sale.create",
+      "receivables.view",
+    ])
+  ) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar clientes.",
+    );
+  }
+
   const { searchCustomersUseCase } = createCustomersRuntime();
   const url = new URL(request.url);
   const query = url.searchParams.get("query") ?? undefined;

@@ -1,7 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { OnAccountDebtRecorderAdapter } from "@/modules/accounts-receivable/application/services/OnAccountDebtRecorderAdapter";
 import { RecordOnAccountDebtUseCase } from "@/modules/accounts-receivable/application/use-cases/RecordOnAccountDebtUseCase";
 import type { ProductRepository } from "@/modules/catalog/domain/repositories/ProductRepository";
@@ -65,7 +70,14 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["checkout.sale.create"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para registrar ventas.",
+    );
+  }
+
   const { createSaleUseCase } = createSaleRuntime();
   let payload: unknown;
 

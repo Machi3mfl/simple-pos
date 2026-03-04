@@ -1,6 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { ProductDomainError } from "@/modules/catalog/domain/errors/ProductDomainError";
 import { createCatalogRuntime } from "@/modules/catalog/infrastructure/runtime/catalogRuntime";
 import { CatalogProductImageInputError } from "@/modules/catalog/infrastructure/storage/SupabaseCatalogProductImageAssetStore";
@@ -47,8 +52,20 @@ function parseActiveOnlyParam(value: string | null): boolean | undefined {
   return undefined;
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (
+    !actorHasAnyPermission(actorSnapshot, [
+      "products.view",
+      "checkout.sale.create",
+    ])
+  ) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar productos.",
+    );
+  }
+
   const { listProductsUseCase } = createCatalogRuntime();
   const url = new URL(request.url);
   const categoryIdRaw = url.searchParams.get("categoryId");
@@ -89,7 +106,14 @@ export async function GET(request: Request): Promise<Response> {
   return NextResponse.json(parsedResponse.data, { status: 200 });
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["products.create_from_sourcing"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para crear productos desde sourcing.",
+    );
+  }
+
   const { createProductUseCase, persistProductImageUseCase } = createCatalogRuntime();
   const parsedBody = await parseCreateProductRequest(request);
   if (!parsedBody.success) {

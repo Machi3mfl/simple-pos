@@ -1,7 +1,12 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { parseDateQueryParam } from "@/lib/date/parseDateQueryParam";
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { createReportingRuntime } from "@/modules/reporting/infrastructure/runtime/reportingRuntime";
 import { topProductsResponseDTOSchema } from "@/modules/reporting/presentation/dtos/top-products-response.dto";
 
@@ -20,8 +25,20 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (
+    !actorHasAnyPermission(actorSnapshot, [
+      "reporting.executive.view",
+      "reporting.operational.view",
+    ])
+  ) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar el ranking de productos.",
+    );
+  }
+
   const { getTopProductsReportUseCase } = createReportingRuntime();
   const url = new URL(request.url);
   const periodStart = parseDateQueryParam(

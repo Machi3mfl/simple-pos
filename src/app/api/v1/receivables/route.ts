@@ -1,6 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import {
+  actorHasAnyPermission,
+  forbiddenPermissionResponse,
+  resolveActorSnapshotForRequest,
+} from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import { createAccountsReceivableRuntime } from "@/modules/accounts-receivable/infrastructure/runtime/accountsReceivableRuntime";
 import { receivablesSnapshotResponseDTOSchema } from "@/modules/accounts-receivable/presentation/dtos/receivables-snapshot-response.dto";
 
@@ -19,8 +24,15 @@ function errorResponse(
   return NextResponse.json(body, { status });
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   noStore();
+  const actorSnapshot = await resolveActorSnapshotForRequest(request);
+  if (!actorHasAnyPermission(actorSnapshot, ["receivables.view"])) {
+    return forbiddenPermissionResponse(
+      "El operador actual no tiene permiso para consultar deudas.",
+    );
+  }
+
   const { listReceivablesSnapshotUseCase } = createAccountsReceivableRuntime();
 
   try {
