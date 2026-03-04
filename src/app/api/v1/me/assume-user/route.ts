@@ -6,6 +6,7 @@ import {
 import { createAccessControlRuntime } from "@/modules/access-control/infrastructure/runtime/accessControlRuntime";
 import {
   getActorSessionCookieName,
+  isAssumeUserBridgeEnabled,
   serializeActorSessionCookie,
   shouldUseSecureActorSessionCookie,
 } from "@/modules/access-control/infrastructure/session/actorSessionCookie";
@@ -54,6 +55,14 @@ function buildSuccessResponse(payload: {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  if (!isAssumeUserBridgeEnabled()) {
+    return errorResponse(403, {
+      code: "assume_user_bridge_disabled",
+      message:
+        "La selección temporal de operador está deshabilitada para esta instancia.",
+    });
+  }
+
   let payload: unknown;
 
   try {
@@ -125,6 +134,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 export async function DELETE(request: NextRequest): Promise<Response> {
+  if (!isAssumeUserBridgeEnabled()) {
+    return errorResponse(403, {
+      code: "assume_user_bridge_disabled",
+      message:
+        "La selección temporal de operador está deshabilitada para esta instancia.",
+    });
+  }
+
   const response = NextResponse.json({ ok: true }, { status: 200 });
   response.cookies.set({
     name: getActorSessionCookieName(),

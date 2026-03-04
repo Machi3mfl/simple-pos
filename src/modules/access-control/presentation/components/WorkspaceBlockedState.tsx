@@ -19,7 +19,7 @@ export function WorkspaceBlockedState({
   icon: Icon = ShieldAlert,
 }: WorkspaceBlockedStateProps): JSX.Element {
   const { messages } = useI18n();
-  const { currentActor, openOperatorSelector } = useActorSession();
+  const { currentActor, canSwitchActor, openOperatorSelector } = useActorSession();
 
   return (
     <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
@@ -44,13 +44,15 @@ export function WorkspaceBlockedState({
                 currentActor?.displayName ?? messages.accessControl.unknownOperator,
               )}
             </p>
-            <button
-              type="button"
-              onClick={openOperatorSelector}
-              className="inline-flex min-h-[3rem] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.25)]"
-            >
-              {messages.accessControl.changeOperatorAction}
-            </button>
+            {canSwitchActor ? (
+              <button
+                type="button"
+                onClick={openOperatorSelector}
+                className="inline-flex min-h-[3rem] items-center justify-center rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.25)]"
+              >
+                {messages.accessControl.changeOperatorAction}
+              </button>
+            ) : null}
           </div>
         </div>
       </article>

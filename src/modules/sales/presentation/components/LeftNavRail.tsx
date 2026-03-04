@@ -15,7 +15,9 @@ interface LeftNavRailProps {
   readonly actorDisplayName: string;
   readonly actorRoleLabel: string;
   readonly actorRegisterSummary?: string;
+  readonly actorSessionLabel?: string;
   readonly isLoadingActor?: boolean;
+  readonly canOpenOperatorSelector?: boolean;
   readonly onOpenOperatorSelector: () => void;
   readonly onItemSelect: (itemId: string) => void;
 }
@@ -26,7 +28,9 @@ export function LeftNavRail({
   actorDisplayName,
   actorRoleLabel,
   actorRegisterSummary,
+  actorSessionLabel,
   isLoadingActor = false,
+  canOpenOperatorSelector = true,
   onOpenOperatorSelector,
   onItemSelect,
 }: LeftNavRailProps): JSX.Element {
@@ -38,7 +42,8 @@ export function LeftNavRail({
         type="button"
         onClick={onOpenOperatorSelector}
         data-testid="open-operator-selector-button"
-        className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] px-1 py-1 text-left transition hover:bg-white/5"
+        disabled={!canOpenOperatorSelector}
+        className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] px-1 py-1 text-left transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-80"
       >
         <div className="flex size-12 items-center justify-center rounded-full bg-[#222b3a] text-sm font-semibold text-slate-200">
           👩🏼
@@ -53,6 +58,14 @@ export function LeftNavRail({
           {actorRegisterSummary ? (
             <p className="mt-1 truncate text-[0.78rem] text-slate-500">
               {actorRegisterSummary}
+            </p>
+          ) : null}
+          {actorSessionLabel ? (
+            <p
+              data-testid="actor-session-source-label"
+              className="mt-2 inline-flex w-fit items-center rounded-full border border-[#2b3342] bg-[#0f1725] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-300"
+            >
+              {actorSessionLabel}
             </p>
           ) : null}
         </div>

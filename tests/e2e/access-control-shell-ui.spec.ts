@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
+import {
+  createAuthenticatedSessionForAppUser,
+  installApiAuthorizationHeader,
+} from "./support/access-control-auth";
 
 async function mockWorkspaceData(page: Page): Promise<void> {
   await page.route("**/api/v1/products?activeOnly=true**", async (route) => {
@@ -142,6 +146,7 @@ test("switches operator and blocks workspaces according to role", async ({ page 
   await page.goto("/cash-register");
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
+  await expect(page.getByTestId("actor-session-source-label")).toHaveText("Preset temporal");
 
   await selectOperator(page, "user_collections_marta");
   await expect(page.getByRole("heading", { name: "Caja restringida" })).toBeVisible();
@@ -189,4 +194,28 @@ test("switches operator and blocks workspaces according to role", async ({ page 
   await expect(page.getByTestId("nav-item-receivables")).toHaveCount(0);
   await page.getByTestId("nav-item-products").click();
   await expect(page.getByRole("heading", { name: "Productos e inventario" })).toBeVisible();
+});
+
+test("shows authenticated attribution in the shell when a real auth user is mapped", async ({
+  page,
+}) => {
+  const session = await createAuthenticatedSessionForAppUser({
+    appUserId: "user_manager_maxi",
+    label: "auth-shell",
+  });
+
+  try {
+    await installApiAuthorizationHeader(page, session.accessToken);
+    await mockWorkspaceData(page);
+
+    await page.goto("/cash-register");
+
+    await expect(page.getByTestId("actor-session-source-label")).toHaveText(
+      "Login verificado",
+    );
+    await expect(page.getByText("Maxi")).toBeVisible();
+    await expect(page.getByTestId("nav-item-reporting")).toBeVisible();
+  } finally {
+    await session.cleanup();
+  }
 });

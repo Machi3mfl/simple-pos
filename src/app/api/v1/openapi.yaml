@@ -90,6 +90,8 @@ paths:
                 $ref: '#/components/schemas/AssumeUserSessionResponse'
         '400':
           $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
         '404':
           $ref: '#/components/responses/ErrorResponse'
     delete:
@@ -1337,12 +1339,27 @@ components:
           items:
             type: string
 
+    MeResponseSession:
+      type: object
+      required: [resolutionSource, canAssumeUserBridge]
+      properties:
+        resolutionSource:
+          type: string
+          enum: [authenticated, authenticated_unmapped, assumed_user, default_actor]
+        authUserId:
+          type: string
+          format: uuid
+        canAssumeUserBridge:
+          type: boolean
+
     MeResponse:
       type: object
-      required: [actor, permissionSnapshot]
+      required: [actor, session, permissionSnapshot]
       properties:
         actor:
           $ref: '#/components/schemas/MeResponseActor'
+        session:
+          $ref: '#/components/schemas/MeResponseSession'
         permissionSnapshot:
           $ref: '#/components/schemas/PermissionSnapshot'
 

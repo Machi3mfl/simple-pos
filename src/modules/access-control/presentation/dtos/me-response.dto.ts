@@ -95,6 +95,18 @@ export const meResponseDTOSchema = z
         assignedRegisterIds: z.array(z.string().min(1)),
       })
       .strict(),
+    session: z
+      .object({
+        resolutionSource: z.enum([
+          "authenticated",
+          "authenticated_unmapped",
+          "assumed_user",
+          "default_actor",
+        ]),
+        authUserId: z.string().uuid().optional(),
+        canAssumeUserBridge: z.boolean(),
+      })
+      .strict(),
     permissionSnapshot: z
       .object({
         permissionCodes: z.array(z.string().min(1)),

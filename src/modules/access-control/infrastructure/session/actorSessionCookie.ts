@@ -7,6 +7,23 @@ interface ActorSessionCookiePayload {
   readonly userId: string;
 }
 
+function parseBooleanEnv(value: string | undefined): boolean | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalizedValue)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalizedValue)) {
+    return false;
+  }
+
+  return null;
+}
+
 function resolveCookieSecret(): string {
   return (
     process.env.ACTOR_SESSION_SECRET ??
@@ -21,6 +38,15 @@ function signValue(value: string): string {
 
 export function getActorSessionCookieName(): string {
   return ACTOR_SESSION_COOKIE_NAME;
+}
+
+export function isAssumeUserBridgeEnabled(): boolean {
+  const explicitValue = parseBooleanEnv(process.env.POS_ENABLE_ASSUME_USER_BRIDGE);
+  if (explicitValue !== null) {
+    return explicitValue;
+  }
+
+  return true;
 }
 
 function isLocalHostname(hostname: string): boolean {

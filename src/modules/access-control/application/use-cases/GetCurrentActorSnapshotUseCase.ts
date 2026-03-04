@@ -7,12 +7,14 @@ export interface GetCurrentActorSnapshotInput {
   readonly authUserId?: string;
 }
 
+export type ResolvedActorSnapshot = Omit<CurrentActorSnapshot, "session">;
+
 export class GetCurrentActorSnapshotUseCase {
   constructor(private readonly actorAccessRepository: ActorAccessRepository) {}
 
   async execute(
     input: GetCurrentActorSnapshotInput,
-  ): Promise<CurrentActorSnapshot | null> {
+  ): Promise<ResolvedActorSnapshot | null> {
     const actorAccess =
       (input.authUserId
         ? await this.actorAccessRepository.findByAuthUserId(input.authUserId)

@@ -35,6 +35,11 @@ const spanishMessages = {
     currentOperatorContext: (displayName: string): string =>
       `Operador actual: ${displayName}`,
     unknownOperator: "Operador desconocido",
+    unmappedActorRole: "Sin rol asignado",
+    sessionSourceAuthenticated: "Login verificado",
+    sessionSourceAuthenticatedUnmapped: "Login sin perfil",
+    sessionSourceAssumedUser: "Modo soporte",
+    sessionSourceDefaultActor: "Preset temporal",
     readOnlyWorkspaceHint:
       "Este perfil puede consultar la información, pero no tiene permisos para modificarla.",
     salesDetailRestrictedHint:
@@ -316,6 +321,10 @@ const spanishMessages = {
         "El cierre quedó pendiente de revisión y tu perfil no puede aprobar diferencias.",
       movementErrorFallback: "No se pudo registrar el movimiento de caja.",
       movementSuccess: "Movimiento de caja registrado correctamente.",
+      movementSavedOffline:
+        "Movimiento de caja guardado sin conexión. Pendiente de sincronización.",
+      retryOfflineSyncButton: (count: number): string =>
+        `Reintentar sincronización (${count})`,
       movementTypeLabels: {
         opening_float: "Cambio inicial",
         cash_sale: "Venta en efectivo",

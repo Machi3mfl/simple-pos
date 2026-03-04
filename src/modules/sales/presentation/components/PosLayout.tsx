@@ -137,7 +137,14 @@ export function PosLayout({
   const { messages, labelForCategory } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
-  const { currentActor, permissionSnapshot, openOperatorSelector, status } =
+  const {
+    currentActor,
+    permissionSnapshot,
+    sessionSource,
+    canSwitchActor,
+    openOperatorSelector,
+    status,
+  } =
     useActorSession();
   const [salesRefreshToken, setSalesRefreshToken] = useState<number>(0);
   const [catalogProducts, setCatalogProducts] = useState<readonly CatalogProduct[]>([]);
@@ -167,13 +174,27 @@ export function PosLayout({
     ),
     [messages, permissionSnapshot],
   );
-  const actorRoleLabel = currentActor?.roleNames[0] ?? messages.shell.cashierRole;
+  const actorRoleLabel =
+    currentActor?.roleNames[0] ??
+    (sessionSource === "authenticated_unmapped"
+      ? messages.accessControl.unmappedActorRole
+      : messages.shell.cashierRole);
   const actorRegisterSummary =
     currentActor && currentActor.assignedRegisterIds.length > 0
       ? messages.accessControl.assignedRegistersSummary(
           currentActor.assignedRegisterIds.length,
         )
       : undefined;
+  const actorSessionLabel =
+    status === "loading"
+      ? undefined
+      : sessionSource === "authenticated"
+        ? messages.accessControl.sessionSourceAuthenticated
+        : sessionSource === "authenticated_unmapped"
+          ? messages.accessControl.sessionSourceAuthenticatedUnmapped
+          : sessionSource === "assumed_user"
+            ? messages.accessControl.sessionSourceAssumedUser
+            : messages.accessControl.sessionSourceDefaultActor;
   const categories = useMemo(() => {
     const categoryCodes = sortCategoryCodes(
       dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
@@ -463,6 +484,7 @@ export function PosLayout({
                 preferredRegisterIds={currentActor?.assignedRegisterIds ?? []}
                 selectedRegisterId={selectedCashRegisterId}
                 onSelectedRegisterIdChange={setSelectedCashRegisterId}
+                currentActorId={currentActor?.actorId}
                 refreshToken={cashSessionRefreshToken}
                 canOpenSession={
                   permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
@@ -518,7 +540,9 @@ export function PosLayout({
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
           actorRoleLabel={actorRoleLabel}
           actorRegisterSummary={actorRegisterSummary}
+          actorSessionLabel={actorSessionLabel}
           isLoadingActor={status === "loading"}
+          canOpenOperatorSelector={canSwitchActor}
           onOpenOperatorSelector={openOperatorSelector}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {

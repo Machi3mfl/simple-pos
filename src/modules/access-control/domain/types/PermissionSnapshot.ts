@@ -79,8 +79,21 @@ export interface ActorIdentitySnapshot {
   readonly assignedRegisterIds: readonly string[];
 }
 
+export type ActorSessionResolutionSource =
+  | "authenticated"
+  | "authenticated_unmapped"
+  | "assumed_user"
+  | "default_actor";
+
+export interface ActorSessionSnapshot {
+  readonly resolutionSource: ActorSessionResolutionSource;
+  readonly authUserId?: string;
+  readonly canAssumeUserBridge: boolean;
+}
+
 export interface CurrentActorSnapshot {
   readonly actor: ActorIdentitySnapshot;
+  readonly session: ActorSessionSnapshot;
   readonly permissionSnapshot: PermissionSnapshot;
 }
 

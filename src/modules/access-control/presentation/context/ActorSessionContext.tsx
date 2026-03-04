@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import type {
+  ActorSessionResolutionSource,
   CurrentActorSnapshot,
   SelectableActorSummary,
 } from "../../domain/types/PermissionSnapshot";
@@ -22,6 +23,8 @@ interface ActorSessionContextValue {
   readonly status: ActorSessionStatus;
   readonly currentActor: CurrentActorSnapshot["actor"] | null;
   readonly permissionSnapshot: CurrentActorSnapshot["permissionSnapshot"] | null;
+  readonly sessionSource: ActorSessionResolutionSource | null;
+  readonly canSwitchActor: boolean;
   readonly errorMessage: string | null;
   readonly openOperatorSelector: () => void;
   readonly refreshActorSession: () => Promise<void>;
@@ -140,9 +143,13 @@ export function ActorSessionProvider({
   }, [refreshActorSession]);
 
   const openOperatorSelector = useCallback((): void => {
+    if (!snapshot?.session.canAssumeUserBridge) {
+      return;
+    }
+
     setIsSelectorOpen(true);
     void loadSelectableActors();
-  }, [loadSelectableActors]);
+  }, [loadSelectableActors, snapshot?.session.canAssumeUserBridge]);
 
   const switchActor = useCallback(
     async (userId: string): Promise<void> => {
@@ -199,6 +206,8 @@ export function ActorSessionProvider({
       status,
       currentActor: snapshot?.actor ?? null,
       permissionSnapshot: snapshot?.permissionSnapshot ?? null,
+      sessionSource: snapshot?.session.resolutionSource ?? null,
+      canSwitchActor: snapshot?.session.canAssumeUserBridge ?? false,
       errorMessage,
       openOperatorSelector,
       refreshActorSession,
