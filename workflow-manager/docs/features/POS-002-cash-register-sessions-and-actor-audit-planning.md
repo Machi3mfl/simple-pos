@@ -105,7 +105,6 @@ Delivered so far:
 
 Still pending:
 
-- custom role administration for `system_admin` so role bundles can be adapted to each business without code changes,
 - full auth hardening beyond the temporary `assume-user` bridge.
 
 ---
@@ -1257,6 +1256,19 @@ Mandatory UI checkpoint:
 - assign the resulting role to a user,
 - switch operator and immediately observe rail, page, component, and data changes through the existing `/api/v1/me` snapshot.
 
+Implemented result:
+
+- `/users-admin` now exists as a protected workspace inside the same POS shell,
+- `GET /api/v1/access-control/workspace` returns the live role catalog, permission catalog, permission groups, and current user-role assignments,
+- `POST /api/v1/access-control/roles` creates custom roles from cloned or blank bundles,
+- `PUT /api/v1/access-control/roles/{id}` edits only mutable custom roles,
+- `DELETE /api/v1/access-control/roles/{id}` removes only mutable custom roles without remaining assignments,
+- `PUT /api/v1/access-control/users/{id}/roles` replaces user-role assignments through the same effective-permission model already used by `/api/v1/me`,
+- seed roles are now marked as locked system presets and can only be adapted through cloning,
+- `roles.manage` was added as the explicit capability for role-catalog CRUD,
+- self-lockout guardrails now prevent the acting admin from removing the last role-management capability from themself,
+- the admin UI exposes the required real checkpoint: role catalog, permission composer, user assignment, and immediate operator switch to verify the result visually.
+
 ### Slice 7: Hardening
 
 - request-scoped auth integration
@@ -1284,7 +1296,7 @@ Mandatory UI checkpoint:
 - [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.
 - [x] Operational reporting can be exposed to supervisors without leaking margin, credit exposure, or stock-value data.
 - [x] High-discrepancy closeouts require higher-trust approval or a recount flow instead of silently closing.
-- [ ] `system_admin` can create and assign custom roles as bundles of existing permission codes without code changes.
+- [x] `system_admin` can create and assign custom roles as bundles of existing permission codes without code changes.
 
 ---
 
@@ -1324,6 +1336,7 @@ Mandatory UI checkpoint:
 - `executive_readonly` can open `/reporting` and `/sales` but cannot mutate anything
 - `catalog_manager` can manage products but cannot approve cash discrepancies
 - `system_admin` can clone a preset role, change permissions, assign it, and verify the resulting permission snapshot from a real UI flow
+- `system_admin` can create, update, and delete custom roles without mutating locked seed presets
 
 ---
 

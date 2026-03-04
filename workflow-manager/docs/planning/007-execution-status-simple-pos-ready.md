@@ -121,7 +121,10 @@ Open planning item:
     - closeouts above tolerance now move to `closing_review_required`, exposing who submitted the count and who approved the discrepancy
     - `shift_supervisor` and `business_manager` now hold `cash.session.close.override_discrepancy`, while `cashier` still closes directly only within tolerance
     - `/cash-register` now includes the supervisor review checkpoint with approve-closeout and reopen-for-recount actions
-    - next plan step is `Slice 6`: role catalog and permission composition UI for `system_admin`
+    - `Slice 6` role catalog and permission composition UI is also implemented
+    - `/users-admin` now lets `system_admin` clone presets, compose permission bundles, assign roles to users, and validate the resulting shell/data snapshot by switching operator from the same workspace
+    - the permission catalog now includes `roles.manage`, seed roles are locked system presets, and custom roles can be created without code changes
+    - next plan step is `Slice 7`: hardening beyond the temporary actor bridge
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
