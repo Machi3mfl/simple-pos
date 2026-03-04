@@ -63,7 +63,10 @@ export function buildPermissionSnapshot(
           permissionSet,
           "sales_history.view_all_registers",
         ),
-        canViewSaleDetail: canViewSales,
+        canViewSaleDetail: hasPermission(
+          permissionSet,
+          "sales_history.view_all_registers",
+        ),
       },
       receivables: {
         canView: canViewReceivables,

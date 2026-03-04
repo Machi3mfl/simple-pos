@@ -53,6 +53,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     !actorHasAnyPermission(actorSnapshot, [
       "sales_history.view",
       "sales_history.view_all_registers",
+      "reporting.executive.view",
+      "reporting.operational.view",
     ])
   ) {
     return forbiddenPermissionResponse(
@@ -103,8 +105,21 @@ export async function GET(request: NextRequest): Promise<Response> {
     periodEnd: periodEnd ?? undefined,
     paymentMethod: paymentMethod ?? undefined,
   });
+  const canViewSensitiveSales = actorHasAnyPermission(actorSnapshot, [
+    "sales_history.view_all_registers",
+  ]);
+  const responseBody = {
+    items: canViewSensitiveSales
+      ? items
+      : items.map((item) => ({
+          ...item,
+          customerId: undefined,
+          customerName: undefined,
+          saleItems: [],
+        })),
+  };
 
-  const parsedResponse = salesHistoryResponseDTOSchema.safeParse({ items });
+  const parsedResponse = salesHistoryResponseDTOSchema.safeParse(responseBody);
   if (!parsedResponse.success) {
     return errorResponse(500, {
       code: "response_contract_error",

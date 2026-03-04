@@ -48,6 +48,7 @@ interface ApiErrorPayload {
 
 interface OrdersPanelProps {
   readonly refreshToken?: number;
+  readonly canViewSaleDetail?: boolean;
 }
 
 interface OrdersDialogProps {
@@ -380,6 +381,7 @@ function OrdersDialog({ sale, onClose }: OrdersDialogProps): JSX.Element {
 
 export function OrdersPanel({
   refreshToken,
+  canViewSaleDetail = true,
 }: OrdersPanelProps): JSX.Element {
   const {
     messages,
@@ -520,6 +522,12 @@ export function OrdersPanel({
         </div>
       ) : null}
 
+      {!canViewSaleDetail ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+          {messages.accessControl.salesDetailRestrictedHint}
+        </div>
+      ) : null}
+
       <section className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <OrdersSummaryMetricCard
           label={messages.shell.nav.sales}
@@ -561,11 +569,31 @@ export function OrdersPanel({
 
             return (
               <li key={sale.saleId}>
-                <button
-                  type="button"
+                <div
                   data-testid={`orders-sale-item-${sale.saleId}`}
-                  onClick={() => setActiveSale(sale)}
-                  className="w-full rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.95))] px-4 py-4 text-left shadow-[0_16px_30px_rgba(15,23,42,0.06)] transition hover:border-blue-300 hover:shadow-[0_18px_32px_rgba(15,23,42,0.1)] md:px-5 md:py-5"
+                  className={[
+                    "w-full rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.95))] px-4 py-4 text-left shadow-[0_16px_30px_rgba(15,23,42,0.06)] md:px-5 md:py-5",
+                    canViewSaleDetail
+                      ? "cursor-pointer transition hover:border-blue-300 hover:shadow-[0_18px_32px_rgba(15,23,42,0.1)]"
+                      : "",
+                  ].join(" ")}
+                  role={canViewSaleDetail ? "button" : undefined}
+                  tabIndex={canViewSaleDetail ? 0 : undefined}
+                  aria-disabled={canViewSaleDetail ? undefined : true}
+                  onClick={() => {
+                    if (canViewSaleDetail) {
+                      setActiveSale(sale);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      canViewSaleDetail &&
+                      (event.key === "Enter" || event.key === " ")
+                    ) {
+                      event.preventDefault();
+                      setActiveSale(sale);
+                    }
+                  }}
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
@@ -643,7 +671,7 @@ export function OrdersPanel({
                       />
                     </div>
                   </div>
-                </button>
+                </div>
               </li>
             );
           })}
@@ -659,7 +687,7 @@ export function OrdersPanel({
         </ul>
       </section>
 
-      {activeSale ? (
+      {activeSale && canViewSaleDetail ? (
         <OrdersDialog sale={activeSale} onClose={() => setActiveSale(null)} />
       ) : null}
     </article>

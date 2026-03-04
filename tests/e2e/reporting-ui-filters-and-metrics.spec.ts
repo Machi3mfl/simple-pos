@@ -72,7 +72,7 @@ test("loads reporting UI data and applies payment method filter", async ({ page,
   await expect(page.getByTestId("reporting-cost-value")).not.toHaveText("-");
   await expect(page.getByTestId("reporting-profit-value")).not.toHaveText("-");
   await expect(page.getByTestId("reporting-margin-value")).not.toHaveText("-");
-  await expect(page.getByTestId("reporting-collected-value")).not.toHaveText("-");
+  await expect(page.getByTestId("reporting-current-collected-value")).not.toHaveText("-");
   await expect(page.getByTestId("reporting-current-credit-value")).not.toHaveText("-");
   await expect(page.getByTestId("reporting-stock-value")).not.toHaveText("-");
 

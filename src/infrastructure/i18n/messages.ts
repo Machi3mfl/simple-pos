@@ -36,6 +36,8 @@ const spanishMessages = {
     unknownOperator: "Operador desconocido",
     readOnlyWorkspaceHint:
       "Este perfil puede consultar la información, pero no tiene permisos para modificarla.",
+    salesDetailRestrictedHint:
+      "Este perfil puede ver el resumen de ventas, pero no entrar al detalle completo de cada operación.",
     receivablesReadOnlyHint:
       "Este perfil puede revisar saldos y pedidos pendientes, pero no registrar pagos.",
     blockedProductSourcingDescription:
@@ -663,6 +665,8 @@ const spanishMessages = {
     loadProductsSnapshotError: "No se pudo cargar el snapshot de productos.",
     loadReceivablesSnapshotError: "No se pudo cargar el snapshot de deudas.",
     loadReportingError: "No se pudieron cargar los datos del reporte.",
+    operationalRestrictedHint:
+      "Este perfil ve solo señales operativas. Margen, crédito e inventario valorizado quedan reservados para perfiles estratégicos.",
     invalidPeriodRange: "La fecha desde debe ser anterior o igual a la fecha hasta.",
     quantitySold: (count: number): string => `cantidad ${count}`,
     revenueLabel: (amount: string): string => `Facturación ${amount}`,

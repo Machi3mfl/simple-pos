@@ -132,6 +132,13 @@ interface InsightItem {
   readonly tone: MetricTone;
 }
 
+interface ReportingPanelProps {
+  readonly canViewExecutiveMetrics?: boolean;
+  readonly canViewMargin?: boolean;
+  readonly canViewInventoryValue?: boolean;
+  readonly canViewCreditExposure?: boolean;
+}
+
 const percentageFormatter = new Intl.NumberFormat("es-AR", {
   style: "percent",
   maximumFractionDigits: 1,
@@ -350,39 +357,46 @@ function buildInsights(input: {
   readonly inventoryRiskCount: number;
   readonly topProduct?: TopProductItem;
   readonly messages: ReturnType<typeof useI18n>["messages"];
+  readonly canViewCreditExposure: boolean;
+  readonly canViewInventoryValue: boolean;
 }): readonly InsightItem[] {
   const creditShare =
     input.revenue > 0 ? input.currentCredit / input.revenue : input.currentCredit > 0 ? 1 : 0;
   const topProductShare =
     input.topProduct && input.revenue > 0 ? input.topProduct.revenue / input.revenue : 0;
 
-  return [
-    {
-      id: "credit",
-      title: input.messages.reporting.currentCreditMetric,
-      body:
-        input.currentCredit <= 0
-          ? input.messages.receivables.noDebtors
-          : creditShare > 0.35
-            ? input.messages.reporting.insightCreditRisk(
-                formatPercent(creditShare),
-                `$${input.currentCredit.toFixed(2)}`,
-              )
-            : input.messages.reporting.insightCreditHealthy(
-                formatPercent(creditShare),
-                `$${input.currentCredit.toFixed(2)}`,
-              ),
-      tone: input.currentCredit <= 0 ? "emerald" : creditShare > 0.35 ? "amber" : "blue",
-    },
-    {
-      id: "inventory",
-      title: input.messages.reporting.inventoryRiskMetric,
-      body:
-        input.inventoryRiskCount > 0
-          ? input.messages.reporting.insightInventoryRisk(input.inventoryRiskCount)
-          : input.messages.reporting.insightInventoryHealthy,
-      tone: input.inventoryRiskCount > 0 ? "amber" : "emerald",
-    },
+  const items: Array<InsightItem | null> = [
+    input.canViewCreditExposure
+      ? {
+          id: "credit",
+          title: input.messages.reporting.currentCreditMetric,
+          body:
+            input.currentCredit <= 0
+              ? input.messages.receivables.noDebtors
+              : creditShare > 0.35
+                ? input.messages.reporting.insightCreditRisk(
+                    formatPercent(creditShare),
+                    `$${input.currentCredit.toFixed(2)}`,
+                  )
+                : input.messages.reporting.insightCreditHealthy(
+                    formatPercent(creditShare),
+                    `$${input.currentCredit.toFixed(2)}`,
+                  ),
+          tone:
+            input.currentCredit <= 0 ? "emerald" : creditShare > 0.35 ? "amber" : "blue",
+        }
+      : null,
+    input.canViewInventoryValue
+      ? {
+          id: "inventory",
+          title: input.messages.reporting.inventoryRiskMetric,
+          body:
+            input.inventoryRiskCount > 0
+              ? input.messages.reporting.insightInventoryRisk(input.inventoryRiskCount)
+              : input.messages.reporting.insightInventoryHealthy,
+          tone: input.inventoryRiskCount > 0 ? "amber" : "emerald",
+        }
+      : null,
     {
       id: "concentration",
       title: input.messages.reporting.topProducts,
@@ -401,6 +415,8 @@ function buildInsights(input: {
       tone: input.topProduct && topProductShare > 0.45 ? "blue" : "neutral",
     },
   ];
+
+  return items.filter((item): item is InsightItem => item !== null);
 }
 
 function EmptyChartState({ message }: { readonly message: string }): JSX.Element {
@@ -496,7 +512,12 @@ function InsightCard({ item }: { readonly item: InsightItem }): JSX.Element {
   );
 }
 
-export function ReportingPanel(): JSX.Element {
+export function ReportingPanel({
+  canViewExecutiveMetrics = true,
+  canViewMargin = true,
+  canViewInventoryValue = true,
+  canViewCreditExposure = true,
+}: ReportingPanelProps): JSX.Element {
   const { messages, formatCurrency, formatDateTime, labelForPaymentMethod } = useI18n();
   const [periodStart, setPeriodStart] = useState<string>(() =>
     toDateInputValue(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)),
@@ -554,13 +575,21 @@ export function ReportingPanel(): JSX.Element {
         fetchJsonNoStore<TopProductsResponse | ApiErrorPayload>(
           buildEndpoint("/api/v1/reports/top-products", queryString),
         ),
-        fetchJsonNoStore<ProfitSummary | ApiErrorPayload>(
-          buildEndpoint("/api/v1/reports/profit-summary", queryString),
-        ),
-        fetchJsonNoStore<ProductsWorkspaceSummaryResponse | ApiErrorPayload>(
-          "/api/v1/products/workspace?activeOnly=true&page=1&pageSize=1",
-        ),
-        fetchJsonNoStore<ReceivablesSnapshotResponse | ApiErrorPayload>("/api/v1/receivables"),
+        canViewMargin
+          ? fetchJsonNoStore<ProfitSummary | ApiErrorPayload>(
+              buildEndpoint("/api/v1/reports/profit-summary", queryString),
+            )
+          : Promise.resolve(null),
+        canViewInventoryValue
+          ? fetchJsonNoStore<ProductsWorkspaceSummaryResponse | ApiErrorPayload>(
+              "/api/v1/products/workspace?activeOnly=true&page=1&pageSize=1",
+            )
+          : Promise.resolve(null),
+        canViewCreditExposure
+          ? fetchJsonNoStore<ReceivablesSnapshotResponse | ApiErrorPayload>(
+              "/api/v1/receivables",
+            )
+          : Promise.resolve(null),
       ]);
 
       if (!salesResult.response.ok) {
@@ -573,11 +602,11 @@ export function ReportingPanel(): JSX.Element {
         );
       }
 
-      if (!profitResult.response.ok) {
+      if (profitResult && !profitResult.response.ok) {
         throw new Error(resolveApiMessage(profitResult.data, messages.reporting.loadProfitError));
       }
 
-      if (!productsSnapshotResult.response.ok) {
+      if (productsSnapshotResult && !productsSnapshotResult.response.ok) {
         throw new Error(
           resolveApiMessage(
             productsSnapshotResult.data,
@@ -586,7 +615,7 @@ export function ReportingPanel(): JSX.Element {
         );
       }
 
-      if (!receivablesResult.response.ok) {
+      if (receivablesResult && !receivablesResult.response.ok) {
         throw new Error(
           resolveApiMessage(
             receivablesResult.data,
@@ -597,10 +626,18 @@ export function ReportingPanel(): JSX.Element {
 
       setSalesHistory((salesResult.data as SalesHistoryResponse | null)?.items ?? []);
       setTopProducts((topProductsResult.data as TopProductsResponse | null)?.items ?? []);
-      setProfitSummary((profitResult.data as ProfitSummary | null) ?? null);
-      setProductsSummary((productsSnapshotResult.data as ProductsWorkspaceSummaryResponse | null) ?? null);
+      setProfitSummary(
+        profitResult ? ((profitResult.data as ProfitSummary | null) ?? null) : null,
+      );
+      setProductsSummary(
+        productsSnapshotResult
+          ? ((productsSnapshotResult.data as ProductsWorkspaceSummaryResponse | null) ?? null)
+          : null,
+      );
       setReceivablesSnapshot(
-        (receivablesResult.data as ReceivablesSnapshotResponse | null)?.items ?? [],
+        receivablesResult
+          ? ((receivablesResult.data as ReceivablesSnapshotResponse | null)?.items ?? [])
+          : [],
       );
       setIsError(false);
     } catch (error: unknown) {
@@ -618,6 +655,9 @@ export function ReportingPanel(): JSX.Element {
     messages.reporting.loadReportingError,
     messages.reporting.loadSalesError,
     messages.reporting.loadTopProductsError,
+    canViewCreditExposure,
+    canViewInventoryValue,
+    canViewMargin,
     queryString,
   ]);
 
@@ -649,6 +689,10 @@ export function ReportingPanel(): JSX.Element {
   );
 
   const totalSalesCount = salesHistory.length;
+  const periodRevenue = useMemo(
+    () => roundMoney(salesHistory.reduce((sum, sale) => sum + sale.total, 0)),
+    [salesHistory],
+  );
   const collectedAmount = useMemo(
     () => roundMoney(salesHistory.reduce((sum, sale) => sum + sale.amountPaid, 0)),
     [salesHistory],
@@ -672,10 +716,10 @@ export function ReportingPanel(): JSX.Element {
   );
   const averageTicket = useMemo(
     () =>
-      profitSummary && totalSalesCount > 0
-        ? roundMoney(profitSummary.revenue / totalSalesCount)
+      totalSalesCount > 0
+        ? roundMoney(periodRevenue / totalSalesCount)
         : 0,
-    [profitSummary, totalSalesCount],
+    [periodRevenue, totalSalesCount],
   );
   const grossMargin = useMemo(
     () =>
@@ -710,13 +754,23 @@ export function ReportingPanel(): JSX.Element {
   const insights = useMemo(
     () =>
       buildInsights({
-        revenue: profitSummary?.revenue ?? 0,
+        revenue: periodRevenue,
         currentCredit: currentCreditAmount,
         inventoryRiskCount,
         topProduct: topProducts[0],
         messages,
+        canViewCreditExposure,
+        canViewInventoryValue,
       }),
-    [currentCreditAmount, inventoryRiskCount, messages, profitSummary?.revenue, topProducts],
+    [
+      canViewCreditExposure,
+      canViewInventoryValue,
+      currentCreditAmount,
+      inventoryRiskCount,
+      messages,
+      periodRevenue,
+      topProducts,
+    ],
   );
 
   return (
@@ -818,6 +872,12 @@ export function ReportingPanel(): JSX.Element {
         </p>
       ) : null}
 
+      {!canViewMargin || !canViewCreditExposure || !canViewInventoryValue ? (
+        <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+          {messages.reporting.operationalRestrictedHint}
+        </p>
+      ) : null}
+
       <section className="mt-7">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
@@ -829,7 +889,12 @@ export function ReportingPanel(): JSX.Element {
             </p>
           </div>
         </div>
-        <div className="grid gap-4 xl:grid-cols-4">
+        <div
+          className={cn(
+            "grid gap-4",
+            canViewMargin ? "xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-4",
+          )}
+        >
           <SnapshotMetricCard
             title={messages.reporting.salesCountMetric}
             value={integerFormatter.format(totalSalesCount)}
@@ -840,28 +905,50 @@ export function ReportingPanel(): JSX.Element {
           />
           <SnapshotMetricCard
             title={messages.common.labels.revenue}
-            value={profitSummary ? formatCurrency(profitSummary.revenue) : "-"}
+            value={formatCurrency(periodRevenue)}
             description="Volumen bruto vendido dentro del filtro actual."
             tone="blue"
             icon={TrendingUp}
             testId="reporting-revenue-value"
           />
-          <SnapshotMetricCard
-            title={messages.common.labels.cost}
-            value={profitSummary ? formatCurrency(profitSummary.cost) : "-"}
-            description="Costo consumido por las ventas del período."
-            tone="neutral"
-            icon={PackageSearch}
-            testId="reporting-cost-value"
-          />
-          <SnapshotMetricCard
-            title={messages.common.labels.profit}
-            value={profitSummary ? formatCurrency(profitSummary.profit) : "-"}
-            description="Resultado bruto antes de gastos operativos."
-            tone="emerald"
-            icon={BanknoteArrowUp}
-            testId="reporting-profit-value"
-          />
+          {canViewMargin ? (
+            <>
+              <SnapshotMetricCard
+                title={messages.common.labels.cost}
+                value={profitSummary ? formatCurrency(profitSummary.cost) : "-"}
+                description="Costo consumido por las ventas del período."
+                tone="neutral"
+                icon={PackageSearch}
+                testId="reporting-cost-value"
+              />
+              <SnapshotMetricCard
+                title={messages.common.labels.profit}
+                value={profitSummary ? formatCurrency(profitSummary.profit) : "-"}
+                description="Resultado bruto antes de gastos operativos."
+                tone="emerald"
+                icon={BanknoteArrowUp}
+                testId="reporting-profit-value"
+              />
+            </>
+          ) : (
+            <>
+              <SnapshotMetricCard
+                title={messages.reporting.collectedMetric}
+                value={formatCurrency(collectedAmount)}
+                description={`Pendiente del período ${formatCurrency(periodOutstandingAmount)}`}
+                tone="emerald"
+                icon={HandCoins}
+                testId="reporting-collected-value"
+              />
+              <SnapshotMetricCard
+                title={messages.reporting.averageTicketMetric}
+                value={formatCurrency(averageTicket)}
+                description="Promedio por ticket dentro del período filtrado."
+                tone="neutral"
+                icon={ReceiptText}
+              />
+            </>
+          )}
         </div>
       </section>
 
@@ -876,39 +963,52 @@ export function ReportingPanel(): JSX.Element {
             </p>
           </div>
         </div>
-        <div className="grid gap-4 xl:grid-cols-4">
-          <SnapshotMetricCard
-            title={messages.reporting.marginMetric}
-            value={profitSummary ? formatPercent(grossMargin) : "-"}
-            description={`Ticket promedio ${formatCurrency(averageTicket)}`}
-            tone="neutral"
-            icon={Activity}
-            testId="reporting-margin-value"
-          />
+        <div
+          className={cn(
+            "grid gap-4",
+            canViewCreditExposure || canViewInventoryValue || canViewMargin
+              ? "md:grid-cols-2 xl:grid-cols-4"
+              : "md:grid-cols-2",
+          )}
+        >
+          {canViewMargin ? (
+            <SnapshotMetricCard
+              title={messages.reporting.marginMetric}
+              value={profitSummary ? formatPercent(grossMargin) : "-"}
+              description={`Ticket promedio ${formatCurrency(averageTicket)}`}
+              tone="neutral"
+              icon={Activity}
+              testId="reporting-margin-value"
+            />
+          ) : null}
           <SnapshotMetricCard
             title={messages.reporting.collectedMetric}
             value={formatCurrency(collectedAmount)}
             description={`Pendiente del período ${formatCurrency(periodOutstandingAmount)}`}
             tone="blue"
             icon={HandCoins}
-            testId="reporting-collected-value"
+            testId="reporting-current-collected-value"
           />
-          <SnapshotMetricCard
-            title={messages.reporting.currentCreditMetric}
-            value={formatCurrency(currentCreditAmount)}
-            description={`${integerFormatter.format(debtorCount)} deudores · ${integerFormatter.format(openOrderCount)} pedidos abiertos`}
-            tone={currentCreditAmount > 0 ? "amber" : "emerald"}
-            icon={Wallet}
-            testId="reporting-current-credit-value"
-          />
-          <SnapshotMetricCard
-            title={messages.reporting.stockValueMetric}
-            value={productsSummary ? formatCurrency(productsSummary.summary.stockValue) : "-"}
-            description={`${messages.productsWorkspace.summary.withStock}: ${integerFormatter.format(productsSummary?.summary.withStock ?? 0)} · ${messages.reporting.inventoryRiskMetric}: ${integerFormatter.format(inventoryRiskCount)}`}
-            tone="emerald"
-            icon={Boxes}
-            testId="reporting-stock-value"
-          />
+          {canViewCreditExposure ? (
+            <SnapshotMetricCard
+              title={messages.reporting.currentCreditMetric}
+              value={formatCurrency(currentCreditAmount)}
+              description={`${integerFormatter.format(debtorCount)} deudores · ${integerFormatter.format(openOrderCount)} pedidos abiertos`}
+              tone={currentCreditAmount > 0 ? "amber" : "emerald"}
+              icon={Wallet}
+              testId="reporting-current-credit-value"
+            />
+          ) : null}
+          {canViewInventoryValue ? (
+            <SnapshotMetricCard
+              title={messages.reporting.stockValueMetric}
+              value={productsSummary ? formatCurrency(productsSummary.summary.stockValue) : "-"}
+              description={`${messages.productsWorkspace.summary.withStock}: ${integerFormatter.format(productsSummary?.summary.withStock ?? 0)} · ${messages.reporting.inventoryRiskMetric}: ${integerFormatter.format(inventoryRiskCount)}`}
+              tone="emerald"
+              icon={Boxes}
+              testId="reporting-stock-value"
+            />
+          ) : null}
         </div>
       </section>
 
@@ -1054,51 +1154,53 @@ export function ReportingPanel(): JSX.Element {
             )}
           </div>
 
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-                {messages.reporting.inventoryHealthTitle}
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {messages.reporting.inventoryHealthDescription}
-              </p>
+          {canViewInventoryValue ? (
+            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold tracking-tight text-slate-950">
+                  {messages.reporting.inventoryHealthTitle}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {messages.reporting.inventoryHealthDescription}
+                </p>
+              </div>
+
+              {inventoryHealthData.length === 0 ? (
+                <EmptyChartState message={messages.reporting.noInventoryHealthData} />
+              ) : (
+                <>
+                  <ChartContainer config={inventoryHealthChartConfig} className="h-[220px] w-full">
+                    <BarChart data={inventoryHealthData} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
+                      <ChartTooltip
+                        content={<ChartTooltipContent formatter={(value) => integerFormatter.format(Number(value))} />}
+                      />
+                      <Bar dataKey="value" radius={[14, 14, 0, 0]}>
+                        {inventoryHealthData.map((item) => (
+                          <Cell
+                            key={item.key}
+                            fill={`var(--color-${item.key})`}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    {inventoryHealthData.map((item) => (
+                      <SecondaryStat
+                        key={item.key}
+                        label={item.label}
+                        value={messages.reporting.inventoryHealthValue(item.value)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-
-            {inventoryHealthData.length === 0 ? (
-              <EmptyChartState message={messages.reporting.noInventoryHealthData} />
-            ) : (
-              <>
-                <ChartContainer config={inventoryHealthChartConfig} className="h-[220px] w-full">
-                  <BarChart data={inventoryHealthData} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} />
-                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
-                    <ChartTooltip
-                      content={<ChartTooltipContent formatter={(value) => integerFormatter.format(Number(value))} />}
-                    />
-                    <Bar dataKey="value" radius={[14, 14, 0, 0]}>
-                      {inventoryHealthData.map((item) => (
-                        <Cell
-                          key={item.key}
-                          fill={`var(--color-${item.key})`}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {inventoryHealthData.map((item) => (
-                    <SecondaryStat
-                      key={item.key}
-                      label={item.label}
-                      value={messages.reporting.inventoryHealthValue(item.value)}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          ) : null}
         </div>
       </section>
 
@@ -1186,16 +1288,18 @@ export function ReportingPanel(): JSX.Element {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SecondaryStat
-              label={messages.reporting.debtorsMetric}
-              value={integerFormatter.format(debtorCount)}
-            />
-            <SecondaryStat
-              label={messages.reporting.openOrdersMetric}
-              value={integerFormatter.format(openOrderCount)}
-            />
-          </div>
+          {canViewCreditExposure ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SecondaryStat
+                label={messages.reporting.debtorsMetric}
+                value={integerFormatter.format(debtorCount)}
+              />
+              <SecondaryStat
+                label={messages.reporting.openOrdersMetric}
+                value={integerFormatter.format(openOrderCount)}
+              />
+            </div>
+          ) : null}
 
           <div className="mt-4 space-y-3">
             {insights.length > 0 ? (

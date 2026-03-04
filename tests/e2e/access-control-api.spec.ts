@@ -34,6 +34,7 @@ test.describe("access control api", () => {
     expect(cashierMe.actor.roleCodes).toContain("cashier");
     expect(cashierMe.permissionSnapshot.workspaces.products.canView).toBe(false);
     expect(cashierMe.permissionSnapshot.workspaces.receivables.canView).toBe(false);
+    expect(cashierMe.permissionSnapshot.workspaces.sales.canViewSaleDetail).toBe(false);
 
     const cashierProductsImportResponse = await request.post("/api/v1/products/import", {
       data: {
@@ -44,6 +45,32 @@ test.describe("access control api", () => {
     expect(
       apiErrorResponseSchema.safeParse(await cashierProductsImportResponse.json()).success,
     ).toBe(true);
+
+    const cashierProfitSummaryResponse = await request.get("/api/v1/reports/profit-summary");
+    expect(cashierProfitSummaryResponse.status()).toBe(403);
+
+    const switchToSupervisorResponse = await request.post("/api/v1/me/assume-user", {
+      data: {
+        userId: "user_supervisor_bruno",
+      },
+    });
+    expect(switchToSupervisorResponse.status()).toBe(200);
+
+    const supervisorMeResponse = await request.get("/api/v1/me");
+    expect(supervisorMeResponse.status()).toBe(200);
+    const supervisorMe = meResponseDTOSchema.parse(await supervisorMeResponse.json());
+    expect(supervisorMe.actor.roleCodes).toContain("shift_supervisor");
+    expect(supervisorMe.permissionSnapshot.workspaces.reporting.canView).toBe(true);
+    expect(supervisorMe.permissionSnapshot.workspaces.reporting.canViewMargin).toBe(false);
+    expect(supervisorMe.permissionSnapshot.workspaces.sales.canViewSaleDetail).toBe(true);
+
+    const supervisorTopProductsResponse = await request.get("/api/v1/reports/top-products");
+    expect(supervisorTopProductsResponse.status()).toBe(200);
+
+    const supervisorProfitSummaryResponse = await request.get(
+      "/api/v1/reports/profit-summary",
+    );
+    expect(supervisorProfitSummaryResponse.status()).toBe(403);
 
     const switchToCatalogManagerResponse = await request.post("/api/v1/me/assume-user", {
       data: {

@@ -357,7 +357,18 @@ export function PosLayout({
     if (currentWorkspace === "reporting") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
-          <ReportingPanel />
+          <ReportingPanel
+            canViewExecutiveMetrics={
+              permissionSnapshot?.workspaces.reporting.canViewExecutiveMetrics ?? false
+            }
+            canViewMargin={permissionSnapshot?.workspaces.reporting.canViewMargin ?? false}
+            canViewInventoryValue={
+              permissionSnapshot?.workspaces.reporting.canViewInventoryValue ?? false
+            }
+            canViewCreditExposure={
+              permissionSnapshot?.workspaces.reporting.canViewCreditExposure ?? false
+            }
+          />
         </section>
       );
     }
@@ -365,7 +376,12 @@ export function PosLayout({
     if (currentWorkspace === "sales") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
-          <OrdersPanel refreshToken={salesRefreshToken} />
+          <OrdersPanel
+            refreshToken={salesRefreshToken}
+            canViewSaleDetail={
+              permissionSnapshot?.workspaces.sales.canViewSaleDetail ?? false
+            }
+          />
         </section>
       );
     }

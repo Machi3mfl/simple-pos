@@ -66,6 +66,7 @@ export const fallbackActorAccessRecords: readonly ActorAccessRecord[] = [
       "sales_history.view_all_registers",
       "receivables.view",
       "receivables.payment.register",
+      "reporting.operational.view",
       "sync.view",
     ],
     assignedRegisterIds: ["front-counter"],
