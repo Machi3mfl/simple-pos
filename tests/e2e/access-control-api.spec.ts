@@ -1,8 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { z } from "zod";
 
 import { meResponseDTOSchema } from "../../src/modules/access-control/presentation/dtos/me-response.dto";
-import { createAuthenticatedSessionForAppUser } from "./support/access-control-auth";
+import {
+  assumeActorViaSupportBridge,
+  createAuthenticatedSessionForAppUser,
+} from "./support/access-control-auth";
 
 const apiErrorResponseSchema = z
   .object({
@@ -13,29 +16,30 @@ const apiErrorResponseSchema = z
 
 test.describe("access control api", () => {
   test("exposes current actor snapshot and enforces permissions on critical routes", async ({
-    request,
+    anonymousRequest,
+    supportRequest,
   }) => {
-    const defaultMeResponse = await request.get("/api/v1/me");
+    const defaultMeResponse = await anonymousRequest.get("/api/v1/me");
     expect(defaultMeResponse.status()).toBe(200);
     const defaultMeBody = await defaultMeResponse.json();
     const defaultMe = meResponseDTOSchema.parse(defaultMeBody);
     expect(defaultMe.actor.displayName.length).toBeGreaterThan(0);
-    expect(defaultMe.permissionSnapshot.navigation.cashRegister).toBe(true);
+    expect(defaultMe.permissionSnapshot.navigation.cashRegister).toBe(false);
     expect(defaultMe.session.resolutionSource).toBe("default_actor");
     expect(defaultMe.session.canAssumeUserBridge).toBe(true);
+    expect(defaultMe.session.supportControllerActorId).toBeUndefined();
 
-    const switchToCashierResponse = await request.post("/api/v1/me/assume-user", {
-      data: {
-        userId: "user_cashier_putri",
-      },
-    });
-    expect(switchToCashierResponse.status()).toBe(200);
+    const appUsersWithoutSupportResponse = await anonymousRequest.get("/api/v1/app-users");
+    expect(appUsersWithoutSupportResponse.status()).toBe(403);
 
-    const cashierMeResponse = await request.get("/api/v1/me");
+    await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
+
+    const cashierMeResponse = await supportRequest.get("/api/v1/me");
     expect(cashierMeResponse.status()).toBe(200);
     const cashierMe = meResponseDTOSchema.parse(await cashierMeResponse.json());
     expect(cashierMe.actor.roleCodes).toContain("cashier");
     expect(cashierMe.session.resolutionSource).toBe("assumed_user");
+    expect(cashierMe.session.supportControllerActorId).toBe("user_admin_soporte");
     expect(cashierMe.permissionSnapshot.workspaces.products.canView).toBe(false);
     expect(cashierMe.permissionSnapshot.workspaces.receivables.canView).toBe(false);
     expect(cashierMe.permissionSnapshot.workspaces.sales.canViewSaleDetail).toBe(false);
@@ -46,7 +50,7 @@ test.describe("access control api", () => {
       cashierMe.permissionSnapshot.workspaces.cashRegister.canApproveDiscrepancyClose,
     ).toBe(false);
 
-    const cashierProductsImportResponse = await request.post("/api/v1/products/import", {
+    const cashierProductsImportResponse = await supportRequest.post("/api/v1/products/import", {
       data: {
         items: [],
       },
@@ -56,17 +60,12 @@ test.describe("access control api", () => {
       apiErrorResponseSchema.safeParse(await cashierProductsImportResponse.json()).success,
     ).toBe(true);
 
-    const cashierProfitSummaryResponse = await request.get("/api/v1/reports/profit-summary");
+    const cashierProfitSummaryResponse = await supportRequest.get("/api/v1/reports/profit-summary");
     expect(cashierProfitSummaryResponse.status()).toBe(403);
 
-    const switchToSupervisorResponse = await request.post("/api/v1/me/assume-user", {
-      data: {
-        userId: "user_supervisor_bruno",
-      },
-    });
-    expect(switchToSupervisorResponse.status()).toBe(200);
+    await assumeActorViaSupportBridge(supportRequest, "user_supervisor_bruno");
 
-    const supervisorMeResponse = await request.get("/api/v1/me");
+    const supervisorMeResponse = await supportRequest.get("/api/v1/me");
     expect(supervisorMeResponse.status()).toBe(200);
     const supervisorMe = meResponseDTOSchema.parse(await supervisorMeResponse.json());
     expect(supervisorMe.actor.roleCodes).toContain("shift_supervisor");
@@ -82,22 +81,17 @@ test.describe("access control api", () => {
         .canApproveDiscrepancyClose,
     ).toBe(true);
 
-    const supervisorTopProductsResponse = await request.get("/api/v1/reports/top-products");
+    const supervisorTopProductsResponse = await supportRequest.get("/api/v1/reports/top-products");
     expect(supervisorTopProductsResponse.status()).toBe(200);
 
-    const supervisorProfitSummaryResponse = await request.get(
+    const supervisorProfitSummaryResponse = await supportRequest.get(
       "/api/v1/reports/profit-summary",
     );
     expect(supervisorProfitSummaryResponse.status()).toBe(403);
 
-    const switchToCatalogManagerResponse = await request.post("/api/v1/me/assume-user", {
-      data: {
-        userId: "user_catalog_lucia",
-      },
-    });
-    expect(switchToCatalogManagerResponse.status()).toBe(200);
+    await assumeActorViaSupportBridge(supportRequest, "user_catalog_lucia");
 
-    const catalogManagerMeResponse = await request.get("/api/v1/me");
+    const catalogManagerMeResponse = await supportRequest.get("/api/v1/me");
     expect(catalogManagerMeResponse.status()).toBe(200);
     const catalogManagerMe = meResponseDTOSchema.parse(await catalogManagerMeResponse.json());
     expect(catalogManagerMe.actor.roleCodes).toContain("catalog_manager");
@@ -109,7 +103,7 @@ test.describe("access control api", () => {
         .canApproveDiscrepancyClose,
     ).toBe(false);
 
-    const catalogManagerReceivablesResponse = await request.get("/api/v1/receivables");
+    const catalogManagerReceivablesResponse = await supportRequest.get("/api/v1/receivables");
     expect(catalogManagerReceivablesResponse.status()).toBe(403);
     expect(
       apiErrorResponseSchema.safeParse(await catalogManagerReceivablesResponse.json()).success,
@@ -117,7 +111,7 @@ test.describe("access control api", () => {
   });
 
   test("prefers authenticated auth_user_id mapping over assumed-user bridge", async ({
-    request,
+    supportRequest,
   }) => {
     const session = await createAuthenticatedSessionForAppUser({
       appUserId: "user_manager_maxi",
@@ -125,14 +119,9 @@ test.describe("access control api", () => {
     });
 
     try {
-      const assumeCashierResponse = await request.post("/api/v1/me/assume-user", {
-        data: {
-          userId: "user_cashier_putri",
-        },
-      });
-      expect(assumeCashierResponse.status()).toBe(200);
+      await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
 
-      const meResponse = await request.get("/api/v1/me", {
+      const meResponse = await supportRequest.get("/api/v1/me", {
         headers: {
           authorization: `Bearer ${session.accessToken}`,
         },

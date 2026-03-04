@@ -1,21 +1,12 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "./support/test";
 
 import { activeCashRegisterSessionResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
 import { listCashRegistersResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
 import { getOfflineSyncQueueStorageKey } from "../../src/modules/sync/presentation/offline/offlineSyncQueue";
-
-async function assumeUser(
-  request: APIRequestContext,
-  userId: string,
-): Promise<void> {
-  const response = await request.post("/api/v1/me/assume-user", {
-    data: { userId },
-  });
-  expect(response.status()).toBe(200);
-}
+import { assumeActorViaSupportBridge } from "./support/access-control-auth";
 
 async function ensureClosedSession(request: APIRequestContext): Promise<void> {
-  await assumeUser(request, "user_manager_maxi");
+  await assumeActorViaSupportBridge(request, "user_manager_maxi");
 
   const registersResponse = await request.get("/api/v1/cash-registers");
   expect(registersResponse.status()).toBe(200);
@@ -63,14 +54,14 @@ async function ensureClosedSession(request: APIRequestContext): Promise<void> {
 test.describe("offline cash movement recovery", () => {
   test("queues a manual cash movement offline and replays it on sync retry", async ({
     page,
-    request,
+    supportRequest,
   }) => {
     const storageKey = getOfflineSyncQueueStorageKey();
     let failNextMovementRequest = true;
     let syncRequests = 0;
 
-    await ensureClosedSession(request);
-    await assumeUser(request, "user_manager_maxi");
+    await ensureClosedSession(supportRequest);
+    await assumeActorViaSupportBridge(supportRequest, "user_manager_maxi");
 
     await page.route("**/api/v1/cash-register-sessions/*/movements", async (route) => {
       if (route.request().method() !== "POST") {

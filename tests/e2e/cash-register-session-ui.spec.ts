@@ -1,26 +1,22 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "./support/test";
 
 import { activeCashRegisterSessionResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
 import { listCashRegistersResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
-
-async function assumeUser(
-  request: APIRequestContext,
-  userId: string,
-): Promise<void> {
-  const response = await request.post("/api/v1/me/assume-user", {
-    data: { userId },
-  });
-  expect(response.status()).toBe(200);
-}
+import {
+  assumeActorViaSupportBridge,
+  enterSupportModeFromLogin,
+} from "./support/access-control-auth";
 
 async function selectOperator(page: Page, actorId: string): Promise<void> {
   await page.getByTestId("open-operator-selector-button").click();
-  await expect(page.getByTestId("operator-selector-dialog")).toBeVisible();
+  const dialog = page.getByTestId("operator-selector-dialog");
+  await expect(dialog).toBeVisible();
   await page.getByTestId(`operator-selector-item-${actorId}`).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 async function ensureClosedSession(request: APIRequestContext): Promise<void> {
-  await assumeUser(request, "user_manager_maxi");
+  await assumeActorViaSupportBridge(request, "user_manager_maxi");
 
   const registersResponse = await request.get("/api/v1/cash-registers");
   expect(registersResponse.status()).toBe(200);
@@ -67,11 +63,14 @@ async function ensureClosedSession(request: APIRequestContext): Promise<void> {
 
 test("opens, records manual movements, and closes a cash register session from the cash workspace", async ({
   page,
-  request,
+  supportRequest,
 }) => {
-  await assumeUser(request, "user_manager_maxi");
-  await ensureClosedSession(request);
+  await assumeActorViaSupportBridge(supportRequest, "user_manager_maxi");
+  await ensureClosedSession(supportRequest);
 
+  await enterSupportModeFromLogin(page);
+  await selectOperator(page, "user_manager_maxi");
+  await expect(page.getByTestId("open-operator-selector-button")).toContainText("Maxi");
   await page.goto("/cash-register");
   await expect(page.getByTestId("cash-session-panel")).toBeVisible();
 
@@ -107,10 +106,11 @@ test("opens, records manual movements, and closes a cash register session from t
 
 test("sends cashier closeout with high discrepancy to supervisor review and allows reopen", async ({
   page,
-  request,
+  supportRequest,
 }) => {
-  await ensureClosedSession(request);
-  await assumeUser(request, "user_cashier_putri");
+  await ensureClosedSession(supportRequest);
+  await enterSupportModeFromLogin(page);
+  await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
 
   await page.goto("/cash-register");
   await selectOperator(page, "user_cashier_putri");

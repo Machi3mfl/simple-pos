@@ -1,25 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { accessControlRoleDTOSchema, accessControlWorkspaceResponseDTOSchema } from "../../src/modules/access-control/presentation/dtos/access-control-workspace-response.dto";
 import { meResponseDTOSchema } from "../../src/modules/access-control/presentation/dtos/me-response.dto";
 
 test.describe("access control role administration api", () => {
   test("system admin can create a custom role, assign it, and observe the resulting snapshot", async ({
-    request,
+    supportRequest,
   }) => {
-    const assumeAdminResponse = await request.post("/api/v1/me/assume-user", {
-      data: {
-        userId: "user_admin_soporte",
-      },
-    });
-    expect(assumeAdminResponse.status()).toBe(200);
-
-    const meAsAdminResponse = await request.get("/api/v1/me");
+    const meAsAdminResponse = await supportRequest.get("/api/v1/me");
     const meAsAdmin = meResponseDTOSchema.parse(await meAsAdminResponse.json());
     expect(meAsAdmin.permissionSnapshot.workspaces.usersAdmin.canView).toBe(true);
     expect(meAsAdmin.permissionSnapshot.workspaces.usersAdmin.canManageRoles).toBe(true);
 
-    const workspaceResponse = await request.get("/api/v1/access-control/workspace");
+    const workspaceResponse = await supportRequest.get("/api/v1/access-control/workspace");
     expect(workspaceResponse.status()).toBe(200);
     const workspace = accessControlWorkspaceResponseDTOSchema.parse(
       await workspaceResponse.json(),
@@ -28,7 +21,7 @@ test.describe("access control role administration api", () => {
     expect(workspace.permissionGroups.length).toBeGreaterThan(0);
 
     const uniqueName = `Caja extendida ${Date.now()}`;
-    const createRoleResponse = await request.post("/api/v1/access-control/roles", {
+    const createRoleResponse = await supportRequest.post("/api/v1/access-control/roles", {
       data: {
         name: uniqueName,
         description: "Rol custom para probar el composer.",
@@ -47,7 +40,7 @@ test.describe("access control role administration api", () => {
     expect(createdRole.isLocked).toBe(false);
     expect(createdRole.name).toBe(uniqueName);
 
-    const assignRoleResponse = await request.put(
+    const assignRoleResponse = await supportRequest.put(
       "/api/v1/access-control/users/user_collections_marta/roles",
       {
         data: {
@@ -57,14 +50,14 @@ test.describe("access control role administration api", () => {
     );
     expect(assignRoleResponse.status()).toBe(200);
 
-    const assumeCollectionsResponse = await request.post("/api/v1/me/assume-user", {
+    const assumeCollectionsResponse = await supportRequest.post("/api/v1/me/assume-user", {
       data: {
         userId: "user_collections_marta",
       },
     });
     expect(assumeCollectionsResponse.status()).toBe(200);
 
-    const meAsCollectionsResponse = await request.get("/api/v1/me");
+    const meAsCollectionsResponse = await supportRequest.get("/api/v1/me");
     const meAsCollections = meResponseDTOSchema.parse(
       await meAsCollectionsResponse.json(),
     );
@@ -72,14 +65,14 @@ test.describe("access control role administration api", () => {
     expect(meAsCollections.permissionSnapshot.workspaces.cashRegister.canView).toBe(true);
     expect(meAsCollections.permissionSnapshot.workspaces.receivables.canView).toBe(true);
 
-    const assumeAdminAgainResponse = await request.post("/api/v1/me/assume-user", {
+    const assumeAdminAgainResponse = await supportRequest.post("/api/v1/me/assume-user", {
       data: {
         userId: "user_admin_soporte",
       },
     });
     expect(assumeAdminAgainResponse.status()).toBe(200);
 
-    const restoreAssignmentsResponse = await request.put(
+    const restoreAssignmentsResponse = await supportRequest.put(
       "/api/v1/access-control/users/user_collections_marta/roles",
       {
         data: {
@@ -89,7 +82,7 @@ test.describe("access control role administration api", () => {
     );
     expect(restoreAssignmentsResponse.status()).toBe(200);
 
-    const deleteRoleResponse = await request.delete(
+    const deleteRoleResponse = await supportRequest.delete(
       `/api/v1/access-control/roles/${createdRole.id}`,
     );
     expect(deleteRoleResponse.status()).toBe(200);

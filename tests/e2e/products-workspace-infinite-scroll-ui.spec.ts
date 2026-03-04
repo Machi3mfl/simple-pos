@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 function createWorkspaceProduct(index: number) {
   const id = `workspace-product-${String(index).padStart(3, "0")}`;

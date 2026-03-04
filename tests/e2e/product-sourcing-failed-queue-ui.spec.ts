@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { getProductSourcingFailedQueueStorageKey } from "../../src/modules/product-sourcing/presentation/session/productSourcingFailedQueue";
 

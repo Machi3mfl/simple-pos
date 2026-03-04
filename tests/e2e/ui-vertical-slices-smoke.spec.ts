@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 test("navigates all vertical slice UIs from side rail", async ({ page }) => {
   await page.goto("/cash-register");

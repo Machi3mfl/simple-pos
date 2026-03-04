@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "./support/test";
 
 import { addProductToCart, createCatalogProduct } from "./support/catalog";
 import { createNewOnAccountCustomer } from "./support/checkout";

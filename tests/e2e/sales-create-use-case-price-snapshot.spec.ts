@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { Product } from "../../src/modules/catalog/domain/entities/Product";
 import type { ProductRepository } from "../../src/modules/catalog/domain/repositories/ProductRepository";

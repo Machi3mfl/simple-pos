@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 
 import onAccountMissingCustomer from "../fixtures/mock-api/sale-on-account-missing-customer-error.json";
 import onAccountSuccess from "../fixtures/mock-api/sale-on-account-success.json";

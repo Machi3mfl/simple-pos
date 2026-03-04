@@ -1,7 +1,9 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { join } from "path";
-import type { Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
+
+import { SUPPORT_BRIDGE_ACTOR_ID } from "@/modules/access-control/domain/constants/supportBridge";
 
 interface AuthenticatedAppUserSession {
   readonly accessToken: string;
@@ -16,10 +18,28 @@ interface ProvisionedAppUserCredentials {
   readonly cleanup: () => Promise<void>;
 }
 
+interface BrowserLoginCredentials {
+  readonly email: string;
+  readonly password: string;
+}
+
 interface AppUserAuthLinkSnapshot {
   readonly appUserId: string;
   readonly authUserId: string | null;
 }
+
+interface DemoAuthUserRecord {
+  readonly appUserId: string;
+  readonly displayName: string;
+  readonly email: string;
+  readonly password: string;
+}
+
+interface DemoAuthUsersManifest {
+  readonly users: readonly DemoAuthUserRecord[];
+}
+
+let ensuredDemoAuthUsersPromise: Promise<void> | null = null;
 
 function readRequiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -68,6 +88,199 @@ function createAnonClient(): SupabaseClient {
       },
     },
   );
+}
+
+function readDemoAuthUsersManifest(): DemoAuthUsersManifest {
+  const manifestPath = join(
+    process.cwd(),
+    "workflow-manager",
+    "docs",
+    "injector",
+    "datasets",
+    "access-control",
+    "demo-auth-users.json",
+  );
+
+  const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as DemoAuthUsersManifest;
+  return parsed;
+}
+
+function findDemoUserRecord(appUserId: string): DemoAuthUserRecord {
+  const manifest = readDemoAuthUsersManifest();
+  const matchedUser = manifest.users.find((user) => user.appUserId === appUserId);
+
+  if (!matchedUser) {
+    throw new Error(`Missing demo auth user record for app user: ${appUserId}`);
+  }
+
+  return matchedUser;
+}
+
+async function findAuthUserByEmail(
+  adminClient: SupabaseClient,
+  email: string,
+): Promise<{ readonly id: string } | null> {
+  let page = 1;
+
+  while (true) {
+    const response = await adminClient.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+
+    const users = response.data.users ?? [];
+    const matchedUser = users.find(
+      (user) => user.email?.trim().toLowerCase() === email.trim().toLowerCase(),
+    );
+    if (matchedUser) {
+      return { id: matchedUser.id };
+    }
+
+    if (users.length < 200) {
+      return null;
+    }
+
+    page += 1;
+  }
+}
+
+async function resolveOrCreateDemoAuthUser(params: {
+  readonly adminClient: SupabaseClient;
+  readonly appUserId: string;
+  readonly displayName: string;
+  readonly email: string;
+  readonly password: string;
+}): Promise<string> {
+  const existingLink = await params.adminClient
+    .from("app_users")
+    .select("auth_user_id")
+    .eq("id", params.appUserId)
+    .maybeSingle();
+  if (existingLink.error) {
+    throw new Error(existingLink.error.message);
+  }
+
+  const linkedAuthUserId =
+    (existingLink.data?.auth_user_id as string | null | undefined) ?? null;
+  if (linkedAuthUserId) {
+    const updateResponse = await params.adminClient.auth.admin.updateUserById(
+      linkedAuthUserId,
+      {
+        email: params.email,
+        password: params.password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: params.displayName,
+        },
+      },
+    );
+
+    if (!updateResponse.error) {
+      return linkedAuthUserId;
+    }
+  }
+
+  const matchedUserByEmail = await findAuthUserByEmail(
+    params.adminClient,
+    params.email,
+  );
+
+  if (matchedUserByEmail) {
+    const updateResponse = await params.adminClient.auth.admin.updateUserById(
+      matchedUserByEmail.id,
+      {
+        email: params.email,
+        password: params.password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: params.displayName,
+        },
+      },
+    );
+
+    if (updateResponse.error) {
+      throw new Error(updateResponse.error.message);
+    }
+
+    return matchedUserByEmail.id;
+  }
+
+  const createResponse = await params.adminClient.auth.admin.createUser({
+    email: params.email,
+    password: params.password,
+    email_confirm: true,
+    user_metadata: {
+      display_name: params.displayName,
+    },
+  });
+
+  if (createResponse.error || !createResponse.data.user) {
+    throw new Error(createResponse.error?.message ?? "Failed to create demo auth user.");
+  }
+
+  return createResponse.data.user.id;
+}
+
+export async function ensureDemoAuthUsers(): Promise<void> {
+  if (!ensuredDemoAuthUsersPromise) {
+    ensuredDemoAuthUsersPromise = (async () => {
+      const adminClient = createServiceRoleClient();
+      const manifest = readDemoAuthUsersManifest();
+
+      for (const user of manifest.users) {
+        const authUserId = await resolveOrCreateDemoAuthUser({
+          adminClient,
+          appUserId: user.appUserId,
+          displayName: user.displayName,
+          email: user.email,
+          password: user.password,
+        });
+
+        const linkResponse = await adminClient
+          .from("app_users")
+          .update({ auth_user_id: authUserId })
+          .eq("id", user.appUserId);
+
+        if (linkResponse.error) {
+          throw new Error(linkResponse.error.message);
+        }
+      }
+    })();
+  }
+
+  await ensuredDemoAuthUsersPromise;
+}
+
+export function getDemoAuthUserCredentials(
+  appUserId: string,
+): BrowserLoginCredentials {
+  const record = findDemoUserRecord(appUserId);
+  return {
+    email: record.email,
+    password: record.password,
+  };
+}
+
+export async function signInAsDemoAppUser(appUserId: string): Promise<{
+  readonly accessToken: string;
+  readonly authUserId: string;
+}> {
+  await ensureDemoAuthUsers();
+
+  const credentials = getDemoAuthUserCredentials(appUserId);
+  return signInWithPassword(credentials);
+}
+
+export function buildAuthorizationHeaders(
+  accessToken: string,
+): Record<string, string> {
+  return {
+    authorization: `Bearer ${accessToken}`,
+  };
 }
 
 export async function readAppUserAuthLink(
@@ -193,6 +406,35 @@ export async function provisionPasswordCredentialsForAppUser(params: {
   };
 }
 
+export async function signInThroughLoginPage(
+  page: Page,
+  credentials: BrowserLoginCredentials,
+): Promise<void> {
+  await page.goto("/login");
+  await page.getByTestId("login-email-input").fill(credentials.email);
+  await page.getByTestId("login-password-input").fill(credentials.password);
+  await page.getByTestId("login-submit-button").click();
+}
+
+export async function provisionAndLoginAsAppUser(params: {
+  readonly page: Page;
+  readonly appUserId: string;
+  readonly label: string;
+}): Promise<ProvisionedAppUserCredentials> {
+  const credentials = await provisionPasswordCredentialsForAppUser({
+    appUserId: params.appUserId,
+    label: params.label,
+  });
+
+  try {
+    await signInThroughLoginPage(params.page, credentials);
+    return credentials;
+  } catch (error) {
+    await credentials.cleanup();
+    throw error;
+  }
+}
+
 export async function createAuthenticatedSessionForAppUser(params: {
   readonly appUserId: string;
   readonly label: string;
@@ -251,4 +493,63 @@ export async function installApiAuthorizationHeader(
       });
     }) as typeof window.fetch;
   }, accessToken);
+}
+
+export async function bootstrapSupportBridge(
+  request: APIRequestContext,
+): Promise<void> {
+  const supportSession = await signInAsDemoAppUser(SUPPORT_BRIDGE_ACTOR_ID);
+  const response = await request.post("/api/v1/me/assume-user", {
+    headers: buildAuthorizationHeaders(supportSession.accessToken),
+    data: {
+      userId: SUPPORT_BRIDGE_ACTOR_ID,
+    },
+  });
+  expect(response.status()).toBe(200);
+}
+
+export async function assumeActorViaSupportBridge(
+  request: APIRequestContext,
+  userId: string,
+): Promise<void> {
+  const supportSession = await signInAsDemoAppUser(SUPPORT_BRIDGE_ACTOR_ID);
+  const headers = buildAuthorizationHeaders(supportSession.accessToken);
+
+  const bootstrapResponse = await request.post("/api/v1/me/assume-user", {
+    headers,
+    data: {
+      userId: SUPPORT_BRIDGE_ACTOR_ID,
+    },
+  });
+  expect(bootstrapResponse.status()).toBe(200);
+
+  if (userId === SUPPORT_BRIDGE_ACTOR_ID) {
+    return;
+  }
+
+  const response = await request.post("/api/v1/me/assume-user", {
+    headers,
+    data: {
+      userId,
+    },
+  });
+  expect(response.status()).toBe(200);
+}
+
+export async function enterSupportModeFromLogin(page: Page): Promise<void> {
+  const credentials = getDemoAuthUserCredentials(SUPPORT_BRIDGE_ACTOR_ID);
+
+  await page.goto("/login");
+  if (!(await page.getByTestId("login-email-input").count())) {
+    const authActionButton = page.getByTestId("actor-auth-action-button");
+    if (await authActionButton.isVisible().catch(() => false)) {
+      await authActionButton.click();
+      await expect(page).toHaveURL(/\/login$/);
+    } else {
+      await page.goto("/login");
+    }
+  }
+
+  await signInThroughLoginPage(page, credentials);
+  await expect(page).toHaveURL(/\/users-admin$/);
 }

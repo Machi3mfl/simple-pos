@@ -7,6 +7,7 @@ const shouldReuseExistingServer =
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  globalSetup: "./tests/e2e/support/globalSetup.ts",
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -25,7 +26,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run build && npm run start -- --port 3010",
-        url: `${defaultBaseUrl}/sales`,
+        url: `${defaultBaseUrl}/login`,
         reuseExistingServer: shouldReuseExistingServer,
         timeout: 180_000,
       },

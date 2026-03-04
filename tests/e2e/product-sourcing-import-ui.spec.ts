@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 function uniqueMarker(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;

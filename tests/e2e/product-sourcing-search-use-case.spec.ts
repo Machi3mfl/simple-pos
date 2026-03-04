@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import type { ExternalCategoryMappingRepository } from "../../src/modules/product-sourcing/application/ports/ExternalCategoryMappingRepository";
 import type { RetailerCatalogProvider } from "../../src/modules/product-sourcing/application/ports/RetailerCatalogProvider";

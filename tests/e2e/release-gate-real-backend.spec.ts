@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { productListResponseDTOSchema, productResponseDTOSchema } from "../../src/modules/catalog/presentation/dtos/product-response.dto";
 import { stockMovementResponseDTOSchema } from "../../src/modules/inventory/presentation/dtos/stock-movement-response.dto";

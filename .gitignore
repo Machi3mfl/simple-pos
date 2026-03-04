@@ -79,6 +79,7 @@ web_modules/
 out
 playwright-report
 test-results
+playwright/.auth/
 supabase/.temp
 supabase/.branches
 

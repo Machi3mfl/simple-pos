@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { z } from "zod";
 
 import { createDebtPaymentDTOSchema } from "../../src/modules/accounts-receivable/presentation/dtos/create-debt-payment.dto";

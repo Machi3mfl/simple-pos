@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { CreateProductUseCase } from "../../src/modules/catalog/application/use-cases/CreateProductUseCase";
 import { Product } from "../../src/modules/catalog/domain/entities/Product";

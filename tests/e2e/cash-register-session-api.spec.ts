@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "./support/test";
 
 import {
   activeCashRegisterSessionResponseDTOSchema,
@@ -6,22 +6,13 @@ import {
   cashRegisterSessionResponseDTOSchema,
 } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
 import { listCashRegistersResponseDTOSchema } from "../../src/modules/cash-management/presentation/dtos/list-cash-registers-response.dto";
-
-async function assumeUser(
-  request: APIRequestContext,
-  userId: string,
-): Promise<void> {
-  const response = await request.post("/api/v1/me/assume-user", {
-    data: { userId },
-  });
-  expect(response.status()).toBe(200);
-}
+import { assumeActorViaSupportBridge } from "./support/access-control-auth";
 
 async function closeActiveSessionIfNeeded(
   request: APIRequestContext,
   registerId: string,
 ): Promise<void> {
-  await assumeUser(request, "user_manager_maxi");
+  await assumeActorViaSupportBridge(request, "user_manager_maxi");
 
   const activeSessionResponse = await request.get(
     `/api/v1/cash-registers/${registerId}/active-session`,
@@ -62,11 +53,11 @@ async function closeActiveSessionIfNeeded(
 
 test.describe("cash register session api", () => {
   test("opens, records manual movements, and closes a register session", async ({
-    request,
+    supportRequest,
   }) => {
-    await assumeUser(request, "user_manager_maxi");
+    await assumeActorViaSupportBridge(supportRequest, "user_manager_maxi");
 
-    const registersResponse = await request.get("/api/v1/cash-registers");
+    const registersResponse = await supportRequest.get("/api/v1/cash-registers");
     expect(registersResponse.status()).toBe(200);
     const registersBody = listCashRegistersResponseDTOSchema.parse(
       await registersResponse.json(),
@@ -74,9 +65,9 @@ test.describe("cash register session api", () => {
     const register = registersBody.items[0];
     expect(register).toBeDefined();
 
-    await closeActiveSessionIfNeeded(request, register!.id);
+    await closeActiveSessionIfNeeded(supportRequest, register!.id);
 
-    const openResponse = await request.post("/api/v1/cash-register-sessions", {
+    const openResponse = await supportRequest.post("/api/v1/cash-register-sessions", {
       data: {
         cashRegisterId: register!.id,
         openingFloatAmount: 15000,
@@ -91,7 +82,7 @@ test.describe("cash register session api", () => {
     expect(openedSession.expectedBalanceAmount).toBe(15000);
     expect(openedSession.openedByDisplayName.length).toBeGreaterThan(0);
 
-    const duplicateOpenResponse = await request.post("/api/v1/cash-register-sessions", {
+    const duplicateOpenResponse = await supportRequest.post("/api/v1/cash-register-sessions", {
       data: {
         cashRegisterId: register!.id,
         openingFloatAmount: 500,
@@ -99,7 +90,7 @@ test.describe("cash register session api", () => {
     });
     expect(duplicateOpenResponse.status()).toBe(409);
 
-    const activeSessionResponse = await request.get(
+    const activeSessionResponse = await supportRequest.get(
       `/api/v1/cash-registers/${register!.id}/active-session`,
     );
     expect(activeSessionResponse.status()).toBe(200);
@@ -110,7 +101,7 @@ test.describe("cash register session api", () => {
     expect(activeSessionBody.session?.movements).toHaveLength(1);
     expect(activeSessionBody.session?.movements[0]?.movementType).toBe("opening_float");
 
-    const movementResponse = await request.post(
+    const movementResponse = await supportRequest.post(
       `/api/v1/cash-register-sessions/${openedSession.id}/movements`,
       {
         data: {
@@ -130,7 +121,7 @@ test.describe("cash register session api", () => {
     expect(updatedSession.movements[1]?.direction).toBe("outbound");
     expect(updatedSession.movements[1]?.notes).toBe("retiro a caja fuerte api");
 
-    const closeResponse = await request.post(
+    const closeResponse = await supportRequest.post(
       `/api/v1/cash-register-sessions/${openedSession.id}/close`,
       {
         data: {
@@ -147,7 +138,7 @@ test.describe("cash register session api", () => {
     expect(closedSession.countedClosingAmount).toBe(14700);
     expect(closedSession.discrepancyAmount).toBe(-50);
 
-    const clearedActiveSessionResponse = await request.get(
+    const clearedActiveSessionResponse = await supportRequest.get(
       `/api/v1/cash-registers/${register!.id}/active-session`,
     );
     expect(clearedActiveSessionResponse.status()).toBe(200);
@@ -158,11 +149,11 @@ test.describe("cash register session api", () => {
   });
 
   test("sends closeout with high discrepancy to review and requires supervisor approval", async ({
-    request,
+    supportRequest,
   }) => {
-    await assumeUser(request, "user_cashier_putri");
+    await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
 
-    const registersResponse = await request.get("/api/v1/cash-registers");
+    const registersResponse = await supportRequest.get("/api/v1/cash-registers");
     expect(registersResponse.status()).toBe(200);
     const registersBody = listCashRegistersResponseDTOSchema.parse(
       await registersResponse.json(),
@@ -170,10 +161,10 @@ test.describe("cash register session api", () => {
     const register = registersBody.items[0];
     expect(register).toBeDefined();
 
-    await closeActiveSessionIfNeeded(request, register!.id);
-    await assumeUser(request, "user_cashier_putri");
+    await closeActiveSessionIfNeeded(supportRequest, register!.id);
+    await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
 
-    const openResponse = await request.post("/api/v1/cash-register-sessions", {
+    const openResponse = await supportRequest.post("/api/v1/cash-register-sessions", {
       data: {
         cashRegisterId: register!.id,
         openingFloatAmount: 1000,
@@ -185,7 +176,7 @@ test.describe("cash register session api", () => {
       await openResponse.json(),
     );
 
-    const reviewResponse = await request.post(
+    const reviewResponse = await supportRequest.post(
       `/api/v1/cash-register-sessions/${openedSession.id}/close`,
       {
         data: {
@@ -203,7 +194,7 @@ test.describe("cash register session api", () => {
     expect(reviewSession.closeoutSubmittedByDisplayName).toBe("Putri");
     expect(reviewSession.closedAt).toBeUndefined();
 
-    const cashierApproveResponse = await request.post(
+    const cashierApproveResponse = await supportRequest.post(
       `/api/v1/cash-register-sessions/${openedSession.id}/approve-closeout`,
       {
         data: {
@@ -213,9 +204,9 @@ test.describe("cash register session api", () => {
     );
     expect(cashierApproveResponse.status()).toBe(403);
 
-    await assumeUser(request, "user_supervisor_bruno");
+    await assumeActorViaSupportBridge(supportRequest, "user_supervisor_bruno");
 
-    const approveResponse = await request.post(
+    const approveResponse = await supportRequest.post(
       `/api/v1/cash-register-sessions/${openedSession.id}/approve-closeout`,
       {
         data: {
@@ -234,7 +225,7 @@ test.describe("cash register session api", () => {
       "diferencia validada por supervisor",
     );
 
-    const clearedActiveSessionResponse = await request.get(
+    const clearedActiveSessionResponse = await supportRequest.get(
       `/api/v1/cash-registers/${register!.id}/active-session`,
     );
     expect(clearedActiveSessionResponse.status()).toBe(200);

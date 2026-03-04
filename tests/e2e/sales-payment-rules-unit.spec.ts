@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { Sale } from "../../src/modules/sales/domain/entities/Sale";
 import { SaleCustomerRequiredError } from "../../src/modules/sales/domain/errors/SaleDomainError";

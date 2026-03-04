@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import { z } from "zod";
 
 import { productResponseDTOSchema } from "../../src/modules/catalog/presentation/dtos/product-response.dto";

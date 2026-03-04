@@ -1,9 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 
 import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
 import {
-  createAuthenticatedSessionForAppUser,
-  installApiAuthorizationHeader,
+  enterSupportModeFromLogin,
 } from "./support/access-control-auth";
 
 async function mockWorkspaceData(page: Page): Promise<void> {
@@ -137,16 +136,25 @@ async function mockWorkspaceData(page: Page): Promise<void> {
 
 async function selectOperator(page: Page, actorId: string): Promise<void> {
   await page.getByTestId("open-operator-selector-button").click();
-  await expect(page.getByTestId("operator-selector-dialog")).toBeVisible();
+  const dialog = page.getByTestId("operator-selector-dialog");
+  await expect(dialog).toBeVisible();
   await page.getByTestId(`operator-selector-item-${actorId}`).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 test("switches operator and blocks workspaces according to role", async ({ page }) => {
   await mockWorkspaceData(page);
+  await enterSupportModeFromLogin(page);
+  await expect(page).toHaveURL(/\/users-admin$/);
+  await expect(page.getByTestId("actor-session-source-label")).toHaveText(
+    "Login verificado",
+  );
+  await selectOperator(page, "user_manager_maxi");
+  await expect(page.getByTestId("open-operator-selector-button")).toContainText("Maxi");
   await page.goto("/cash-register");
 
   await expect(page.getByRole("heading", { name: "Elegir categorías" })).toBeVisible();
-  await expect(page.getByTestId("actor-session-source-label")).toHaveText("Preset temporal");
+  await expect(page.getByTestId("actor-session-source-label")).toHaveText("Sesión delegada");
 
   await selectOperator(page, "user_collections_marta");
   await expect(page.getByRole("heading", { name: "Caja restringida" })).toBeVisible();
@@ -199,23 +207,14 @@ test("switches operator and blocks workspaces according to role", async ({ page 
 test("shows authenticated attribution in the shell when a real auth user is mapped", async ({
   page,
 }) => {
-  const session = await createAuthenticatedSessionForAppUser({
-    appUserId: "user_manager_maxi",
-    label: "auth-shell",
-  });
+  await mockWorkspaceData(page);
+  await page.goto("/cash-register");
 
-  try {
-    await installApiAuthorizationHeader(page, session.accessToken);
-    await mockWorkspaceData(page);
-
-    await page.goto("/cash-register");
-
-    await expect(page.getByTestId("actor-session-source-label")).toHaveText(
-      "Login verificado",
-    );
-    await expect(page.getByText("Maxi")).toBeVisible();
-    await expect(page.getByTestId("nav-item-reporting")).toBeVisible();
-  } finally {
-    await session.cleanup();
-  }
+  await expect(page.getByTestId("actor-session-source-label")).toHaveText(
+    "Login verificado",
+  );
+  await expect(page.getByTestId("open-operator-selector-button")).toContainText(
+    "Maxi",
+  );
+  await expect(page.getByTestId("nav-item-reporting")).toBeVisible();
 });

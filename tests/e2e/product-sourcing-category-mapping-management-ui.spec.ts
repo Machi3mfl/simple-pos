@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 test.describe("product sourcing UI category mapping management", () => {
   test.skip(

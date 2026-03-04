@@ -1,4 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
+
+import { enterSupportModeFromLogin } from "./support/access-control-auth";
 
 async function selectOperator(page: Page, actorId: string): Promise<void> {
   await page.getByTestId("open-operator-selector-button").click();
@@ -11,8 +13,7 @@ test("system admin can compose a role, assign it, and validate the resulting wor
 }) => {
   const uniqueRoleName = `Caja extendida UI ${Date.now()}`;
 
-  await page.goto("/cash-register");
-  await selectOperator(page, "user_admin_soporte");
+  await enterSupportModeFromLogin(page);
 
   await expect(page.getByTestId("nav-item-users-admin")).toBeVisible();
   await page.getByTestId("nav-item-users-admin").click();

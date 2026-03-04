@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { SearchQuery } from "../../src/modules/product-sourcing/domain/value-objects/SearchQuery";
 import type {

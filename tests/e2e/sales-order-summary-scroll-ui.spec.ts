@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 
 function createCatalogProduct(index: number) {
   const id = `catalog-product-${String(index).padStart(3, "0")}`;

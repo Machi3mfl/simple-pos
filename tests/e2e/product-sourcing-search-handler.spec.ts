@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 
 import { ExternalCatalogCandidate } from "../../src/modules/product-sourcing/domain/entities/ExternalCatalogCandidate";
 import { handleSearchExternalProductsRequest } from "../../src/modules/product-sourcing/presentation/handlers/searchExternalProductsHandler";

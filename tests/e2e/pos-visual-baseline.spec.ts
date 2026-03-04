@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/test";
 
 import productsListSuccess from "../fixtures/mock-api/products-list-success.json";
 

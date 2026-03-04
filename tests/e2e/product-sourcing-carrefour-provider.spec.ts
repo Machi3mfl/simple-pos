@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./support/test";
 import fixture from "../fixtures/product-sourcing/carrefour-search-response.json";
 
 import { CarrefourCatalogProvider } from "../../src/modules/product-sourcing/infrastructure/providers/carrefour/CarrefourCatalogProvider";
