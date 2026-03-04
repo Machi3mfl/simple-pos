@@ -1,4 +1,5 @@
 import type { SyncEventRepository } from "../../domain/repositories/SyncEventRepository";
+import type { SyncEventProcessor } from "../services/SyncEventProcessor";
 
 export interface ProcessSyncEventInput {
   readonly eventId: string;
@@ -22,10 +23,14 @@ const SUPPORTED_EVENT_TYPES = new Set([
   "sale_created",
   "stock_movement_created",
   "debt_payment_registered",
+  "cash_movement_recorded",
 ]);
 
 export class ProcessSyncEventsBatchUseCase {
-  constructor(private readonly syncEventRepository: SyncEventRepository) {}
+  constructor(
+    private readonly syncEventRepository: SyncEventRepository,
+    private readonly syncEventProcessors: readonly SyncEventProcessor[],
+  ) {}
 
   async execute(input: ProcessSyncEventsBatchInput): Promise<readonly ProcessSyncEventResult[]> {
     const results: ProcessSyncEventResult[] = [];
@@ -63,12 +68,37 @@ export class ProcessSyncEventsBatchUseCase {
         continue;
       }
 
-      await this.syncEventRepository.saveSyncedEvent({
-        idempotencyKey: event.idempotencyKey,
-        eventId: event.eventId,
-        eventType: event.eventType,
-        processedAt: new Date(),
-      });
+      const processor = this.syncEventProcessors.find((candidate) =>
+        candidate.supports(event.eventType),
+      );
+      if (!processor) {
+        results.push({
+          eventId: event.eventId,
+          status: "failed",
+          reason: "missing_event_processor",
+        });
+        continue;
+      }
+
+      try {
+        await processor.process(event);
+        await this.syncEventRepository.saveSyncedEvent({
+          idempotencyKey: event.idempotencyKey,
+          eventId: event.eventId,
+          eventType: event.eventType,
+          processedAt: new Date(),
+        });
+      } catch (error: unknown) {
+        results.push({
+          eventId: event.eventId,
+          status: "failed",
+          reason:
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : "sync_processor_failed",
+        });
+        continue;
+      }
 
       results.push({
         eventId: event.eventId,

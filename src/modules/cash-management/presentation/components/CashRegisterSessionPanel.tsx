@@ -8,6 +8,11 @@ import { Input } from "@/components/ui/input";
 import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import {
+  enqueueOfflineSyncEvent,
+  flushOfflineSyncQueue,
+  getPendingOfflineSyncCount,
+} from "@/modules/sync/presentation/offline/offlineSyncQueue";
 import type {
   ActiveCashRegisterSessionResponseDTO,
   CashRegisterSessionResponseDTO,
@@ -38,6 +43,7 @@ interface CashRegisterSessionPanelProps {
   readonly preferredRegisterIds: readonly string[];
   readonly selectedRegisterId: string;
   readonly onSelectedRegisterIdChange: (registerId: string) => void;
+  readonly currentActorId?: string;
   readonly refreshToken?: number;
   readonly canOpenSession: boolean;
   readonly canCloseSession: boolean;
@@ -94,6 +100,7 @@ export function CashRegisterSessionPanel({
   preferredRegisterIds,
   selectedRegisterId,
   onSelectedRegisterIdChange,
+  currentActorId,
   refreshToken = 0,
   canOpenSession,
   canCloseSession,
@@ -125,7 +132,13 @@ export function CashRegisterSessionPanel({
   const [isMovementModalOpen, setIsMovementModalOpen] = useState<boolean>(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
   const [approvalNotes, setApprovalNotes] = useState<string>("");
+  const [pendingOfflineMovementCount, setPendingOfflineMovementCount] =
+    useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const refreshPendingOfflineMovementCount = useCallback((): void => {
+    setPendingOfflineMovementCount(getPendingOfflineSyncCount(["cash_movement_recorded"]));
+  }, []);
 
   const loadRegisters = useCallback(async (): Promise<void> => {
     setIsLoading(true);
@@ -154,6 +167,26 @@ export function CashRegisterSessionPanel({
   useEffect(() => {
     void loadRegisters();
   }, [loadRegisters]);
+
+  useEffect(() => {
+    refreshPendingOfflineMovementCount();
+
+    const onOnline = (): void => {
+      refreshPendingOfflineMovementCount();
+    };
+
+    const onOffline = (): void => {
+      refreshPendingOfflineMovementCount();
+    };
+
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [refreshPendingOfflineMovementCount]);
 
   useEffect(() => {
     if (registers.length === 0) {
@@ -237,6 +270,35 @@ export function CashRegisterSessionPanel({
 
     void loadActiveSession(selectedRegisterId);
   }, [loadActiveSession, refreshToken, selectedRegisterId]);
+
+  const retryOfflineMovementSync = useCallback(async (): Promise<void> => {
+    const result = await flushOfflineSyncQueue();
+    refreshPendingOfflineMovementCount();
+
+    if (result.synced > 0 && result.failed === 0 && result.pending === 0) {
+      showSuccessToast({
+        description: messages.common.feedback.offlineSyncSuccess,
+      });
+      if (selectedRegisterId) {
+        await loadRegisters();
+        await loadActiveSession(selectedRegisterId);
+      }
+      return;
+    }
+
+    if (result.failed > 0 || result.pending > 0) {
+      showErrorToast({
+        description: messages.common.feedback.offlineSyncPending,
+      });
+    }
+  }, [
+    loadActiveSession,
+    loadRegisters,
+    messages.common.feedback.offlineSyncPending,
+    messages.common.feedback.offlineSyncSuccess,
+    refreshPendingOfflineMovementCount,
+    selectedRegisterId,
+  ]);
 
   const handleOpenSession = useCallback(async (): Promise<void> => {
     const openingFloatValue = parseMonetaryInput(openingFloatAmount);
@@ -480,6 +542,7 @@ export function CashRegisterSessionPanel({
     if (
       !activeSession ||
       !selectedRegister ||
+      !currentActorId ||
       !Number.isFinite(movementAmountValue) ||
       movementAmountValue <= 0
     ) {
@@ -532,17 +595,42 @@ export function CashRegisterSessionPanel({
         description: cashSessionMessages.movementSuccess,
       });
       await loadRegisters();
+      refreshPendingOfflineMovementCount();
+    } catch {
+      enqueueOfflineSyncEvent({
+        eventType: "cash_movement_recorded",
+        payload: {
+          sessionId: activeSession.id,
+          actorId: currentActorId,
+          movementType,
+          amount: movementAmountValue,
+          direction: movementType === "adjustment" ? movementDirection : undefined,
+          notes: movementNotes.trim() || undefined,
+        },
+        idempotencyKey: `cash-movement-offline-${crypto.randomUUID()}`,
+      });
+      refreshPendingOfflineMovementCount();
+      setMovementType("cash_paid_in");
+      setMovementDirection("inbound");
+      setMovementAmount("");
+      setMovementNotes("");
+      setIsMovementModalOpen(false);
+      showInfoToast({
+        description: cashSessionMessages.movementSavedOffline,
+      });
     } finally {
       setIsRecordingMovement(false);
     }
   }, [
     activeSession,
     cashSessionMessages,
+    currentActorId,
     loadRegisters,
     movementAmountValue,
     movementDirection,
     movementNotes,
     movementType,
+    refreshPendingOfflineMovementCount,
     selectedRegister,
   ]);
 
@@ -808,6 +896,25 @@ export function CashRegisterSessionPanel({
                 <p className="mt-1 text-sm text-slate-500">
                   {cashSessionMessages.movementsDescription}
                 </p>
+                {pendingOfflineMovementCount > 0 ? (
+                  <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="font-medium">
+                      {cashSessionMessages.movementSavedOffline}
+                    </p>
+                    <button
+                      type="button"
+                      data-testid="cash-session-retry-offline-sync-button"
+                      onClick={() => {
+                        void retryOfflineMovementSync();
+                      }}
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.2)]"
+                    >
+                      {cashSessionMessages.retryOfflineSyncButton(
+                        pendingOfflineMovementCount,
+                      )}
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="max-h-[18rem] overflow-y-auto px-4 py-4">

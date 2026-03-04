@@ -81,8 +81,21 @@ export function enqueueOfflineSyncEvent(
   return event;
 }
 
-export function getPendingOfflineSyncCount(): number {
-  return readQueue().filter((event) => event.status !== "synced").length;
+export function getPendingOfflineSyncCount(
+  eventTypes?: readonly string[],
+): number {
+  const eventTypeFilter = eventTypes ? new Set(eventTypes) : null;
+  return readQueue().filter((event) => {
+    if (event.status === "synced") {
+      return false;
+    }
+
+    if (!eventTypeFilter) {
+      return true;
+    }
+
+    return eventTypeFilter.has(event.eventType);
+  }).length;
 }
 
 export async function flushOfflineSyncQueue(): Promise<{
