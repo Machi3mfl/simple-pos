@@ -75,6 +75,19 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `mock` + `supabase`
 
+## Cash Movement Ledger
+
+`POS-002 Slice 3` extends the drawer workflow with manual cash ledger events and a richer active-session read model.
+
+- Main contracts:
+  - `GET /api/v1/cash-registers/{id}/active-session`
+  - `POST /api/v1/cash-register-sessions/{id}/movements`
+- Coverage:
+  - UI: [tests/e2e/cash-register-session-ui.spec.ts](../../../tests/e2e/cash-register-session-ui.spec.ts)
+  - API/contract: [tests/e2e/cash-register-session-api.spec.ts](../../../tests/e2e/cash-register-session-api.spec.ts), [tests/e2e/api-contract-conformance.spec.ts](../../../tests/e2e/api-contract-conformance.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:
@@ -116,3 +129,5 @@ Since `2026-03-03`, the cross-cutting actor bootstrap of `POS-002 Slice 0` is al
 Since `2026-03-03`, `POS-002 Slice 1` is also part of the real-backend workflow: `/cash-register` now includes a register-session panel with selector, opening float capture, active-session summary, and counted closeout modal backed by the new cash-session contracts.
 
 Since `2026-03-03`, `POS-002 Slice 2` is also part of traceability: `/sales` now keeps a summary-only mode for operators without `sales_history.view_all_registers`, `/api/v1/reports/sales-history` redacts customer/detail payloads server-side for those roles, and `/reporting` now exposes an operational subset for `shift_supervisor` while hiding margin, credit exposure, and inventory-value blocks without the corresponding strategic permissions.
+
+Since `2026-03-03`, `POS-002 Slice 3` is also part of the real-backend workflow: `/cash-register` now shows the active-session ledger, `GET /api/v1/cash-registers/{id}/active-session` returns movement detail with actor attribution, and `POST /api/v1/cash-register-sessions/{id}/movements` updates the expected drawer balance for manual ingress/egress flows.

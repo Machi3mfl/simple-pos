@@ -6,7 +6,7 @@
 **Status**: `in_progress`
 **GitHub Issue**: `TBD`
 **Priority**: `high`
-**Linked Scope**: `post-MVP operations control`, `actor attribution`, `future roles`, `identity and authorization`, `role-based UI/data protection`
+**Linked Scope**: `post-MVP operations control`, `actor attribution`, `future roles`, `identity and authorization`, `role-based UI/data protection`, `custom role administration`
 **Planning Reference**: `workflow-manager/docs/planning/007-execution-status-simple-pos-ready.md`
 **Architecture Artifacts**:
 - `workflow-manager/docs/planning/diagrams/class-cash-register-session-domain.md`
@@ -84,12 +84,18 @@ Delivered so far:
   - `/api/v1/reports/sales-history` now redacts `customer*` fields and `saleItems` when the actor lacks sale-detail permission
   - `/reporting` now degrades to an operational subset for `shift_supervisor`, hiding margin, credit exposure, and inventory-value cards/charts
   - role-aware UI hints now explain restricted workspaces instead of silently omitting strategic data blocks
+- `Slice 3`:
+  - `POST /api/v1/cash-register-sessions/{id}/movements` for manual `cash_paid_in`, `cash_paid_out`, `safe_drop`, and `adjustment`
+  - `GET /api/v1/cash-registers/{id}/active-session` now returns the active-session ledger detail with actor attribution per movement
+  - `/cash-register` now includes a movement ledger list plus a modal to register manual cash movements against the open session
+  - session expected balance now updates from immutable manual movements before closeout
+  - manual movements remain protected by `cash.movement.manual.record`, so lower-trust cashiers keep a read-only drawer view
 
 Still pending:
 
-- manual `paid in` / `paid out` / `safe drop` / `adjustment` capture,
 - automatic cash-session integration from checkout and debt-payment flows,
 - discrepancy approval workflow,
+- custom role administration for `system_admin` so role bundles can be adapted to each business without code changes,
 - full auth hardening beyond the temporary `assume-user` bridge.
 
 ---
@@ -436,7 +442,8 @@ Design principle:
 
 - keep the underlying authorization model capability-based,
 - expose only a small set of understandable business roles in the UI/admin layer,
-- make `cajero` the safest default role for older operators.
+- make `cajero` the safest default role for older operators,
+- treat the starting roles below as seed presets, not as the final immutable catalog for every business.
 
 Recommended starting role set:
 
@@ -496,6 +503,39 @@ Recommendation:
 - use roles only as curated bundles for humans,
 - let use cases and API handlers check permission codes,
 - let UI render from a permission snapshot, not from hardcoded role names.
+
+### Future Role Administration Strategy
+
+The delivered authorization foundation should evolve into a configurable role catalog, not stay limited to the initial seed bundles.
+
+Target operating model:
+
+- `permissions` remain the stable atomic source of truth,
+- seeded roles such as `cashier`, `shift_supervisor`, and `business_manager` remain available as safe defaults,
+- `system_admin` can create business-specific roles by combining existing permissions,
+- user-facing UI and API guards continue checking effective permission codes, never role names,
+- custom roles can be introduced without rewriting domain/application logic.
+
+Guardrails required for that future UI:
+
+- distinguish `system roles` from `custom roles`,
+- system roles should be locked or clone-only so the business always has a recoverable baseline,
+- prevent self-lockout for the currently acting `system_admin`,
+- audit every role creation, update, deactivation, and assignment change,
+- group permissions by domain in the UI so the catalog stays understandable for non-technical operators.
+
+Recommended permission groups for the future role composer UI:
+
+- `cash_register`
+- `checkout`
+- `cash_movements`
+- `sales_history`
+- `receivables`
+- `products`
+- `product_sourcing`
+- `reporting`
+- `user_admin`
+- `role_admin`
 
 ### UI and Data Protection Strategy
 
@@ -595,6 +635,10 @@ export interface CloseCashRegisterSessionUseCaseInput {
 - `POST /api/v1/cash-registers`
 - `POST /api/v1/cash-register-sessions/{id}/movements`
 - `GET /api/v1/cash-register-sessions?registerId=...&status=...&dateFrom=...&dateTo=...`
+- `GET /api/v1/permissions`
+- `GET /api/v1/roles`
+- `POST /api/v1/roles`
+- `PATCH /api/v1/roles/{id}`
 - `POST /api/v1/user-role-assignments`
 
 ### Command Examples
@@ -1123,11 +1167,21 @@ Completed UI checkpoint:
 
 ### Slice 3: Cash movement ledger
 
-- manual `paid in`, `paid out`, `safe drop`, `adjustment`
-- expected balance updates from immutable movements
-- basic closing discrepancy notes
-- mandatory UI checkpoint:
-  - active-session movement list + add-movement modal/form + updated expected balance view
+Current implementation status:
+
+- manual `cash_paid_in`, `cash_paid_out`, `safe_drop`, and `adjustment` commands are live
+- `GET /api/v1/cash-registers/{id}/active-session` now projects the full movement list for the open session
+- session expected balance updates immediately when a manual movement is recorded
+- `/cash-register` now renders:
+  - active-session movement list
+  - movement modal/form
+  - updated expected balance after each movement
+- movement attribution now includes `performedByUserId` and `performedByDisplayName`
+- the operator can add notes, while the system still persists the movement type as a stable reason code
+
+Completed UI checkpoint:
+
+- active-session movement list + add-movement modal/form + updated expected balance view
 
 ### Slice 4: Automatic integrations
 
@@ -1146,7 +1200,38 @@ Completed UI checkpoint:
 - mandatory UI checkpoint:
   - closeout review state + supervisor approval/rejection flow in UI
 
-### Slice 6: Hardening
+### Slice 6: Role catalog and permission composition UI
+
+Why this slice belongs here:
+
+- `Slice 0` through `Slice 5` stabilize the real permission vocabulary of the product,
+- `Slice 4` and `Slice 5` still add sensitive permissions around automatic cash events and discrepancy approval,
+- adding a role-composer UI earlier would force repeated changes to presets, permission grouping, and admin screens,
+- postponing it until after hardening would delay business validation unnecessarily even though the current `assume-user` bridge already supports a real UI checkpoint.
+
+Lowest-cost insertion point:
+
+- place the role-administration slice after `Slice 5` and before auth hardening,
+- that way the permission catalog is mature enough for business configuration,
+- but the team can still validate the whole workflow visually before replacing the bridge with final authentication wiring.
+
+Scope:
+
+- custom role CRUD for `system_admin`
+- locked seed/system roles with clone-from-preset support
+- permission-group based role composer UI
+- user-to-role assignment UI using the same effective-permission model already delivered in `Slice 0`
+- audit metadata for role mutations and assignments
+
+Mandatory UI checkpoint:
+
+- `system_admin` can open an access-control screen,
+- clone a preset role,
+- enable/disable permission groups or individual permissions,
+- assign the resulting role to a user,
+- switch operator and immediately observe rail, page, component, and data changes through the existing `/api/v1/me` snapshot.
+
+### Slice 7: Hardening
 
 - request-scoped auth integration
 - offline queue for cash events
@@ -1161,7 +1246,7 @@ Completed UI checkpoint:
 - [ ] A register can be opened with an explicit opening float.
 - [ ] Only one open session can exist per register.
 - [ ] Cash sales and cash debt payments can be reflected in expected cash.
-- [ ] Manual cash movements are immutable and attributable to an actor.
+- [x] Manual cash movements are immutable and attributable to an actor.
 - [ ] Closing shows expected amount, counted amount, and discrepancy.
 - [ ] The actor model works before and after full login is introduced.
 - [x] Role enforcement can be added without redesigning business tables.
@@ -1172,6 +1257,7 @@ Completed UI checkpoint:
 - [x] Strategic metrics and sensitive financial fields are hidden from operational roles by default.
 - [x] Sales history detail is server-redacted unless the actor has the explicit sale-detail permission.
 - [x] Operational reporting can be exposed to supervisors without leaking margin, credit exposure, or stock-value data.
+- [ ] `system_admin` can create and assign custom roles as bundles of existing permission codes without code changes.
 
 ---
 
@@ -1202,6 +1288,7 @@ Completed UI checkpoint:
 - blocked direct access to unauthorized workspace
 - operational `/sales` snapshot without sale-detail access
 - operational `/reporting` subset without strategic metrics
+- open session -> record manual movement -> updated expected balance in UI and API
 - open register -> cash sale -> cash out -> close register
 - close with discrepancy inside tolerance
 - close with discrepancy requiring supervisor role
@@ -1209,6 +1296,7 @@ Completed UI checkpoint:
 - `cashier` cannot see `/products` or `/reporting`
 - `executive_readonly` can open `/reporting` and `/sales` but cannot mutate anything
 - `catalog_manager` can manage products but cannot approve cash discrepancies
+- `system_admin` can clone a preset role, change permissions, assign it, and verify the resulting permission snapshot from a real UI flow
 
 ---
 
@@ -1243,4 +1331,5 @@ Recommended target solution:
 - keep service-role access only for trusted internal jobs, not user-facing command attribution,
 - protect navigation, components, and data responses with the same authorization source,
 - separate `business_manager` / `executive_readonly` from `system_admin` so strategic visibility and technical administration are not conflated,
+- treat seeded roles as safe starter presets while allowing a later `system_admin` role-composer UI to adapt business bundles without changing code,
 - use app-layer authorization with optional Supabase RLS only as a guardrail, never as the place for core cash rules.
