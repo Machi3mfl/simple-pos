@@ -134,6 +134,22 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Hardening and Auth-Scoped Actor Resolution
+
+`POS-002 Slice 7` hardens the temporary actor bridge by preferring real request-scoped auth when available and adds offline replay support for manual cash movements only, keeping open/close flows online-first.
+
+- Main contracts:
+  - `GET /api/v1/me`
+  - `POST /api/v1/me/assume-user`
+  - `DELETE /api/v1/me/assume-user`
+  - `POST /api/v1/sync/events`
+  - `POST /api/v1/cash-register-sessions/{id}/movements`
+- Coverage:
+  - UI: [tests/e2e/access-control-shell-ui.spec.ts](../../../tests/e2e/access-control-shell-ui.spec.ts), [tests/e2e/offline-cash-movement-recovery.spec.ts](../../../tests/e2e/offline-cash-movement-recovery.spec.ts)
+  - API/contract: [tests/e2e/access-control-api.spec.ts](../../../tests/e2e/access-control-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:

@@ -124,7 +124,11 @@ Open planning item:
     - `Slice 6` role catalog and permission composition UI is also implemented
     - `/users-admin` now lets `system_admin` clone presets, compose permission bundles, assign roles to users, and validate the resulting shell/data snapshot by switching operator from the same workspace
     - the permission catalog now includes `roles.manage`, seed roles are locked system presets, and custom roles can be created without code changes
-    - next plan step is `Slice 7`: hardening beyond the temporary actor bridge
+    - `Slice 7` hardening is also implemented
+    - `/api/v1/me` now exposes request attribution metadata so the shell can distinguish authenticated login, support override, and fallback operator resolution
+    - request actor resolution now prefers validated Supabase bearer tokens mapped through `app_users.auth_user_id`, while authenticated-but-unmapped requests degrade to zero permissions instead of inheriting the default demo actor
+    - the `assume-user` bridge is now controlled by `POS_ENABLE_ASSUME_USER_BRIDGE`, remaining available by default only outside production
+    - `/cash-register` now queues manual cash movements offline and can replay them into the real ledger through sync retry without enabling offline open/close flows
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`
@@ -215,6 +219,7 @@ Resolved cross-cutting planning item:
 - Workspace guardrails Slice 2 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, `tests/e2e/orders-ui-sales-snapshot.spec.ts`, and `tests/e2e/reporting-ui-filters-and-metrics.spec.ts` cover summary-only `/sales`, server-redacted sale detail, hidden strategic reporting metrics, and supervisor operational reporting visibility.
 - Cash movement ledger Slice 3 verification: `tests/e2e/cash-register-session-api.spec.ts`, `tests/e2e/cash-register-session-ui.spec.ts`, and `tests/e2e/api-contract-conformance.spec.ts` cover manual movement recording, active-session ledger detail, expected-balance updates, and the new movement endpoint contract.
 - Discrepancy approval Slice 5 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/cash-register-session-api.spec.ts`, and `tests/e2e/cash-register-session-ui.spec.ts` cover the new override permission, review-required closeouts, supervisor approval, and reopen-for-recount UI flow.
+- Hardening Slice 7 verification: `tests/e2e/access-control-api.spec.ts`, `tests/e2e/access-control-shell-ui.spec.ts`, and `tests/e2e/offline-cash-movement-recovery.spec.ts` cover authenticated actor precedence over the support bridge, visible session attribution in the rail, and offline manual cash-movement replay into the real ledger.
 - NFR evidence baseline: `workflow-manager/docs/planning/008-nfr-validation-evidence-ready.md`.
 - UC to E2E mapping: `workflow-manager/docs/planning/006-uc-e2e-traceability-matrix-ready.md`.
 - Unified `/products` workspace coverage: `tests/e2e/products-workspace-ui.spec.ts`, `tests/e2e/products-workspace-infinite-scroll-ui.spec.ts`, `tests/e2e/products-workspace-api.spec.ts`.

@@ -1277,6 +1277,17 @@ Implemented result:
 - mandatory UI checkpoint:
   - authenticated operator attribution visible in the UI and real-backend verification flows
 
+Implemented result:
+
+- `GET /api/v1/me` now exposes a `session` block with `resolutionSource`, `authUserId`, and `canAssumeUserBridge`,
+- request actor resolution now prefers a validated Supabase bearer token mapped through `app_users.auth_user_id`,
+- authenticated-but-unmapped requests no longer fall back to the default business actor; they degrade to an empty permission snapshot instead,
+- `POST /api/v1/me/assume-user` and `DELETE /api/v1/me/assume-user` are now gated by `POS_ENABLE_ASSUME_USER_BRIDGE` and remain enabled by default only outside production,
+- the shell now surfaces the attribution mode directly in the rail (`Login verificado`, `Modo soporte`, or fallback temporary mode),
+- manual cash movements can now be queued offline from `/cash-register`,
+- retrying sync from `/cash-register` replays `cash_movement_recorded` into the real cash ledger and refreshes the active-session detail after success,
+- opening and closing a register remain online-first as previously recommended; the hardening slice only adds offline support for manual cash events.
+
 ---
 
 ## Acceptance Criteria for the Feature Plan
@@ -1286,7 +1297,7 @@ Implemented result:
 - [ ] Cash sales and cash debt payments can be reflected in expected cash.
 - [x] Manual cash movements are immutable and attributable to an actor.
 - [x] Closing shows expected amount, counted amount, and discrepancy.
-- [ ] The actor model works before and after full login is introduced.
+- [x] The actor model works before and after full login is introduced.
 - [x] Role enforcement can be added without redesigning business tables.
 - [x] Roles are implemented as bundles of permission codes, not as hardcoded UI conditionals.
 - [x] `GET /api/v1/me` returns a stable permission snapshot usable directly by the shell/UI.
