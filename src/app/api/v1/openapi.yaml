@@ -241,6 +241,29 @@ paths:
         '403':
           $ref: '#/components/responses/ErrorResponse'
 
+  /access-control/users:
+    post:
+      tags: [AccessControl]
+      operationId: createAccessUser
+      summary: Create an application user and optionally assign initial roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccessUserRequest'
+      responses:
+        '201':
+          description: Access user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessControlUser'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
   /access-control/users/{id}/auth-credentials:
     post:
       tags: [AccessControl]
@@ -1561,6 +1584,23 @@ components:
       type: object
       required: [roleIds]
       properties:
+        roleIds:
+          type: array
+          items:
+            type: string
+
+    CreateAccessUserRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          minLength: 3
+          maxLength: 120
+        actorKind:
+          type: string
+          enum: [human, system]
+          default: human
         roleIds:
           type: array
           items:

@@ -87,6 +87,13 @@ export interface UpsertUserAuthCredentialsInput {
   readonly password: string;
 }
 
+export interface CreateAccessUserInput {
+  readonly actorId: string;
+  readonly displayName: string;
+  readonly actorKind: AppUserKind;
+  readonly roleIds: readonly string[];
+}
+
 export interface UpsertedUserAuthCredentials {
   readonly userId: string;
   readonly displayName: string;

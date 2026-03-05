@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 
 import { CreateCustomRoleUseCase } from "../../application/use-cases/CreateCustomRoleUseCase";
+import { CreateAccessUserUseCase } from "../../application/use-cases/CreateAccessUserUseCase";
 import { DeleteCustomRoleUseCase } from "../../application/use-cases/DeleteCustomRoleUseCase";
 import { AssumeSelectableActorUseCase } from "../../application/use-cases/AssumeSelectableActorUseCase";
 import { GetCurrentActorSnapshotUseCase } from "../../application/use-cases/GetCurrentActorSnapshotUseCase";
@@ -18,6 +19,7 @@ export function createAccessControlRuntime(): {
   readonly assumeSelectableActorUseCase: AssumeSelectableActorUseCase;
   readonly getAccessControlWorkspaceSnapshotUseCase: GetAccessControlWorkspaceSnapshotUseCase;
   readonly createCustomRoleUseCase: CreateCustomRoleUseCase;
+  readonly createAccessUserUseCase: CreateAccessUserUseCase;
   readonly updateCustomRoleUseCase: UpdateCustomRoleUseCase;
   readonly deleteCustomRoleUseCase: DeleteCustomRoleUseCase;
   readonly replaceUserRolesUseCase: ReplaceUserRolesUseCase;
@@ -38,6 +40,9 @@ export function createAccessControlRuntime(): {
     getAccessControlWorkspaceSnapshotUseCase:
       new GetAccessControlWorkspaceSnapshotUseCase(roleAdministrationRepository),
     createCustomRoleUseCase: new CreateCustomRoleUseCase(
+      roleAdministrationRepository,
+    ),
+    createAccessUserUseCase: new CreateAccessUserUseCase(
       roleAdministrationRepository,
     ),
     updateCustomRoleUseCase: new UpdateCustomRoleUseCase(

@@ -2,6 +2,7 @@ import type {
   AccessPermissionDefinition,
   AccessRoleDefinition,
   AccessUserDefinition,
+  CreateAccessUserInput,
   CreateCustomRoleInput,
   UpsertedUserAuthCredentials,
   UpsertUserAuthCredentialsInput,
@@ -20,6 +21,7 @@ export interface RoleAdministrationRepository {
   findRoleById(roleId: string): Promise<AccessRoleDefinition | null>;
   listUsers(): Promise<readonly AccessUserDefinition[]>;
   findUserById(userId: string): Promise<AccessUserDefinition | null>;
+  createUser(input: CreateAccessUserInput): Promise<AccessUserDefinition>;
   listPermissions(): Promise<readonly RawAccessPermissionRecord[]>;
   createCustomRole(input: CreateCustomRoleInput & { readonly code: string }): Promise<AccessRoleDefinition>;
   updateCustomRole(input: UpdateCustomRoleInput): Promise<AccessRoleDefinition | null>;

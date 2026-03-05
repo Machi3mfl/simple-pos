@@ -7,6 +7,7 @@ import type {
 import type {
   AccessRoleDefinition,
   AccessUserDefinition,
+  CreateAccessUserInput,
   CreateCustomRoleInput,
   UpsertedUserAuthCredentials,
   UpsertUserAuthCredentialsInput,
@@ -125,6 +126,62 @@ export class SupabaseRoleAdministrationRepository
     const users = await this.loadUsers([userId]);
     const builtUsers = await this.buildUsers(users);
     return builtUsers[0] ?? null;
+  }
+
+  async createUser(input: CreateAccessUserInput): Promise<AccessUserDefinition> {
+    const displayName = input.displayName.trim();
+    if (displayName.length < 3) {
+      throw new Error("El nombre del usuario debe tener al menos 3 caracteres.");
+    }
+
+    if (input.roleIds.length > 0) {
+      const roles = await this.loadRoles(input.roleIds);
+      if (roles.length !== input.roleIds.length) {
+        throw new Error("Alguno de los roles seleccionados ya no existe.");
+      }
+    }
+
+    const userId = `user_${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+
+    const { error: createUserError } = await this.client.from("app_users").insert({
+      id: userId,
+      auth_user_id: null,
+      display_name: displayName,
+      actor_kind: input.actorKind,
+      is_active: true,
+      created_at: now,
+    });
+
+    if (createUserError) {
+      throw new Error(`Failed to create app user in Supabase: ${createUserError.message}`);
+    }
+
+    if (input.roleIds.length > 0) {
+      const { error: insertRolesError } = await this.client
+        .from("user_role_assignments")
+        .insert(
+          input.roleIds.map((roleId) => ({
+            id: `ura_${crypto.randomUUID()}`,
+            user_id: userId,
+            role_id: roleId,
+            assigned_by_user_id: input.actorId,
+          })),
+        );
+
+      if (insertRolesError) {
+        throw new Error(
+          `Failed to assign initial roles to the user in Supabase: ${insertRolesError.message}`,
+        );
+      }
+    }
+
+    const createdUser = await this.findUserById(userId);
+    if (!createdUser) {
+      throw new Error("No se pudo recargar el usuario creado.");
+    }
+
+    return createdUser;
   }
 
   async upsertUserAuthCredentials(
