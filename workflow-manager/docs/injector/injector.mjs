@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createClient } from "@supabase/supabase-js";
 import { execFile } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -21,6 +22,10 @@ const DEMO_AUTH_USERS_PATH = path.join(
 const DEFAULT_ENV_FILE = path.join(PROJECT_ROOT, ".env.local");
 const PRODUCT_SOURCING_BUCKET = "product-sourcing-images";
 const DEFAULT_APP_BASE_URL = "http://127.0.0.1:3001";
+const DEFAULT_ONBOARDING_ADMIN_APP_USER_ID = "user_admin_bootstrap";
+const DEFAULT_ONBOARDING_ADMIN_NAME = "System Admin";
+const DEFAULT_ONBOARDING_ADMIN_EMAIL = "admin@simple-pos.local";
+const DEFAULT_ONBOARDING_ADMIN_PASSWORD_LENGTH = 20;
 
 const COLORS = {
   reset: "\u001b[0m",
@@ -53,6 +58,22 @@ function logErr(message) {
 
 function abort(message) {
   throw new Error(message);
+}
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "n", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
 }
 
 function ensureArray(value) {
@@ -136,7 +157,11 @@ async function loadSupabaseCliEnv() {
 }
 
 async function loadEnvironment() {
-  const envFile = process.env.ENV_FILE ?? process.env.DOTENV_CONFIG_PATH ?? DEFAULT_ENV_FILE;
+  const envFile =
+    process.env.INJECTOR_ENV_FILE ??
+    process.env.ENV_FILE ??
+    process.env.DOTENV_CONFIG_PATH ??
+    DEFAULT_ENV_FILE;
   let fileEnv = {};
   if (await fileExists(envFile)) {
     fileEnv = parseEnvContent(await fs.readFile(envFile, "utf8"));
@@ -147,9 +172,15 @@ async function loadEnvironment() {
     ...process.env,
   };
 
-  let supabaseUrl = merged.NEXT_PUBLIC_SUPABASE_URL ?? merged.SUPABASE_URL ?? "";
-  let serviceRoleKey = merged.SUPABASE_SERVICE_ROLE_KEY ?? "";
-  let anonKey = merged.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  let supabaseUrl =
+    merged.INJECTOR_SUPABASE_URL ??
+    merged.NEXT_PUBLIC_SUPABASE_URL ??
+    merged.SUPABASE_URL ??
+    "";
+  let serviceRoleKey =
+    merged.INJECTOR_SUPABASE_SERVICE_ROLE_KEY ?? merged.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  let anonKey =
+    merged.INJECTOR_SUPABASE_ANON_KEY ?? merged.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
   if (!supabaseUrl || !serviceRoleKey) {
     const cliEnv = await loadSupabaseCliEnv();
@@ -166,9 +197,14 @@ async function loadEnvironment() {
     abort(`Missing SUPABASE_SERVICE_ROLE_KEY. Checked ${envFile} and supabase status -o env.`);
   }
 
+  const normalizedSupabaseUrl = supabaseUrl.replace(/\/$/u, "");
+  const isLocalSupabase =
+    /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/u.test(normalizedSupabaseUrl) ||
+    normalizedSupabaseUrl.includes("supabase.local");
+
   return {
     envFile,
-    supabaseUrl: supabaseUrl.replace(/\/$/u, ""),
+    supabaseUrl: normalizedSupabaseUrl,
     serviceRoleKey,
     anonKey,
     appBaseUrl: (
@@ -176,6 +212,36 @@ async function loadEnvironment() {
       merged.NEXT_PUBLIC_APP_URL ??
       DEFAULT_APP_BASE_URL
     ).replace(/\/$/u, ""),
+    targetName:
+      merged.INJECTOR_TARGET_NAME ?? (isLocalSupabase ? "local-development" : "remote"),
+    isLocalSupabase,
+    allowRemoteWrite: parseBoolean(merged.INJECTOR_ALLOW_REMOTE_WRITE, false),
+    allowDemoAuthUsersOnRemote: parseBoolean(
+      merged.INJECTOR_ALLOW_DEMO_AUTH_USERS_ON_REMOTE,
+      false,
+    ),
+    onboarding: {
+      adminAppUserId:
+        merged.INJECTOR_ONBOARDING_ADMIN_APP_USER_ID ??
+        DEFAULT_ONBOARDING_ADMIN_APP_USER_ID,
+      adminDisplayName:
+        merged.INJECTOR_ONBOARDING_ADMIN_NAME ?? DEFAULT_ONBOARDING_ADMIN_NAME,
+      adminEmail:
+        merged.INJECTOR_ONBOARDING_ADMIN_EMAIL ?? DEFAULT_ONBOARDING_ADMIN_EMAIL,
+      adminActorKind: merged.INJECTOR_ONBOARDING_ADMIN_ACTOR_KIND ?? "human",
+      passwordLength: Number(
+        merged.INJECTOR_ONBOARDING_ADMIN_PASSWORD_LENGTH ??
+          String(DEFAULT_ONBOARDING_ADMIN_PASSWORD_LENGTH),
+      ),
+      resetPasswordOnEveryRun: parseBoolean(
+        merged.INJECTOR_ONBOARDING_ADMIN_RESET_PASSWORD,
+        true,
+      ),
+      forceEmailConfirm: parseBoolean(
+        merged.INJECTOR_ONBOARDING_ADMIN_FORCE_EMAIL_CONFIRM,
+        true,
+      ),
+    },
   };
 }
 
@@ -400,6 +466,85 @@ async function ensureDemoAuthUsers(env, authManifest) {
   logOk("Demo auth users reconciled successfully.");
 }
 
+async function cleanupDemoUsers(env, authManifest) {
+  const adminClient = createServiceRoleClient(env);
+  logInfo(`Cleaning up ${authManifest.users.length} demo users from auth and app tables.`);
+
+  const authUsers = await listAuthUsers(env);
+  const authUserByEmail = new Map(
+    authUsers
+      .filter((user) => typeof user.email === "string" && user.email.trim().length > 0)
+      .map((user) => [user.email.trim().toLowerCase(), user]),
+  );
+
+  let deletedAuthUsers = 0;
+  let removedRoleAssignments = 0;
+  let removedRegisterAssignments = 0;
+  let deletedAppUsers = 0;
+  let deactivatedAppUsers = 0;
+
+  for (const userRecord of authManifest.users) {
+    const appUserRows = await listRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]]);
+    const appUser = appUserRows[0] ?? null;
+    const normalizedEmail = userRecord.email.trim().toLowerCase();
+
+    const authUserIdFromAppUser =
+      typeof appUser?.auth_user_id === "string" && appUser.auth_user_id.length > 0
+        ? appUser.auth_user_id
+        : null;
+    const authUserIdFromEmail = authUserByEmail.get(normalizedEmail)?.id ?? null;
+    const authUserId = authUserIdFromAppUser ?? authUserIdFromEmail;
+
+    if (authUserId) {
+      const deletion = await adminClient.auth.admin.deleteUser(authUserId);
+      if (deletion.error) {
+        logWarn(
+          `Could not delete auth user ${normalizedEmail} (${authUserId}): ${deletion.error.message}`,
+        );
+      } else {
+        deletedAuthUsers += 1;
+      }
+    }
+
+    if (!appUser) {
+      continue;
+    }
+
+    const deletedAssignments = await deleteRows(env, "user_role_assignments", [
+      ["user_id", `eq.${appUser.id}`],
+    ]);
+    removedRoleAssignments += deletedAssignments.length;
+
+    const deletedRegisterLinks = await deleteRows(env, "cash_register_user_assignments", [
+      ["user_id", `eq.${appUser.id}`],
+    ]);
+    removedRegisterAssignments += deletedRegisterLinks.length;
+
+    try {
+      const deletedUsers = await deleteRows(env, "app_users", [["id", `eq.${appUser.id}`]]);
+      deletedAppUsers += deletedUsers.length;
+    } catch {
+      const patchedUsers = await patchRows(env, "app_users", [["id", `eq.${appUser.id}`]], {
+        auth_user_id: null,
+        is_active: false,
+      });
+      if (patchedUsers.length > 0) {
+        deactivatedAppUsers += 1;
+        logWarn(
+          `App user ${appUser.id} could not be deleted (likely referenced by audit/history). Deactivated instead.`,
+        );
+      } else {
+        throw new Error(`Failed to cleanup app user ${appUser.id}.`);
+      }
+    }
+  }
+
+  logOk("Demo users cleanup completed.");
+  process.stdout.write(
+    `  Removed auth users: ${deletedAuthUsers}\n  Removed role assignments: ${removedRoleAssignments}\n  Removed register assignments: ${removedRegisterAssignments}\n  Deleted app users: ${deletedAppUsers}\n  Deactivated app users: ${deactivatedAppUsers}\n`,
+  );
+}
+
 async function signInDemoSystemAdmin(env, authManifest) {
   const systemAdminRecord = authManifest.users.find((user) =>
     ensureArray(user.roleCodes).includes("system_admin"),
@@ -489,6 +634,22 @@ async function patchRows(env, table, filters, payload) {
 
   if (!response.ok) {
     abort(`Supabase PATCH ${table} failed (${response.status}): ${text}`);
+  }
+
+  return ensureArray(data);
+}
+
+async function insertRows(env, table, payload) {
+  const { response, data, text } = await requestSupabase(env, "POST", `/rest/v1/${table}`, {
+    body: JSON.stringify(payload),
+    headers: {
+      Prefer: "return=representation",
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    abort(`Supabase POST ${table} failed (${response.status}): ${text}`);
   }
 
   return ensureArray(data);
@@ -1241,27 +1402,249 @@ async function clearAll(env, datasets, force) {
   logOk("All project data removed.");
 }
 
+function buildGeneratedPassword(length) {
+  const targetLength =
+    Number.isInteger(length) && length >= 14 ? length : DEFAULT_ONBOARDING_ADMIN_PASSWORD_LENGTH;
+  const alphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_+-=:.?";
+  const bytes = randomBytes(targetLength);
+  let output = "";
+  for (let index = 0; index < targetLength; index += 1) {
+    output += alphabet[bytes[index] % alphabet.length];
+  }
+  return output;
+}
+
+async function ensureSystemAdminRole(env) {
+  const rows = await listRows(env, "roles", [["code", "eq.system_admin"]]);
+  if (!rows[0]?.id) {
+    abort(
+      "Role system_admin was not found. Run database migrations before onboarding an admin.",
+    );
+  }
+  return rows[0];
+}
+
+async function ensureAdminAppUser(env, roleRow) {
+  const appUserId = env.onboarding.adminAppUserId.trim();
+  if (!appUserId) {
+    abort("INJECTOR_ONBOARDING_ADMIN_APP_USER_ID cannot be empty.");
+  }
+
+  const actorKind =
+    env.onboarding.adminActorKind === "system" ? "system" : "human";
+  const displayName = env.onboarding.adminDisplayName.trim();
+  if (displayName.length < 3) {
+    abort("INJECTOR_ONBOARDING_ADMIN_NAME must have at least 3 characters.");
+  }
+
+  const rows = await listRows(env, "app_users", [["id", `eq.${appUserId}`]]);
+  let appUser = rows[0] ?? null;
+  if (!appUser) {
+    const inserted = await insertRows(env, "app_users", {
+      id: appUserId,
+      auth_user_id: null,
+      display_name: displayName,
+      actor_kind: actorKind,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    });
+    appUser = inserted[0] ?? null;
+  } else {
+    const needsUpdate =
+      appUser.display_name !== displayName ||
+      appUser.actor_kind !== actorKind ||
+      appUser.is_active !== true;
+    if (needsUpdate) {
+      const updated = await patchRows(env, "app_users", [["id", `eq.${appUserId}`]], {
+        display_name: displayName,
+        actor_kind: actorKind,
+        is_active: true,
+      });
+      appUser = updated[0] ?? appUser;
+    }
+  }
+
+  if (!appUser?.id) {
+    abort("Failed to reconcile onboarding admin app user.");
+  }
+
+  const assignmentRows = await listRows(env, "user_role_assignments", [
+    ["user_id", `eq.${appUser.id}`],
+    ["role_id", `eq.${roleRow.id}`],
+  ]);
+  if (assignmentRows.length === 0) {
+    await insertRows(env, "user_role_assignments", {
+      id: `ura_${crypto.randomUUID()}`,
+      user_id: appUser.id,
+      role_id: roleRow.id,
+      assigned_by_user_id: appUser.id,
+    });
+  }
+
+  return appUser;
+}
+
+async function reconcileOnboardingAdminAuthCredentials(env, appUser) {
+  const email = env.onboarding.adminEmail.trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    abort("INJECTOR_ONBOARDING_ADMIN_EMAIL must be a valid email.");
+  }
+
+  const password = buildGeneratedPassword(env.onboarding.passwordLength);
+  const adminClient = createServiceRoleClient(env);
+  const metadata = {
+    app_user_id: appUser.id,
+    display_name: appUser.display_name,
+    injector_target: env.targetName,
+  };
+  const forcePasswordReset = env.onboarding.resetPasswordOnEveryRun;
+  const emailConfirm = env.onboarding.forceEmailConfirm;
+
+  let authUserId =
+    typeof appUser.auth_user_id === "string" && appUser.auth_user_id.length > 0
+      ? appUser.auth_user_id
+      : null;
+  if (!authUserId) {
+    const authUser = await findAuthUserByEmail(env, email);
+    authUserId = authUser?.id ?? null;
+  }
+
+  if (authUserId) {
+    const updatePayload = {
+      email,
+      email_confirm: emailConfirm,
+      user_metadata: metadata,
+      ...(forcePasswordReset ? { password } : {}),
+    };
+    const updated = await adminClient.auth.admin.updateUserById(authUserId, updatePayload);
+    if (updated.error) {
+      abort(
+        `Failed to update onboarding admin auth user (${email}): ${updated.error.message}`,
+      );
+    }
+  } else {
+    const created = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: emailConfirm,
+      user_metadata: metadata,
+    });
+    if (created.error || !created.data.user?.id) {
+      abort(
+        `Failed to create onboarding admin auth user (${email}): ${created.error?.message ?? "unknown error"}`,
+      );
+    }
+    authUserId = created.data.user.id;
+  }
+
+  if (appUser.auth_user_id !== authUserId) {
+    await patchRows(env, "app_users", [["id", `eq.${appUser.id}`]], {
+      auth_user_id: authUserId,
+    });
+  }
+
+  return {
+    appUserId: appUser.id,
+    displayName: appUser.display_name,
+    email,
+    password: forcePasswordReset ? password : "(password unchanged)",
+    passwordSha256: forcePasswordReset
+      ? createHash("sha256").update(password).digest("hex")
+      : null,
+    authUserId,
+    passwordWasReset: forcePasswordReset,
+  };
+}
+
+async function runOnboardingAdmin(env) {
+  logInfo(
+    `Running admin onboarding for target=${env.targetName} supabase=${env.supabaseUrl}.`,
+  );
+
+  const systemAdminRole = await ensureSystemAdminRole(env);
+  const appUser = await ensureAdminAppUser(env, systemAdminRole);
+  const result = await reconcileOnboardingAdminAuthCredentials(env, appUser);
+
+  logOk("Admin onboarding completed.");
+  process.stdout.write("\n");
+  process.stdout.write("  Onboarding credentials (store securely):\n");
+  process.stdout.write(`    appUserId:  ${result.appUserId}\n`);
+  process.stdout.write(`    displayName:${result.displayName}\n`);
+  process.stdout.write(`    email:      ${result.email}\n`);
+  process.stdout.write(`    password:   ${result.password}\n`);
+  process.stdout.write(`    authUserId: ${result.authUserId}\n`);
+  if (result.passwordSha256) {
+    process.stdout.write(
+      `    passwordSha256: ${result.passwordSha256} (debug receipt only)\n`,
+    );
+  }
+  process.stdout.write("\n");
+  process.stdout.write(
+    "  Note: Supabase Auth stores password hashes internally; plaintext is never stored in app tables.\n",
+  );
+}
+
+function assertCommandWriteSafety(env, command, allowRemoteWriteFlag) {
+  const mutatingCommands = new Set([
+    "all",
+    "auth-users",
+    "cleanup-demo-users",
+    "products",
+    "sales",
+    "debt-payments",
+    "clear-all",
+    "onboarding-admin",
+  ]);
+  if (!mutatingCommands.has(command)) {
+    return;
+  }
+
+  const allowRemoteWrite = allowRemoteWriteFlag || env.allowRemoteWrite;
+  if (!env.isLocalSupabase && !allowRemoteWrite) {
+    abort(
+      `Blocked mutating command "${command}" for non-local target "${env.supabaseUrl}". Set INJECTOR_ALLOW_REMOTE_WRITE=true or pass --allow-remote-write if you are sure.`,
+    );
+  }
+}
+
+function assertDemoAuthUsersSafety(env) {
+  if (env.isLocalSupabase || env.allowDemoAuthUsersOnRemote) {
+    return;
+  }
+
+  abort(
+    "Demo auth users provisioning is blocked for non-local targets. Use onboarding-admin for first bootstrap, or set INJECTOR_ALLOW_DEMO_AUTH_USERS_ON_REMOTE=true if this is an intentional staging seed.",
+  );
+}
+
 function printHelp() {
   process.stdout.write(`Simple POS demo injector\n\n`);
   process.stdout.write(`Usage:\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh all\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh auth-users\n`);
+  process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh cleanup-demo-users\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh products\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh sales\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh debt-payments\n`);
+  process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh onboarding-admin\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh status\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh show-all\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh clear-all\n`);
   process.stdout.write(`  bash workflow-manager/docs/injector/injector.sh clear-all -f\n`);
+  process.stdout.write(`\nFlags:\n`);
+  process.stdout.write(`  --allow-remote-write  Allow mutating commands against non-local targets\n`);
 }
 
 async function selectInteractiveCommand() {
   const options = [
     ["all", "Inject demo products + sales + debt payments"],
     ["auth-users", "Provision demo auth users for local login"],
+    ["cleanup-demo-users", "Delete/deactivate demo users and their auth credentials"],
     ["products", "Inject or reconcile sourced demo products"],
     ["sales", "Recreate demo sales and outbound stock movements"],
     ["debt-payments", "Recreate demo debt payments"],
+    ["onboarding-admin", "Create or reconcile a secure system_admin login"],
     ["status", "Show managed demo counts"],
     ["show-all", "Print managed demo snapshot"],
     ["clear-all", "Delete all managed demo data"],
@@ -1289,7 +1672,15 @@ async function selectInteractiveCommand() {
 async function main() {
   const rawArgs = process.argv.slice(2);
   const force = rawArgs.includes("-f") || rawArgs.includes("--force");
-  const args = rawArgs.filter((arg) => arg !== "-f" && arg !== "--force");
+  const allowRemoteWriteFlag =
+    rawArgs.includes("--allow-remote-write") || rawArgs.includes("--allow-remote");
+  const args = rawArgs.filter(
+    (arg) =>
+      arg !== "-f" &&
+      arg !== "--force" &&
+      arg !== "--allow-remote-write" &&
+      arg !== "--allow-remote",
+  );
   const command = args[0] ?? (await selectInteractiveCommand());
 
   if (["help", "--help", "-h"].includes(command)) {
@@ -1304,7 +1695,9 @@ async function main() {
     debtPayments: await loadDataset("debt-payments"),
   };
   const env = await loadEnvironment();
+  assertCommandWriteSafety(env, command, allowRemoteWriteFlag);
   const getSystemAdminAccessToken = async () => {
+    assertDemoAuthUsersSafety(env);
     await ensureDemoAuthUsers(env, datasets.authUsers);
     return signInDemoSystemAdmin(env, datasets.authUsers);
   };
@@ -1330,7 +1723,11 @@ async function main() {
       }
       break;
     case "auth-users":
+      assertDemoAuthUsersSafety(env);
       await ensureDemoAuthUsers(env, datasets.authUsers);
+      break;
+    case "cleanup-demo-users":
+      await cleanupDemoUsers(env, datasets.authUsers);
       break;
     case "products":
       await injectProducts(env, datasets.products, await getSystemAdminAccessToken());
@@ -1351,6 +1748,9 @@ async function main() {
         datasets.debtPayments,
         await getSystemAdminAccessToken(),
       );
+      break;
+    case "onboarding-admin":
+      await runOnboardingAdmin(env);
       break;
     case "status":
       await showStatus(env, datasets);
