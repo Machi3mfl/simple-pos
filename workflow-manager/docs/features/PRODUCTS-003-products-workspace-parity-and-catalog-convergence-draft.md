@@ -34,7 +34,7 @@ This follow-up exists because the MVP and `PRODUCTS-002` already delivered a rea
 
 - Rewriting the catalog and inventory domains into one module
 - Changing the source of truth chosen in `PRODUCTS-002`
-- Adding new pricing strategies beyond the current bulk price update modes
+- Replacing product-level patch and stock-movement APIs with a brand-new bulk backend contract
 
 ---
 
@@ -42,6 +42,7 @@ This follow-up exists because the MVP and `PRODUCTS-002` already delivered a rea
 
 - [x] Guided onboarding is reachable from `/products` without sending the operator to `/catalog`
 - [x] Bulk price update with preview and audit summary is reachable from `/products`
+- [x] Bulk product profile edit is reachable from `/products` with scope selection and per-product editable fields
 - [x] The batch import UX decision is explicitly documented and reflected in the workspace UI
 - [x] `/catalog` and `/inventory` are no longer part of daily product administration
 - [x] UI, API, persistence, and E2E docs remain aligned after the convergence
@@ -82,5 +83,9 @@ The workspace now makes that decision explicit in the bulk import dialogs by war
 - `/catalog` and `/inventory` are no longer used by the application runtime or UI regression suite
 - The rail, smoke suite, and real-backend UI module suite now validate the converged route model
 - The primary CTA `Nuevo producto` now opens `/products/sourcing`, so single-product onboarding follows the external-sourcing-assisted path instead of the older manual modal
-- Secondary admin actions were compacted behind a three-dots menu, leaving `Nuevo producto` and `Actualizar precios` as the visible toolbar actions
+- Secondary admin actions were compacted behind a three-dots menu; later UX iteration restored a visible bulk profile edit action (`Modificar ficha de productos`) next to `Actualizar precios`
+- Bulk product profile editing now supports per-product changes for key fields (`nombre`, `precio`, `costo`, `stock mínimo`, `activo`) plus optional stock target adjustment through stock movement commands
+- Bulk product profile modal confirmation now renders per-field before/after values (old vs new) with product thumbnail to improve operator validation before apply
+- Top action buttons in `/products` were compacted and aligned to a single desktop row (`Nuevo producto`, `Actualizar precios`, `Modificar ficha de productos`, and overflow actions)
+- Bulk action wizards now use distinct CTA copy between review and final apply steps (`Continuar a confirmar` / `Revisar cambios` -> `Aplicar cambios`) to avoid double-confirm confusion
 - `EAN` is now part of the converged workspace contract: it is persisted on `products`, searchable from the `/products` list, and only displayed inside the detail modal to preserve browsing density

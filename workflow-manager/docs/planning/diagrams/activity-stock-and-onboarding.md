@@ -19,7 +19,7 @@ flowchart TD
   K --> L{Run bulk price update now?}
   L -->|No| Z([End])
   L -->|Yes| M[Select scope: all/category/selection]
-  M --> N[Choose mode: percentage/fixed_amount]
+  M --> N[Choose mode: percentage/fixed_amount/set_price]
   N --> O[Enter value and generate preview]
   O --> P{Any invalid resulting price?}
   P -->|Yes| Q[Block apply and show invalid items]

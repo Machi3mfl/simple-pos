@@ -48,7 +48,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 - Vertical-slice delivery for every FR/UC with mandatory integrated evidence (`UI + API + domain/application + tests`).
 - Sales registration with v1 payment methods: `cash` and `on_account` (no gateway in MVP).
 - Product, category, stock, and stock movement management with mandatory cost capture on inbound stock.
-- Bulk price update for product batches (percentage or fixed amount), with preview before apply.
+- Bulk price update for product batches (percentage, fixed amount, or set price), with preview before apply.
 - Sales history and baseline analytics.
 - Offline mode for critical MVP operations with automatic sync on reconnection.
 - API contract design in Next.js for current web and future mobile app.
@@ -124,7 +124,7 @@ Deliver a UI-first MVP to validate usability early, while designing stable Next.
 | FR-012 | Accumulate customer debt by originating orders | high | Owner / UC-007 | Debt ledger stores debt entries per order |
 | FR-013 | Register debt payments to reduce customer outstanding balance | high | Owner / UC-007 | Payment records reduce debt consistently |
 | FR-014 | Allow offline operation for critical MVP flows with later synchronization | high | Owner / UC-008 | Sale/debt events can be captured offline and synced without loss |
-| FR-015 | Execute bulk price updates for product batches | high | Owner / UC-009 | Admin can apply percentage/fixed updates to selected products with preview and audit trail |
+| FR-015 | Execute bulk price updates for product batches | high | Owner / UC-009 | Admin can apply percentage/fixed amount/set-price updates to selected products with preview and audit trail |
 
 ---
 
@@ -280,7 +280,7 @@ Delivery note: each detailed UC below inherits the mandatory integrated-slice ev
 - **Main Flow**:
   1. User opens bulk price update screen.
   2. User selects scope (all products, category, brand, or filtered set).
-  3. User selects update mode (`percentage` or `fixed_amount`) and value.
+  3. User selects update mode (`percentage`, `fixed_amount`, or `set_price`) and value.
   4. System calculates and displays preview (old price vs new price).
   5. User confirms update.
   6. System applies prices atomically and stores audit record for the batch.

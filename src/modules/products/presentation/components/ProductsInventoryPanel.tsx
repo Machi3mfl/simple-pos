@@ -12,7 +12,6 @@ import {
   Plus,
   Search,
   Upload,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -26,6 +25,7 @@ import {
 } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
@@ -33,6 +33,7 @@ import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
+import { BulkProductProfileUpdatePanel } from "@/modules/products/presentation/components/BulkProductProfileUpdatePanel";
 import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
 import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
@@ -47,6 +48,7 @@ type DialogId =
   | "edit"
   | "stock"
   | "bulkPrices"
+  | "bulkProductProfiles"
   | "bulkProducts"
   | "bulkStock"
   | null;
@@ -220,22 +222,18 @@ function Dialog({ title, onClose, children }: DialogProps): JSX.Element {
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4">
       <div className="flex min-h-full items-center justify-center">
         <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[1040px] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.24)] md:max-h-[calc(100dvh-2rem)]">
-          <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 md:px-6">
+          <header className="border-b border-slate-200 px-5 py-4 md:px-6">
             <h3 className="text-[1.8rem] font-semibold tracking-tight text-slate-900">
               {title}
             </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              data-testid="products-workspace-dialog-close"
-              className="flex size-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600"
-              aria-label={messages.common.actions.close}
-            >
-              <X size={18} />
-            </button>
           </header>
           <div className="min-h-0 overflow-y-auto px-5 py-4 md:px-6 md:py-5">{children}</div>
         </div>
+        <FloatingModalCloseButton
+          onClick={onClose}
+          ariaLabel={messages.common.actions.close}
+          testId="products-workspace-dialog-close"
+        />
       </div>
     </div>
   );
@@ -877,12 +875,15 @@ export function ProductsInventoryPanel({
   }
 
   const workspaceItems = workspace?.items ?? [];
-  const canShowPrimaryActions =
-    capabilities.canCreateFromSourcing || capabilities.canUpdatePrice || capabilities.canRunBulkImport;
   const canEditProduct =
     capabilities.canCreateFromSourcing ||
     capabilities.canUpdatePrice ||
     capabilities.canAdjustStock;
+  const canShowPrimaryActions =
+    capabilities.canCreateFromSourcing ||
+    capabilities.canUpdatePrice ||
+    capabilities.canRunBulkImport ||
+    canEditProduct;
   const hasMoreWorkspaceItems =
     workspace !== null && workspace.page < workspace.totalPages;
   const loadNextWorkspacePage = useCallback(async (): Promise<void> => {
@@ -928,12 +929,12 @@ export function ProductsInventoryPanel({
               </div>
 
               {canShowPrimaryActions ? (
-                <div className="flex flex-wrap gap-2 xl:max-w-[39rem] xl:justify-end">
+                <div className="flex flex-wrap gap-1.5 lg:flex-nowrap lg:items-center lg:justify-end">
                   {capabilities.canCreateFromSourcing ? (
                     <Link
                       href="/products/sourcing"
                       data-testid="products-workspace-open-create-button"
-                      className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)]"
+                      className="flex min-h-[3.2rem] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-blue-600 px-3 text-[0.88rem] font-semibold text-white shadow-[0_14px_28px_rgba(37,99,235,0.25)] lg:min-h-[3.35rem]"
                     >
                       <Plus size={18} />
                       {messages.productsWorkspace.actions.newProduct}
@@ -944,10 +945,21 @@ export function ProductsInventoryPanel({
                       type="button"
                       onClick={() => setOpenDialog("bulkPrices")}
                       data-testid="products-workspace-open-bulk-prices-button"
-                      className="flex min-h-[4rem] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800"
+                      className="flex min-h-[3.2rem] items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 text-[0.88rem] font-semibold text-slate-800 lg:min-h-[3.35rem]"
                     >
                       <ArrowUpDown size={18} />
                       {messages.productsWorkspace.actions.bulkPrices}
+                    </button>
+                  ) : null}
+                  {canEditProduct ? (
+                    <button
+                      type="button"
+                      onClick={() => setOpenDialog("bulkProductProfiles")}
+                      data-testid="products-workspace-open-bulk-profile-button"
+                      className="flex min-h-[3.2rem] items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 text-[0.88rem] font-semibold text-slate-800 lg:min-h-[3.35rem]"
+                    >
+                      <Pencil size={18} />
+                      {messages.productsWorkspace.actions.bulkProductProfiles}
                     </button>
                   ) : null}
                   {capabilities.canRunBulkImport ? (
@@ -956,7 +968,7 @@ export function ProductsInventoryPanel({
                         <button
                           type="button"
                           data-testid="products-workspace-open-more-actions-button"
-                          className="flex min-h-[4rem] min-w-[4rem] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800"
+                          className="flex min-h-[3.2rem] min-w-[3.2rem] items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 lg:min-h-[3.35rem] lg:min-w-[3.35rem]"
                           aria-label={messages.productsWorkspace.actions.more}
                         >
                           <MoreHorizontal size={20} />
@@ -1637,6 +1649,29 @@ export function ProductsInventoryPanel({
               publishWorkspaceFeedback({
                 type: "success",
                 message: messages.catalog.bulkPriceUpdate.applied(result.updatedCount),
+              });
+            }}
+          />
+        </Dialog>
+      ) : null}
+
+      {openDialog === "bulkProductProfiles" ? (
+        <Dialog
+          title={messages.productsWorkspace.actions.bulkProductProfiles}
+          onClose={() => setOpenDialog(null)}
+        >
+          <BulkProductProfileUpdatePanel
+            canAdjustStock={capabilities.canAdjustStock}
+            refreshToken={refreshToken}
+            onProfilesUpdated={async (result) => {
+              setOpenDialog(null);
+              await refreshWorkspace();
+              publishWorkspaceFeedback({
+                type: "success",
+                message: messages.productsWorkspace.feedback.bulkProductProfilesUpdated(
+                  result.updatedProducts,
+                  result.adjustedStockProducts,
+                ),
               });
             }}
           />

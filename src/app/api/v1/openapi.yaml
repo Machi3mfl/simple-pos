@@ -2393,7 +2393,7 @@ components:
           $ref: '#/components/schemas/BulkPriceUpdateScope'
         mode:
           type: string
-          enum: [percentage, fixed_amount]
+          enum: [percentage, fixed_amount, set_price]
         value:
           type: number
         previewOnly:

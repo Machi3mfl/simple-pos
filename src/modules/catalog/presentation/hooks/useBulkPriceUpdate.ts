@@ -13,7 +13,6 @@ import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
   dedupeCategoryCodes,
-  defaultKioskCategoryCodes,
   sortCategoryCodes,
 } from "@/shared/core/category/categoryNaming";
 
@@ -22,6 +21,7 @@ export interface BulkPriceProductItem {
   readonly name: string;
   readonly categoryId: string;
   readonly price: number;
+  readonly imageUrl?: string;
 }
 
 interface ProductListResponse {
@@ -54,7 +54,7 @@ interface ApiErrorPayload {
 }
 
 type ScopeType = "all" | "category" | "selection";
-type ModeType = "percentage" | "fixed_amount";
+type ModeType = "percentage" | "fixed_amount" | "set_price";
 
 interface BulkPriceUpdateFeedback {
   readonly type: "success" | "error";
@@ -72,6 +72,7 @@ interface UseBulkPriceUpdateResult {
   readonly categoryId: string;
   readonly feedback: BulkPriceUpdateFeedback | null;
   readonly hasValidScopeSelection: boolean;
+  readonly isPreviewUpToDate: boolean;
   readonly isLoadingProducts: boolean;
   readonly isSubmitting: boolean;
   readonly lastResult: BulkPriceUpdateResponse | null;
@@ -93,8 +94,6 @@ interface UseBulkPriceUpdateResult {
   readonly preview: () => Promise<void>;
   readonly apply: () => Promise<void>;
 }
-
-const defaultCategoryOptions = defaultKioskCategoryCodes();
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
   if (
@@ -133,10 +132,11 @@ export function useBulkPriceUpdate({
 
   const categories = useMemo(() => {
     return sortCategoryCodes(
-      dedupeCategoryCodes([
-        ...defaultCategoryOptions,
-        ...products.map((product) => product.categoryId),
-      ]),
+      dedupeCategoryCodes(
+        products
+          .map((product) => product.categoryId.trim())
+          .filter((categoryId) => categoryId.length > 0),
+      ),
     );
   }, [products]);
 
@@ -178,9 +178,12 @@ export function useBulkPriceUpdate({
     });
   }, [categoryId, mode, scopeType, selectedProductIds, value]);
 
-  const canApplyCurrentPreview =
+  const isPreviewUpToDate =
     previewSignature === currentSignature &&
-    lastResult?.previewOnly === true &&
+    lastResult?.previewOnly === true;
+
+  const canApplyCurrentPreview =
+    isPreviewUpToDate &&
     lastResult.invalidItems.length === 0;
 
   const reloadProducts = useCallback(async (): Promise<void> => {
@@ -198,17 +201,18 @@ export function useBulkPriceUpdate({
       setCategoryId((current) => {
         const normalizedCurrent = current.trim();
         const knownCategories = new Set<string>(
-          dedupeCategoryCodes([
-            ...defaultCategoryOptions,
-            ...data.items.map((item) => item.categoryId),
-          ]),
+          dedupeCategoryCodes(
+            data.items
+              .map((item) => item.categoryId.trim())
+              .filter((categoryId) => categoryId.length > 0),
+          ),
         );
 
         if (normalizedCurrent.length > 0 && knownCategories.has(normalizedCurrent)) {
           return current;
         }
 
-        return data.items[0]?.categoryId ?? defaultCategoryOptions[0] ?? "other";
+        return data.items.find((item) => item.categoryId.trim().length > 0)?.categoryId ?? "";
       });
     } finally {
       setIsLoadingProducts(false);
@@ -231,8 +235,15 @@ export function useBulkPriceUpdate({
   }, [refreshToken, reloadProducts]);
 
   useEffect(() => {
-    if (categories.length > 0 && (categoryId.trim().length === 0 || !categories.includes(categoryId))) {
-      setCategoryId(categories[0] ?? "other");
+    if (categories.length === 0) {
+      if (categoryId !== "") {
+        setCategoryId("");
+      }
+      return;
+    }
+
+    if (categoryId.trim().length === 0 || !categories.includes(categoryId)) {
+      setCategoryId(categories[0] ?? "");
     }
   }, [categories, categoryId]);
 
@@ -386,6 +397,7 @@ export function useBulkPriceUpdate({
     categoryId,
     feedback,
     hasValidScopeSelection,
+    isPreviewUpToDate,
     isLoadingProducts,
     isSubmitting,
     lastResult,

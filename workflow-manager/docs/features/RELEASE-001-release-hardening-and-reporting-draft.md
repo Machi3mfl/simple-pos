@@ -65,6 +65,7 @@ export interface SaleFilters {
   - `Reporting` now behaves as an executive dashboard instead of a simple history table, combining real sales, receivables, and product-workspace signals into one decision-support snapshot
   - the UI now exposes CEO-facing metric cards for sales count, revenue, cost, profit, gross margin, collected amount, current credit balance, stock value, debtor count, and open orders
   - the workspace now uses shadcn-style charts for daily trend, payment mix, inventory health, and top-product concentration
+  - `2026-03-05`: reporting cards were rebalanced to remove visual dead space by replacing row-based pairing with two independent stacked columns (left: trend + top products, right: mix + inventory + insights). A follow-up UI pass reduced residual spacing before the recent-sales block and reordered each sale row so date/customer appears first on the left.
 - Reporting API routes added:
   - `src/app/api/v1/reports/top-products/route.ts`
   - `src/app/api/v1/reports/profit-summary/route.ts`

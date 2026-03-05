@@ -3,7 +3,7 @@ import { z } from "zod";
 export const bulkPriceUpdateScopeTypeSchema = z.enum(["all", "category", "selection"]);
 export type BulkPriceUpdateScopeType = z.infer<typeof bulkPriceUpdateScopeTypeSchema>;
 
-export const bulkPriceUpdateModeSchema = z.enum(["percentage", "fixed_amount"]);
+export const bulkPriceUpdateModeSchema = z.enum(["percentage", "fixed_amount", "set_price"]);
 export type BulkPriceUpdateMode = z.infer<typeof bulkPriceUpdateModeSchema>;
 
 export const bulkPriceUpdateScopeDTOSchema = z

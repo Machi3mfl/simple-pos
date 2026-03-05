@@ -51,7 +51,7 @@ interface UpdateProductDetailsProps {
   readonly isActive?: boolean;
 }
 
-export type BulkPriceUpdateMode = "percentage" | "fixed_amount";
+export type BulkPriceUpdateMode = "percentage" | "fixed_amount" | "set_price";
 
 function validateSku(value: string): string {
   const normalizedSku = value.trim().toUpperCase();
@@ -190,7 +190,11 @@ export class Product {
       return this.price * (1 + value / 100);
     }
 
-    return this.price + value;
+    if (mode === "fixed_amount") {
+      return this.price + value;
+    }
+
+    return value;
   }
 
   getId(): string {

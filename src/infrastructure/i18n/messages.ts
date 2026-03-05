@@ -517,6 +517,7 @@ const spanishMessages = {
     actions: {
       newProduct: "Nuevo producto",
       bulkPrices: "Actualizar precios",
+      bulkProductProfiles: "Modificar ficha de productos",
       bulkProducts: "Carga masiva",
       bulkStock: "Stock masivo",
       more: "Más acciones",
@@ -588,6 +589,59 @@ const spanishMessages = {
       noMovement: "Sin movimientos",
       noMovementHistory: "Sin movimientos registrados.",
     },
+    bulkProfileUpdate: {
+      processHint:
+        "Proceso guiado: definí alcance, editá los campos principales y confirmá los cambios antes de aplicar.",
+      eligibleProducts: (count: number): string =>
+        `Productos elegibles en el alcance actual: ${count}`,
+      loadingProducts: "Cargando productos para edición masiva...",
+      scopeStepTitle: "1. Alcance",
+      scopeStepDescription:
+        "Seleccioná si querés modificar todos, por categoría o por selección manual.",
+      editStepTitle: "2. Modificar ficha",
+      editStepDescription:
+        "Editá nombre, precio, costo, stock mínimo y stock objetivo para los productos del alcance.",
+      confirmStepTitle: "3. Confirmar y aplicar",
+      confirmStepDescription:
+        "Revisá el detalle de cambios y aplicá la actualización masiva.",
+      editListTitle: "Productos a modificar",
+      editListHint: (count: number): string =>
+        count === 1
+          ? "1 producto dentro del alcance."
+          : `${count} productos dentro del alcance.`,
+      pendingChanges: (count: number): string =>
+        count === 1 ? "1 producto con cambios pendientes." : `${count} productos con cambios pendientes.`,
+      reviewChangesAction: "Revisar cambios",
+      applyAction: "Aplicar cambios",
+      activeLabel: "Activo",
+      activeState: (isActive: boolean): string => (isActive ? "Activo" : "Inactivo"),
+      noValue: "Sin valor",
+      targetStockLabel: "Stock objetivo",
+      stockPermissionHint:
+        "No tenés permiso para ajustar stock. El campo de stock objetivo queda solo lectura.",
+      stockAdjustmentReason: "Ajuste masivo desde ficha de productos",
+      errors: {
+        loadProducts: "No se pudieron cargar los productos para la edición masiva.",
+        emptyScope:
+          "No se encontraron productos para el alcance seleccionado. Elegí otro alcance o agregá productos.",
+        noChanges: "No hay cambios para aplicar en los productos seleccionados.",
+        invalidName: "El nombre debe tener al menos 2 caracteres.",
+        invalidPrice: "El precio debe ser mayor a cero.",
+        invalidCost: "El costo debe ser mayor a cero cuando se informa.",
+        invalidMinStock: "El stock mínimo debe ser un número entero mayor o igual a cero.",
+        invalidStock: "El stock objetivo debe ser un número mayor o igual a cero.",
+        stockPermission:
+          "No tenés permiso para modificar stock. Quitá ese cambio o pedí permisos de inventario.",
+        updateProduct: "No se pudo guardar la ficha del producto.",
+        updateStock: "No se pudo ajustar el stock del producto.",
+      },
+      feedback: {
+        success: (updated: number, adjustedStock: number): string =>
+          `Edición masiva aplicada: ${updated} fichas actualizadas y ${adjustedStock} ajustes de stock.`,
+        partialError: (failed: number): string =>
+          `Se aplicaron cambios parciales. ${failed} productos quedaron con error.`,
+      },
+    },
     modals: {
       wizardSteps: {
         stepOne: "1. Plantilla",
@@ -634,6 +688,8 @@ const spanishMessages = {
         invalid > 0
           ? `Stock masivo aplicado: ${count} movimientos correctos, ${invalid} filas con error.`
           : `Stock masivo aplicado: ${count} movimientos correctos.`,
+      bulkProductProfilesUpdated: (updated: number, adjustedStock: number): string =>
+        `Edición masiva aplicada: ${updated} fichas actualizadas y ${adjustedStock} ajustes de stock.`,
     },
   },
   catalog: {
@@ -699,6 +755,52 @@ const spanishMessages = {
       modes: {
         percentage: "Porcentaje",
         fixed_amount: "Monto fijo",
+        set_price: "Precio fijo",
+      },
+      adjustmentInputLabels: {
+        percentage: "Porcentaje",
+        fixed_amount: "Monto",
+        set_price: "Precio fijo",
+      },
+      wizard: {
+        processHint:
+          "Proceso guiado: definí alcance, configurá el ajuste y cerrá con previsualización antes de aplicar.",
+        scopeStepTitle: "1. Alcance",
+        scopeStepDescription:
+          "Elegí si actualizás todos los productos, por categoría o por selección manual.",
+        adjustmentStepTitle: "2. Ajuste",
+        adjustmentStepDescription:
+          "Definí si el cambio es porcentual, monto fijo o precio fijo e ingresá el valor.",
+        reviewStepTitle: "3. Previsualización y aplicación",
+        reviewStepDescription:
+          "Revisá el resultado del lote, validá alertas y recién ahí aplicá.",
+        selectedProducts: (count: number): string =>
+          count === 1 ? "1 producto seleccionado." : `${count} productos seleccionados.`,
+        stepReady: "Listo",
+        stepPending: "Pendiente",
+        backAction: "Volver",
+        nextAction: "Siguiente",
+        reviewAction: "Revisar previsualización",
+        goToConfirmAction: "Continuar a confirmar",
+        confirmAction: "Confirmar y aplicar",
+        applyAction: "Aplicar cambios",
+        recalculateAction: "Recalcular previsualización",
+        scopeProductsInAdjustmentTitle: "Productos en alcance",
+        scopeProductsInAdjustmentHint: (count: number): string =>
+          count === 1
+            ? "1 producto se actualizará con este ajuste."
+            : `${count} productos se actualizarán con este ajuste.`,
+        previewOutdated:
+          "La configuración cambió después de la última previsualización. Generá una nueva antes de aplicar.",
+        previewEmpty:
+          "Todavía no generaste una previsualización. Ejecutala para validar el impacto antes de aplicar.",
+        previewServerHint:
+          "La previsualización calcula y valida el lote en servidor para evitar aplicar cambios inconsistentes.",
+        previewListTitle: "Productos con cambio de precio",
+        previewListHint:
+          "Revisá el precio anterior y el nuevo para confirmar que el lote es correcto.",
+        invalidListHint:
+          "Estos productos no se pueden actualizar con la configuración actual. Ajustá el alcance o el valor.",
       },
     },
   },

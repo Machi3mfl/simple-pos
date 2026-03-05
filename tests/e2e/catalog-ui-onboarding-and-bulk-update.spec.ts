@@ -29,8 +29,6 @@ test("creates product and reprices it from Products UI, then verifies Sales inte
 
   await page.getByTestId("products-workspace-open-bulk-prices-button").click();
   await page.getByTestId("bulk-scope-select").selectOption("selection");
-  await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
-  await page.getByTestId("bulk-value-input").fill("10");
 
   const selectionItem = page
     .locator('[data-testid^="bulk-selection-item-"]')
@@ -38,13 +36,19 @@ test("creates product and reprices it from Products UI, then verifies Sales inte
     .first();
 
   await expect(selectionItem).toBeVisible();
-  await selectionItem.locator('input[type="checkbox"]').check();
+  await selectionItem.locator('[data-testid^="bulk-selection-checkbox-"]').click();
+  await page.getByTestId("bulk-wizard-next-from-scope").click();
+
+  await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
+  await page.getByTestId("bulk-value-input").fill("10");
+  await page.getByTestId("bulk-wizard-next-to-preview").click();
 
   await page.getByTestId("bulk-preview-button").click();
   await expect(page.getByTestId("bulk-feedback")).toContainText(
     "Previsualización lista: 1 filas.",
   );
 
+  await page.getByTestId("bulk-wizard-next-to-confirm").click();
   await page.getByTestId("bulk-apply-button").click();
   await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     "Lote aplicado: 1 productos actualizados.",

@@ -151,6 +151,7 @@ curl -X POST /api/v1/sales \
   - the `/receivables` workspace now follows the same visual language as `/cash-register` and `/sales`, replacing the old customer-select form with a debtor snapshot layout focused on "money in the street"
   - the top area exposes four snapshot metrics: debtor count, total outstanding balance, open orders, and average outstanding balance
   - debtors are now explored through a scrollable card list with filters for customer name, last-activity date range, open-order count, and sorting by debt/recent activity/name
+  - date range filters now use a shared shadcn datepicker (`Popover + Calendar`) instead of native `type="date"`, matching the rest of the shell interactions
   - opening a debtor card launches a centered detail modal with the customer snapshot, order-level debt breakdown, full debt ledger, optional payment notes, and direct payment registration from the same context
   - each pending order inside that receivables modal now renders its purchased items with stored product image, quantity x unit price, and subtotal, reusing the same visual language as the `/sales` sale-detail modal
   - receivables, sales-history, and checkout now share the same floating close affordance in the upper-right overlay corner for modal consistency across the POS
@@ -158,6 +159,7 @@ curl -X POST /api/v1/sales \
 - Reporting UX updates:
   - the `/reporting` workspace now follows the same rounded-card system, spacing rhythm, and strong typographic hierarchy already used in `/products`, `/sales`, and `/receivables`
   - the screen is now split between executive filters and a business snapshot so leadership can compare the selected period with the live operating position from a single surface
+  - reporting date filters now use the same shared shadcn datepicker used in receivables to keep filter affordances consistent across workspaces
   - reporting combines signals from sales, receivables, and products to surface facturación, costo, profit, margen bruto, ticket promedio, saldo de créditos, stock valorizado, deudores, and pedidos abiertos
   - the dashboard now includes shadcn-style charts for daily revenue/collections/outstanding trend, payment-method mix, inventory health, and top-product concentration
   - an executive insight section summarizes credit exposure, inventory risk, and revenue concentration so the workspace acts as a decision-support snapshot instead of only a sales-history list

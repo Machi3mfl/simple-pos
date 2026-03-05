@@ -121,8 +121,6 @@ test("navigates to sourcing, searches by EAN, edits stock and uses bulk actions 
 
   await page.getByTestId("products-workspace-open-bulk-prices-button").click();
   await page.getByTestId("bulk-scope-select").selectOption("selection");
-  await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
-  await page.getByTestId("bulk-value-input").fill("5");
 
   const bulkPriceSelectionItem = page
     .locator('[data-testid^="bulk-selection-item-"]')
@@ -135,13 +133,19 @@ test("navigates to sourcing, searches by EAN, edits stock and uses bulk actions 
   }
 
   await expect(bulkPriceSelectionItem).toBeVisible();
-  await bulkPriceSelectionItem.locator('input[type="checkbox"]').check();
+  await bulkPriceSelectionItem.locator('[data-testid^="bulk-selection-checkbox-"]').click();
+  await page.getByTestId("bulk-wizard-next-from-scope").click();
+
+  await page.getByTestId("bulk-mode-select").selectOption("fixed_amount");
+  await page.getByTestId("bulk-value-input").fill("5");
+  await page.getByTestId("bulk-wizard-next-to-preview").click();
 
   await page.getByTestId("bulk-preview-button").click();
   await expect(page.getByTestId("bulk-feedback")).toContainText(
     "Previsualización lista: 1 filas.",
   );
 
+  await page.getByTestId("bulk-wizard-next-to-confirm").click();
   await page.getByTestId("bulk-apply-button").click();
   await expect(page.getByTestId("products-workspace-feedback")).toContainText(
     "Lote aplicado: 1 productos actualizados.",
@@ -151,6 +155,45 @@ test("navigates to sourcing, searches by EAN, edits stock and uses bulk actions 
     await bulkPricesCloseButton.click();
   }
 
+  await page.getByTestId("products-workspace-open-bulk-profile-button").click();
+  await page.getByTestId("bulk-profile-scope-select").selectOption("selection");
+
+  const bulkProfileSelectionItem = page
+    .locator('[data-testid^="bulk-profile-selection-item-"]')
+    .filter({ hasText: bulkProductName })
+    .first();
+
+  if ((await bulkProfileSelectionItem.count()) === 0) {
+    const loadedBulkProfileSelectionItems = page.locator('[data-testid^="bulk-profile-selection-item-"]');
+    await loadedBulkProfileSelectionItems.last().scrollIntoViewIfNeeded();
+  }
+
+  await expect(bulkProfileSelectionItem).toBeVisible();
+  await bulkProfileSelectionItem
+    .locator('[data-testid^="bulk-profile-selection-checkbox-"]')
+    .click();
+  await page.getByTestId("bulk-profile-wizard-next-from-scope").click();
+
+  const bulkProfileEditItem = page
+    .locator('[data-testid^="bulk-profile-edit-item-"]')
+    .filter({ hasText: bulkProductName })
+    .first();
+  await expect(bulkProfileEditItem).toBeVisible();
+  await bulkProfileEditItem
+    .locator('[data-testid^="bulk-profile-edit-price-input-"]')
+    .fill("72");
+
+  await page.getByTestId("bulk-profile-wizard-next-to-confirm").click();
+  await page.getByTestId("bulk-profile-apply-button").click();
+
+  await expect(page.getByTestId("products-workspace-feedback")).toContainText(
+    "Edición masiva aplicada: 1 fichas actualizadas",
+  );
+  const bulkProfilesCloseButton = page.getByRole("button", { name: "Cerrar" });
+  if (await bulkProfilesCloseButton.isVisible().catch(() => false)) {
+    await bulkProfilesCloseButton.click();
+  }
+
   await page.getByTestId("nav-item-cash-register").click();
   await page.getByLabel("Buscar en el menú").fill(bulkProductName);
   const bulkSalesCard = page
@@ -158,5 +201,5 @@ test("navigates to sourcing, searches by EAN, edits stock and uses bulk actions 
     .filter({ hasText: bulkProductName })
     .first();
   await expect(bulkSalesCard).toBeVisible();
-  await expect(bulkSalesCard).toContainText("$65");
+  await expect(bulkSalesCard).toContainText("$72");
 });

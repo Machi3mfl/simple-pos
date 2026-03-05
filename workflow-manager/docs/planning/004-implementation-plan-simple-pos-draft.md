@@ -159,7 +159,7 @@ The POS UI must follow the user-approved visual reference image provided in this
 **PBIs**: PBI-006, PBI-007, PBI-009, PBI-019  
 **Exit Criteria**
 - [x] Product onboarding complete without real photos.
-- [x] Bulk repricing flow validated for percentage/fixed updates with preview.
+- [x] Bulk repricing flow validated for percentage/fixed amount/set-price updates with preview.
 - [x] Stock + cost basis update verified by integration tests.
 - [x] Onboarding, stock movement, and bulk repricing UIs execute end-to-end against API contracts.
 

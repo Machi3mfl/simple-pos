@@ -63,7 +63,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 - Functional POS mockup UI must follow the approved visual reference selected by the user.
 - Sale registration with v1 payment methods: `cash` and `on_account`.
 - Product catalog management (create/edit/soft-disable) and base stock control with mandatory unit cost on inbound stock.
-- Bulk price update for batches of products (percentage/fixed amount) with preview and audit.
+- Bulk price update for batches of products (percentage/fixed amount/set price) with preview and audit.
 - Sales history and basic analytics (top products, revenue, baseline profit).
 - Customer debt management:
   - mark checkout as `on_account`
@@ -145,7 +145,7 @@ We need to validate usability quickly with a functional UI demo to build custome
 | FR-012 | Maintain customer debt ledger accumulated by order | high | Outstanding balance is computed from unpaid order debt entries | J-005 |
 | FR-013 | Register customer debt payments and reduce balance | high | Payment record updates outstanding debt correctly | J-005 |
 | FR-014 | Capture and sync critical operations in offline mode | high | Sale/debt events persist offline and sync when connection returns | J-006 |
-| FR-015 | Execute bulk price updates for product batches | high | Admin can preview and apply percentage/fixed updates with auditability | J-007 |
+| FR-015 | Execute bulk price updates for product batches | high | Admin can preview and apply percentage/fixed amount/set-price updates with auditability | J-007 |
 
 ### Non-Functional Requirements (NFR)
 | ID | Category | Requirement | Target/Threshold | Validation |

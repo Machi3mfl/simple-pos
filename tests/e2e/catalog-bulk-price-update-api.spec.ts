@@ -162,6 +162,69 @@ test.describe("catalog bulk price update api", () => {
     expect(pricesAfter).toEqual([55, 75]);
   });
 
+  test("applies set price update to selected products", async ({ request }) => {
+    const marker = Date.now();
+    const uniqueCategoryId = `apply-set-price-${marker}`;
+
+    await createProduct(request, {
+      name: `Set Price Item A ${marker}`,
+      categoryId: uniqueCategoryId,
+      price: 110,
+      cost: 45,
+      initialStock: 8,
+    });
+
+    await createProduct(request, {
+      name: `Set Price Item B ${marker}`,
+      categoryId: uniqueCategoryId,
+      price: 135,
+      cost: 54,
+      initialStock: 8,
+    });
+
+    const listBeforeResponse = await request.get(`/api/v1/products?categoryId=${uniqueCategoryId}`);
+    const listBeforeBody = await listBeforeResponse.json();
+    const listBeforeParsed = productListResponseDTOSchema.parse(listBeforeBody);
+    const targetIds = listBeforeParsed.items
+      .filter((item) => item.name.endsWith(String(marker)))
+      .map((item) => item.id);
+
+    const applyResponse = await request.post("/api/v1/products/price-batches", {
+      data: {
+        scope: { type: "selection", productIds: targetIds },
+        mode: "set_price",
+        value: 99,
+        previewOnly: false,
+      },
+      headers: {
+        "x-actor-id": "owner-set-price",
+      },
+    });
+
+    expect(applyResponse.status()).toBe(200);
+    const applyBody = await applyResponse.json();
+    const parsedApply = bulkPriceUpdateResponseDTOSchema.safeParse(applyBody);
+    expect(parsedApply.success).toBe(true);
+
+    if (!parsedApply.success) {
+      throw new Error("Expected valid set-price apply response");
+    }
+
+    expect(parsedApply.data.previewOnly).toBe(false);
+    expect(parsedApply.data.appliedBy).toBe("owner-set-price");
+    expect(parsedApply.data.updatedCount).toBe(2);
+
+    const listAfterResponse = await request.get(`/api/v1/products?categoryId=${uniqueCategoryId}`);
+    expect(listAfterResponse.status()).toBe(200);
+    const listAfterBody = await listAfterResponse.json();
+    const listAfterParsed = productListResponseDTOSchema.parse(listAfterBody);
+    const pricesAfter = listAfterParsed.items
+      .filter((item) => item.name.endsWith(String(marker)))
+      .map((item) => item.price)
+      .sort((a, b) => a - b);
+    expect(pricesAfter).toEqual([99, 99]);
+  });
+
   test("blocks apply with 409 when resulting prices are invalid", async ({ request }) => {
     await createProduct(request, {
       name: "Conflict Item",

@@ -51,7 +51,7 @@ function resolveProductImage(input?: string, categoryPlaceholder?: string): stri
 ```ts
 export interface BulkPriceUpdateDTO {
   scope: { type: "all" | "category" | "selection"; categoryId?: string; productIds?: string[] };
-  mode: "percentage" | "fixed_amount";
+  mode: "percentage" | "fixed_amount" | "set_price";
   value: number;
 }
 ```
@@ -66,7 +66,7 @@ export interface BulkPriceUpdateDTO {
 - [x] Created product is visible and usable in POS.
 - [x] Category entry accepts a human-readable label, persists a canonical code, and prevents duplicate category variants caused by punctuation/casing differences.
 - [x] Manual onboarding and product edit flows accept either direct file upload or an operator-provided image URL, and both end in managed Supabase Storage.
-- [x] Bulk price update supports percentage/fixed amount by scope with preview and validation.
+- [x] Bulk price update supports percentage/fixed amount/set price by scope with preview and validation.
 - [x] Bulk price update writes audit summary (products affected, old/new prices, author, timestamp).
 
 ## Current Output
@@ -82,6 +82,7 @@ export interface BulkPriceUpdateDTO {
   - mounted from `src/modules/sales/presentation/components/PosLayout.tsx` (`Catalog`)
   - cross-panel refresh token in `PosLayout` keeps onboarding and bulk list synchronized
   - empty-scope guard in bulk UI blocks invalid requests and shows guided warning state
+  - `2026-03-05`: bulk price modal UX migrated to a tabbed shadcn wizard with explicit steps (`alcance` → `ajuste` → `previsualización` → `confirmación`), back/next navigation, active-step primary highlighting, auto-refresh preview on preview step, and improved product cards (shadcn checkbox + image thumbnails + stronger product title hierarchy). Category scope now lists only categories that currently have assigned products. Repricing mode now also supports `set_price` (precio final manual), with dynamic input label by selected mode. Step `2. Ajuste` now keeps a live list of products in scope so operators can verify what will be modified without returning to step 1.
 - Category entry and display behavior:
   - product onboarding and edit flows now use a shared `CategoryInputField`
   - operator-facing labels stay human-readable (example: `Desayuno y merienda`)

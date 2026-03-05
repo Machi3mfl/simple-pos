@@ -71,7 +71,7 @@
 | PBI-016 | EPIC-005 | story | As support admin, I can register debt payments that reduce customer balance. | Debt payment creates ledger movement and updates outstanding total | high | M | done | PBI-015 | FR-013, NFR-006 |
 | PBI-017 | EPIC-002 | enabler | Implement offline queue and sync orchestration for critical events (sales/debt). | Offline events are persisted as `pending_sync` and synchronized idempotently after reconnect | high | M | done | PBI-008, PBI-014, PBI-016 | FR-014, NFR-007 |
 | PBI-018 | EPIC-002 | story | Validate offline outage/recovery flows with Playwright + integration tests. | E2E covers offline checkout/debt capture and successful sync reconciliation | high | M | done | PBI-017 | FR-014, NFR-007 |
-| PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount by scope, shows preview, validates invalid results, and writes audit summary | high | M | done | PBI-008, PBI-006 | FR-015 |
+| PBI-019 | EPIC-003 | story | As owner/admin, I want to update many prices in one action so I can react fast to frequent price changes. | Bulk update supports percentage/fixed amount/set price by scope, shows preview, validates invalid results, and writes audit summary | high | M | done | PBI-008, PBI-006 | FR-015 |
 
 ---
 
