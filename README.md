@@ -62,6 +62,20 @@ Full injector docs:
 
 - [`workflow-manager/docs/injector/README.md`](./workflow-manager/docs/injector/README.md)
 
+### Migration CLI (Remote)
+
+Remote migrations support 2 drivers:
+
+1. `psql` sync script (default): best for Railway/self-hosted Postgres.
+2. Supabase CLI push (optional): useful when direct `supabase db push --db-url` works for your target.
+
+`SUPABASE_DB_URL` is used by migration scripts only (not by app runtime).
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_DB_URL` | Postgres connection string used by `supabase db push --db-url ...` to apply migrations in remote environments. |
+| `SUPABASE_DB_SSLMODE` | Optional sslmode override (`require`, `disable`, etc.). If URL already contains `sslmode`, this value replaces it. |
+
 ## Quick Production Checklist
 
 1. Configure runtime keys (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
@@ -70,3 +84,32 @@ Full injector docs:
 4. Set `APP_ENV=production` (or equivalent runtime env marker).
 5. Run migrations.
 6. Bootstrap admin using `onboarding-admin` if needed.
+
+## Remote Migration Script
+
+Default (psql sync):
+
+```bash
+npm run supabase:migrate:remote:dry-run
+npm run supabase:migrate:remote
+```
+
+Optional Supabase CLI mode:
+
+```bash
+npm run supabase:migrate:remote:cli:dry-run
+npm run supabase:migrate:remote:cli
+```
+
+By default they read env from `.env.local`. For production/staging, point to a private file:
+
+```bash
+ENV_FILE=.env.production.local npm run supabase:migrate:remote:dry-run
+ENV_FILE=.env.production.local npm run supabase:migrate:remote
+```
+
+Security notes:
+
+- Keep `SUPABASE_DB_URL` only in private env files or platform secrets.
+- Never commit real connection strings.
+- If your provider proxy refuses TLS, set `SUPABASE_DB_SSLMODE=disable` (or include `sslmode=disable` directly in `SUPABASE_DB_URL`).

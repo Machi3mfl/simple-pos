@@ -39,8 +39,14 @@ set
   end,
   is_system = true,
   is_locked = true,
-  created_by_user_id = coalesce(created_by_user_id, 'user_admin_soporte'),
-  updated_by_user_id = coalesce(updated_by_user_id, 'user_admin_soporte'),
+  created_by_user_id = coalesce(
+    created_by_user_id,
+    (select id from public.app_users where id = 'user_admin_soporte' limit 1)
+  ),
+  updated_by_user_id = coalesce(
+    updated_by_user_id,
+    (select id from public.app_users where id = 'user_admin_soporte' limit 1)
+  ),
   updated_at = now()
 where code in (
   'cashier',
