@@ -2,10 +2,6 @@
 
 import {
   LockKeyhole,
-  ReceiptText,
-  ShieldCheck,
-  ShoppingCart,
-  type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -15,32 +11,6 @@ import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
 import { resolvePreferredWorkspaceId } from "@/modules/access-control/presentation/workspaceAccess";
 import { workspacePathById } from "@/modules/sales/presentation/posWorkspace";
-
-interface FeaturePillProps {
-  readonly icon: LucideIcon;
-  readonly title: string;
-  readonly description: string;
-}
-
-function FeaturePill({
-  icon: Icon,
-  title,
-  description,
-}: FeaturePillProps): JSX.Element {
-  return (
-    <div className="rounded-[1.6rem] border border-white/10 bg-white/5 px-5 py-4">
-      <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-2xl bg-white/10 text-white">
-          <Icon className="size-5" aria-hidden />
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-white">{title}</p>
-          <p className="mt-1 text-sm text-slate-300">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function LoginPage(): JSX.Element {
   const { messages } = useI18n();
@@ -134,35 +104,14 @@ export function LoginPage(): JSX.Element {
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
         <section className="relative overflow-hidden bg-gradient-to-br from-[#050812] via-[#091121] to-[#102443] px-6 py-10 text-white lg:px-12 lg:py-14">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(63,141,255,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(9,115,85,0.18),transparent_30%)]" />
-          <div className="relative mx-auto flex h-full max-w-[40rem] flex-col justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">
-                simple-pos
-              </p>
-              <h1 className="mt-6 max-w-[28rem] text-[3.6rem] leading-[0.95] font-semibold tracking-tight text-white lg:text-[4.7rem]">
-                {messages.accessControl.loginTitle}
+          <div className="relative mx-auto flex h-full max-w-[40rem] items-center justify-center">
+            <div className="w-full max-w-[28rem] rounded-[2.2rem] border border-white/15 bg-white/5 px-8 py-10 text-center shadow-[0_28px_70px_rgba(2,6,23,0.45)] backdrop-blur-sm">
+              <span className="mx-auto inline-flex size-20 items-center justify-center rounded-[1.8rem] bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-[2.2rem] font-bold text-white shadow-[0_16px_34px_rgba(23,104,232,0.42)]">
+                S
+              </span>
+              <h1 className="mt-6 text-[2.8rem] leading-none font-semibold tracking-tight text-white lg:text-[3.4rem]">
+                Simple POS
               </h1>
-              <p className="mt-5 max-w-[34rem] text-lg leading-8 text-slate-300">
-                {messages.accessControl.loginDescription}
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-4">
-              <FeaturePill
-                icon={ShoppingCart}
-                title="Caja y ventas atribuidas"
-                description="Cada cobro, apertura y cierre queda ligado al operador que trabajó el turno."
-              />
-              <FeaturePill
-                icon={ShieldCheck}
-                title="Permisos visibles"
-                description="La UI se adapta al rol operativo y oculta acciones o datos que no corresponden."
-              />
-              <FeaturePill
-                icon={ReceiptText}
-                title="Snapshot confiable"
-                description="Ventas, deudas y reporting se construyen sobre identidad real para sostener decisiones de negocio."
-              />
             </div>
           </div>
         </section>
