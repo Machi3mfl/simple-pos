@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+
+import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useIncrementalReveal } from "@/shared/presentation/hooks/useIncrementalReveal";
 import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 import {
@@ -69,6 +72,24 @@ export function BulkPriceUpdatePanel({
     onLoadMore: loadMoreSelectionProducts,
     triggerKey: `${selectionResetKey}:${visibleSelectionProducts.length}`,
   });
+
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+
+    const payload = {
+      description: feedback.message,
+      testId: "bulk-feedback",
+    };
+
+    if (feedback.type === "error") {
+      showErrorToast(payload);
+      return;
+    }
+
+    showSuccessToast(payload);
+  }, [feedback]);
 
   const containerClassName =
     variant === "panel"
@@ -263,20 +284,6 @@ export function BulkPriceUpdatePanel({
             ) : null}
           </ul>
         </div>
-      ) : null}
-
-      {feedback ? (
-        <p
-          data-testid="bulk-feedback"
-          className={[
-            "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
-            feedback.type === "error"
-              ? "bg-rose-50 text-rose-700"
-              : "bg-emerald-50 text-emerald-700",
-          ].join(" ")}
-        >
-          {feedback.message}
-        </p>
       ) : null}
 
       {lastResult ? (

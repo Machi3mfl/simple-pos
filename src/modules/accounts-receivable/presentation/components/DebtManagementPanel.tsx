@@ -751,8 +751,6 @@ export function DebtManagementPanel({
     readonly CashRegisterListItemDTO[]
   >([]);
   const [selectedPaymentRegisterId, setSelectedPaymentRegisterId] = useState<string>("");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -768,12 +766,10 @@ export function DebtManagementPanel({
       readonly message: string;
       readonly title?: string;
     }): void => {
-      setIsError(tone === "error");
-      setFeedback(message);
-
       const payload = {
         title,
         description: message,
+        testId: "debt-feedback",
       };
 
       if (tone === "error") {
@@ -827,12 +823,9 @@ export function DebtManagementPanel({
   const loadCustomerDetail = useCallback(
     async (
       customerId: string,
-      options: { readonly preserveFeedback?: boolean } = {},
+      _options: { readonly preserveFeedback?: boolean } = {},
     ): Promise<CustomerDebtSummary | null> => {
       setIsDetailLoading(true);
-      if (!options.preserveFeedback) {
-        setFeedback(null);
-      }
 
       try {
         const { response, data } = await fetchJsonNoStore<CustomerDebtSummary | ApiErrorPayload>(
@@ -921,7 +914,7 @@ export function DebtManagementPanel({
 
       await loadReceivablesSnapshot();
       if (activeCustomer) {
-        await loadCustomerDetail(activeCustomer.customerId, { preserveFeedback: true });
+        await loadCustomerDetail(activeCustomer.customerId);
       }
       return;
     }
@@ -1429,16 +1422,6 @@ export function DebtManagementPanel({
           ) : null}
         </ul>
       </section>
-
-      {feedback ? (
-        <p
-          data-testid="debt-feedback"
-          aria-live={isError ? "assertive" : "polite"}
-          className="sr-only"
-        >
-          {feedback}
-        </p>
-      ) : null}
 
       {activeCustomer ? (
         <DebtDetailDialog

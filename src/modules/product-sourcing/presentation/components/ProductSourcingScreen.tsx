@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import {
@@ -405,6 +406,101 @@ export function ProductSourcingScreen({
       ]),
     [categoryMappings, importHistory, knownCategoryCodes],
   );
+  const publishSourcingFeedback = useCallback(
+    ({
+      feedbackState,
+      testId,
+      fallbackTone = "info",
+    }: {
+      readonly feedbackState: FeedbackState | string;
+      readonly testId: string;
+      readonly fallbackTone?: "success" | "error" | "info";
+    }): void => {
+      const description =
+        typeof feedbackState === "string" ? feedbackState : feedbackState.message;
+      const tone =
+        typeof feedbackState === "string" ? fallbackTone : feedbackState.type;
+      const payload = {
+        description,
+        testId,
+      };
+
+      if (tone === "error") {
+        showErrorToast(payload);
+        return;
+      }
+
+      if (tone === "success") {
+        showSuccessToast(payload);
+        return;
+      }
+
+      showInfoToast(payload);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: feedback,
+      testId: "product-sourcing-feedback",
+      fallbackTone: "info",
+    });
+  }, [feedback, publishSourcingFeedback]);
+
+  useEffect(() => {
+    if (!sessionFeedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: sessionFeedback,
+      testId: "product-sourcing-session-feedback",
+      fallbackTone: "info",
+    });
+  }, [publishSourcingFeedback, sessionFeedback]);
+
+  useEffect(() => {
+    if (!importFeedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: importFeedback,
+      testId: "product-sourcing-import-feedback",
+    });
+  }, [importFeedback, publishSourcingFeedback]);
+
+  useEffect(() => {
+    if (!failedQueueFeedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: failedQueueFeedback,
+      testId: "product-sourcing-failed-queue-feedback",
+    });
+  }, [failedQueueFeedback, publishSourcingFeedback]);
+
+  useEffect(() => {
+    if (!mappingFeedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: mappingFeedback,
+      testId: "product-sourcing-mapping-feedback",
+    });
+  }, [mappingFeedback, publishSourcingFeedback]);
+
+  useEffect(() => {
+    if (!importHistoryFeedback) {
+      return;
+    }
+    publishSourcingFeedback({
+      feedbackState: importHistoryFeedback,
+      testId: "product-sourcing-import-history-feedback",
+    });
+  }, [importHistoryFeedback, publishSourcingFeedback]);
 
   useEffect(() => {
     resultsRef.current = results;
@@ -1428,33 +1524,17 @@ export function ProductSourcingScreen({
                 <Search size={18} />
                 Buscar
               </button>
-            </form>
-
-            {feedback ? (
-              <div
-                data-testid="product-sourcing-feedback"
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-              >
-                {feedback}
-              </div>
-            ) : null}
-
-            {sessionFeedback ? (
-              <div
-                data-testid="product-sourcing-session-feedback"
-                className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <span>{sessionFeedback}</span>
+              {sessionFeedback ? (
                 <button
                   type="button"
                   data-testid="product-sourcing-discard-session-button"
                   onClick={handleDiscardSession}
-                  className="inline-flex min-h-[2.65rem] items-center justify-center rounded-xl border border-blue-200 bg-white px-4 text-sm font-semibold text-blue-900"
+                  className="inline-flex min-h-[4rem] items-center justify-center rounded-[1.75rem] border border-blue-200 bg-white px-6 text-base font-semibold text-blue-900"
                 >
                   Descartar sesión
                 </button>
-              </div>
-            ) : null}
+              ) : null}
+            </form>
 
             <section
               data-testid="product-sourcing-selection-panel"
@@ -1505,20 +1585,6 @@ export function ProductSourcingScreen({
                   {isImporting ? <Loader2 size={16} className="animate-spin" /> : "Importar seleccion"}
                 </button>
               </div>
-
-              {importFeedback ? (
-                <div
-                  data-testid="product-sourcing-import-feedback"
-                  className={[
-                    "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
-                    importFeedback.type === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-rose-200 bg-rose-50 text-rose-700",
-                  ].join(" ")}
-                >
-                  {importFeedback.message}
-                </div>
-              ) : null}
 
               {hasPendingInvalidItems ? (
                 <div
@@ -1960,20 +2026,6 @@ export function ProductSourcingScreen({
             </div>
           </div>
 
-          {failedQueueFeedback ? (
-            <div
-              data-testid="product-sourcing-failed-queue-feedback"
-              className={[
-                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
-                failedQueueFeedback.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-rose-200 bg-rose-50 text-rose-700",
-              ].join(" ")}
-            >
-              {failedQueueFeedback.message}
-            </div>
-          ) : null}
-
           <div className="mt-4 flex flex-wrap gap-2">
             {FAILED_QUEUE_FILTERS.map((filterOption) => (
               <button
@@ -2141,20 +2193,6 @@ export function ProductSourcingScreen({
             ) : null}
           </div>
 
-          {mappingFeedback ? (
-            <div
-              data-testid="product-sourcing-mapping-feedback"
-              className={[
-                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
-                mappingFeedback.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-rose-200 bg-rose-50 text-rose-700",
-              ].join(" ")}
-            >
-              {mappingFeedback.message}
-            </div>
-          ) : null}
-
           {categoryMappings.length === 0 && !isLoadingMappings ? (
             <div className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
               Todavia no hay reglas aprendidas. Importa un producto y la categoria confirmada quedara disponible para futuras busquedas.
@@ -2270,20 +2308,6 @@ export function ProductSourcingScreen({
               </div>
             ) : null}
           </div>
-
-          {importHistoryFeedback ? (
-            <div
-              data-testid="product-sourcing-import-history-feedback"
-              className={[
-                "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
-                importHistoryFeedback.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-rose-200 bg-rose-50 text-rose-700",
-              ].join(" ")}
-            >
-              {importHistoryFeedback.message}
-            </div>
-          ) : null}
 
           {importHistory.length === 0 && !isLoadingImportHistory ? (
             <div className="mt-4 rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">

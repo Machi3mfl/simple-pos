@@ -27,6 +27,7 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
@@ -148,11 +149,6 @@ interface BulkStockMovementsResponse {
     readonly productId: string;
     readonly reason: string;
   }[];
-}
-
-interface FeedbackState {
-  readonly type: "success" | "error";
-  readonly message: string;
 }
 
 interface EditProductFormState {
@@ -313,7 +309,6 @@ export function ProductsInventoryPanel({
   const [workspace, setWorkspace] = useState<WorkspaceProductsResponse | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState<DialogId>(null);
-  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
   const [isLoadingMoreWorkspace, setIsLoadingMoreWorkspace] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -326,6 +321,31 @@ export function ProductsInventoryPanel({
   const [bulkStockInput, setBulkStockInput] = useState<string>("");
   const [refreshToken, setRefreshToken] = useState<number>(0);
   const workspaceRequestTokenRef = useRef<number>(0);
+  const publishWorkspaceFeedback = useCallback(
+    ({
+      type,
+      message,
+      title,
+    }: {
+      readonly type: "success" | "error";
+      readonly message: string;
+      readonly title?: string;
+    }): void => {
+      const payload = {
+        title,
+        description: message,
+        testId: "products-workspace-feedback",
+      };
+
+      if (type === "error") {
+        showErrorToast(payload);
+        return;
+      }
+
+      showSuccessToast(payload);
+    },
+    [],
+  );
   const {
     categories: onboardingCategories,
     feedback: onboardingFeedback,
@@ -346,13 +366,23 @@ export function ProductsInventoryPanel({
         searchTerm: searchValue,
         stockFilter: "all",
       });
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.productCreated(createdProduct.name),
       });
     },
     refreshToken,
   });
+  useEffect(() => {
+    if (!onboardingFeedback) {
+      return;
+    }
+
+    publishWorkspaceFeedback({
+      type: onboardingFeedback.type,
+      message: onboardingFeedback.message,
+    });
+  }, [onboardingFeedback, publishWorkspaceFeedback]);
 
   const selectedProduct =
     workspace?.items.find((item) => item.id === selectedProductId) ?? workspace?.items[0] ?? null;
@@ -399,7 +429,7 @@ export function ProductsInventoryPanel({
         if (workspaceRequestTokenRef.current !== requestToken) {
           return;
         }
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: messages.productsWorkspace.loadError,
         });
@@ -424,7 +454,7 @@ export function ProductsInventoryPanel({
       if (workspaceRequestTokenRef.current !== requestToken) {
         return;
       }
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.loadError,
       });
@@ -439,6 +469,7 @@ export function ProductsInventoryPanel({
     categoryFilter,
     deferredSearchTerm,
     messages.productsWorkspace.loadError,
+    publishWorkspaceFeedback,
     sortMode,
     stockFilter,
   ]);
@@ -498,7 +529,7 @@ export function ProductsInventoryPanel({
         );
 
         if (!response.ok || !data) {
-          setFeedback({
+          publishWorkspaceFeedback({
             type: "error",
             message: messages.productsWorkspace.movementsLoadError,
           });
@@ -507,7 +538,7 @@ export function ProductsInventoryPanel({
 
         setMovementHistory(data.items.slice(0, 6));
       } catch {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: messages.productsWorkspace.movementsLoadError,
         });
@@ -520,6 +551,7 @@ export function ProductsInventoryPanel({
   }, [
     messages.productsWorkspace.movementsLoadError,
     openDialog,
+    publishWorkspaceFeedback,
     refreshToken,
     selectedProduct,
   ]);
@@ -558,14 +590,14 @@ export function ProductsInventoryPanel({
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
       if (!response.ok) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: resolveApiMessage(payload, messages.productsWorkspace.errors.updateProduct),
         });
         return;
       }
 
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.productUpdated(
           (payload as ProductResponse).item.name,
@@ -574,7 +606,7 @@ export function ProductsInventoryPanel({
       setOpenDialog(null);
       await refreshWorkspace();
     } catch {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.updateProduct,
       });
@@ -607,21 +639,21 @@ export function ProductsInventoryPanel({
 
       const payload = (await response.json()) as ProductResponse | ApiErrorPayload;
       if (!response.ok) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: resolveApiMessage(payload, messages.productsWorkspace.errors.archiveProduct),
         });
         return;
       }
 
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.productArchived(selectedProduct.name),
       });
       setOpenDialog(null);
       await refreshWorkspace();
     } catch {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.archiveProduct,
       });
@@ -640,7 +672,7 @@ export function ProductsInventoryPanel({
     const parsedUnitCost = Number(stockForm.unitCost);
 
     if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.inventory.invalidQuantity,
       });
@@ -651,7 +683,7 @@ export function ProductsInventoryPanel({
       stockForm.movementType === "inbound" &&
       (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
     ) {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.inventory.invalidInboundCost,
       });
@@ -679,14 +711,14 @@ export function ProductsInventoryPanel({
 
       const payload = (await response.json()) as StockMovementItem | ApiErrorPayload;
       if (!response.ok) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: resolveApiMessage(payload, messages.productsWorkspace.errors.stockRegister),
         });
         return;
       }
 
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.stockRegistered(selectedProduct.name),
       });
@@ -694,7 +726,7 @@ export function ProductsInventoryPanel({
       setOpenDialog("detail");
       await refreshWorkspace();
     } catch {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.stockRegister,
       });
@@ -707,7 +739,7 @@ export function ProductsInventoryPanel({
     event.preventDefault();
     const rows = parsePastedRows(bulkProductsInput);
     if (rows.length === 0) {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.bulkProductsEmpty,
       });
@@ -740,7 +772,7 @@ export function ProductsInventoryPanel({
       });
       const payload = (await response.json()) as BulkCreateProductsResponse | ApiErrorPayload;
       if (!response.ok) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: resolveApiMessage(payload, messages.productsWorkspace.errors.bulkProducts),
         });
@@ -748,7 +780,7 @@ export function ProductsInventoryPanel({
       }
 
       const result = payload as BulkCreateProductsResponse;
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.bulkProductsImported(
           result.importedCount,
@@ -759,7 +791,7 @@ export function ProductsInventoryPanel({
       setOpenDialog(null);
       await refreshWorkspace();
     } catch {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.bulkProducts,
       });
@@ -772,7 +804,7 @@ export function ProductsInventoryPanel({
     event.preventDefault();
     const rows = parsePastedRows(bulkStockInput);
     if (rows.length === 0) {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.bulkStockEmpty,
       });
@@ -785,7 +817,7 @@ export function ProductsInventoryPanel({
         await fetchJsonNoStore<ProductListResponse>("/api/v1/products");
 
       if (!lookupResponse.ok || !lookupData) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: messages.productsWorkspace.loadError,
         });
@@ -816,7 +848,7 @@ export function ProductsInventoryPanel({
       });
       const payload = (await response.json()) as BulkStockMovementsResponse | ApiErrorPayload;
       if (!response.ok) {
-        setFeedback({
+        publishWorkspaceFeedback({
           type: "error",
           message: resolveApiMessage(payload, messages.productsWorkspace.errors.bulkStock),
         });
@@ -824,7 +856,7 @@ export function ProductsInventoryPanel({
       }
 
       const result = payload as BulkStockMovementsResponse;
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "success",
         message: messages.productsWorkspace.feedback.bulkStockImported(
           result.appliedCount,
@@ -835,7 +867,7 @@ export function ProductsInventoryPanel({
       setOpenDialog(null);
       await refreshWorkspace();
     } catch {
-      setFeedback({
+      publishWorkspaceFeedback({
         type: "error",
         message: messages.productsWorkspace.errors.bulkStock,
       });
@@ -886,20 +918,6 @@ export function ProductsInventoryPanel({
       className="min-h-0 min-w-0 overflow-y-auto bg-[#f5f6f8] p-3 lg:col-span-2 lg:h-full lg:p-4"
     >
       <div className="flex w-full flex-col gap-3">
-        {feedback ? (
-          <div
-            data-testid="products-workspace-feedback"
-            className={[
-              "rounded-2xl border px-4 py-3 text-sm font-semibold",
-              feedback.type === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-rose-200 bg-rose-50 text-rose-700",
-            ].join(" ")}
-          >
-            {feedback.message}
-          </div>
-        ) : null}
-
         <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
           <div className="px-5 py-4 lg:px-6 lg:py-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1582,18 +1600,6 @@ export function ProductsInventoryPanel({
                 setOnboardingForm((current) => ({ ...current, imageFile: file }))
               }
             />
-            {onboardingFeedback ? (
-              <p
-                className={[
-                  "md:col-span-2 rounded-2xl px-4 py-3 text-sm font-medium",
-                  onboardingFeedback.type === "error"
-                    ? "bg-rose-50 text-rose-700"
-                    : "bg-emerald-50 text-emerald-700",
-                ].join(" ")}
-              >
-                {onboardingFeedback.message}
-              </p>
-            ) : null}
             <div className="md:col-span-2 flex justify-end gap-3">
               <button
                 type="button"
@@ -1628,7 +1634,7 @@ export function ProductsInventoryPanel({
             onPricesUpdated={async (result) => {
               setOpenDialog(null);
               await refreshWorkspace();
-              setFeedback({
+              publishWorkspaceFeedback({
                 type: "success",
                 message: messages.catalog.bulkPriceUpdate.applied(result.updatedCount),
               });

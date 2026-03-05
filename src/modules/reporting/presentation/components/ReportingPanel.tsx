@@ -34,6 +34,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { showErrorToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
@@ -536,8 +537,6 @@ export function ReportingPanel({
   >([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isError, setIsError] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
 
   const queryString = useMemo(() => {
     const searchParams = new URLSearchParams();
@@ -559,7 +558,6 @@ export function ReportingPanel({
 
   const loadReports = useCallback(async (): Promise<void> => {
     setIsLoading(true);
-    setFeedback(null);
 
     try {
       const [
@@ -639,12 +637,13 @@ export function ReportingPanel({
           ? ((receivablesResult.data as ReceivablesSnapshotResponse | null)?.items ?? [])
           : [],
       );
-      setIsError(false);
     } catch (error: unknown) {
-      setIsError(true);
-      setFeedback(
-        error instanceof Error ? error.message : messages.reporting.loadReportingError,
-      );
+      showErrorToast({
+        title: "No se pudo actualizar reportes",
+        description:
+          error instanceof Error ? error.message : messages.reporting.loadReportingError,
+        testId: "reporting-feedback",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -669,8 +668,11 @@ export function ReportingPanel({
     event.preventDefault();
 
     if (periodStart && periodEnd && periodStart > periodEnd) {
-      setIsError(true);
-      setFeedback(messages.reporting.invalidPeriodRange);
+      showErrorToast({
+        title: "Período inválido",
+        description: messages.reporting.invalidPeriodRange,
+        testId: "reporting-feedback",
+      });
       return;
     }
 
@@ -859,18 +861,6 @@ export function ReportingPanel({
           </div>
         </form>
       </header>
-
-      {feedback ? (
-        <p
-          data-testid="reporting-feedback"
-          className={cn(
-            "mt-4 rounded-2xl px-4 py-3 text-sm font-medium",
-            isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
-          )}
-        >
-          {feedback}
-        </p>
-      ) : null}
 
       {!canViewMargin || !canViewCreditExposure || !canViewInventoryValue ? (
         <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">

@@ -140,8 +140,6 @@ export function CheckoutPanel({
   const [onAccountInitialPaymentAmount, setOnAccountInitialPaymentAmount] =
     useState<string>("");
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [recentCustomers, setRecentCustomers] = useState<readonly CustomerLookupItem[]>([]);
@@ -294,12 +292,10 @@ export function CheckoutPanel({
       readonly message: string;
       readonly title?: string;
     }): void => {
-      setIsError(tone === "error");
-      setFeedback(message);
-
       const toastPayload = {
         title,
         description: message,
+        testId: "checkout-feedback",
       };
 
       if (tone === "error") {
@@ -548,8 +544,6 @@ export function CheckoutPanel({
   ]);
 
   async function submitCheckout(): Promise<void> {
-    setFeedback(null);
-
     if (items.length === 0) {
       publishFeedback({
         tone: "error",
@@ -866,16 +860,6 @@ export function CheckoutPanel({
             </button>
           </div>
         </div>
-
-        {feedback ? (
-          <p
-            data-testid="checkout-feedback"
-            aria-live={isError ? "assertive" : "polite"}
-            className="sr-only"
-          >
-            {feedback}
-          </p>
-        ) : null}
 
         {pendingSyncCount > 0 ? (
           <button

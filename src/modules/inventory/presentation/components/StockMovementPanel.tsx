@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
@@ -69,10 +70,27 @@ export function StockMovementPanel({
   const [quantity, setQuantity] = useState<string>("1");
   const [unitCost, setUnitCost] = useState<string>("1");
   const [reason, setReason] = useState<string>("");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [isError, setIsError] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const publishError = useCallback(
+    (description: string): void => {
+      showErrorToast({
+        description,
+        testId: "inventory-feedback",
+      });
+    },
+    [],
+  );
+  const publishSuccess = useCallback(
+    (description: string): void => {
+      showSuccessToast({
+        description,
+        testId: "inventory-feedback",
+      });
+    },
+    [],
+  );
 
   const hasProducts = products.length > 0;
   const productNameById = useMemo(
@@ -120,12 +138,11 @@ export function StockMovementPanel({
     try {
       await Promise.all([loadProducts(), loadMovementHistory()]);
     } catch {
-      setIsError(true);
-      setFeedback(messages.inventory.loadError);
+      publishError(messages.inventory.loadError);
     } finally {
       setIsLoading(false);
     }
-  }, [loadMovementHistory, loadProducts, messages.inventory.loadError]);
+  }, [loadMovementHistory, loadProducts, messages.inventory.loadError, publishError]);
 
   useEffect(() => {
     void loadData();
@@ -133,20 +150,17 @@ export function StockMovementPanel({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setFeedback(null);
 
     const parsedQuantity = Number(quantity);
     const parsedUnitCost = Number(unitCost);
 
     if (!productId) {
-      setIsError(true);
-      setFeedback(messages.inventory.missingProduct);
+      publishError(messages.inventory.missingProduct);
       return;
     }
 
     if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      setIsError(true);
-      setFeedback(messages.inventory.invalidQuantity);
+      publishError(messages.inventory.invalidQuantity);
       return;
     }
 
@@ -154,8 +168,7 @@ export function StockMovementPanel({
       movementType === "inbound" &&
       (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
     ) {
-      setIsError(true);
-      setFeedback(messages.inventory.invalidInboundCost);
+      publishError(messages.inventory.invalidInboundCost);
       return;
     }
 
@@ -178,13 +191,11 @@ export function StockMovementPanel({
 
       const payload = (await response.json()) as StockMovementItem | ApiErrorPayload;
       if (!response.ok) {
-        setIsError(true);
-        setFeedback(resolveApiMessage(payload, messages.inventory.registerError));
+        publishError(resolveApiMessage(payload, messages.inventory.registerError));
         return;
       }
 
-      setIsError(false);
-      setFeedback(
+      publishSuccess(
         messages.inventory.registerSuccess(
           labelForMovementType((payload as StockMovementItem).movementType).toLowerCase(),
         ),
@@ -193,8 +204,7 @@ export function StockMovementPanel({
       setReason("");
       await loadMovementHistory();
     } catch {
-      setIsError(true);
-      setFeedback(messages.inventory.registerError);
+      publishError(messages.inventory.registerError);
     } finally {
       setIsSubmitting(false);
     }
@@ -308,18 +318,6 @@ export function StockMovementPanel({
       {!isLoading && !hasProducts ? (
         <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
           {messages.inventory.noProductsWarning}
-        </p>
-      ) : null}
-
-      {feedback ? (
-        <p
-          data-testid="inventory-feedback"
-          className={[
-            "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
-            isError ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700",
-          ].join(" ")}
-        >
-          {feedback}
         </p>
       ) : null}
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+
+import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import {
@@ -31,6 +34,24 @@ export function ProductOnboardingPanel({
     onProductCreated,
     refreshToken,
   });
+
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+
+    const payload = {
+      description: feedback.message,
+      testId: "onboarding-feedback",
+    };
+
+    if (feedback.type === "error") {
+      showErrorToast(payload);
+      return;
+    }
+
+    showSuccessToast(payload);
+  }, [feedback]);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_24px_rgba(15,23,42,0.08)] lg:p-5">
@@ -161,20 +182,6 @@ export function ProductOnboardingPanel({
           </button>
         </div>
       </form>
-
-      {feedback ? (
-        <p
-          data-testid="onboarding-feedback"
-          className={[
-            "mt-3 rounded-xl px-3 py-2 text-sm font-medium",
-            feedback.type === "error"
-              ? "bg-rose-50 text-rose-700"
-              : "bg-emerald-50 text-emerald-700",
-          ].join(" ")}
-        >
-          {feedback.message}
-        </p>
-      ) : null}
 
       <div className="mt-4 rounded-xl border border-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
