@@ -375,6 +375,7 @@ const spanishMessages = {
         inbound: "Suma efectivo",
         outbound: "Resta efectivo",
       },
+      viewSessionAction: "Ver sesión de caja",
       openAction: "Abrir caja",
       closeAction: "Cerrar caja",
       approveCloseoutAction: "Aprobar cierre",

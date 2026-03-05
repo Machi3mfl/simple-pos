@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronsUpDown } from "lucide-react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 
@@ -13,12 +12,10 @@ interface LeftNavRailProps {
   readonly items: readonly PosNavItem[];
   readonly activeItemId: string;
   readonly actorDisplayName: string;
-  readonly actorRoleLabel: string;
-  readonly actorRegisterSummary?: string;
-  readonly actorSessionLabel?: string;
   readonly isLoadingActor?: boolean;
+  readonly isAuthenticated: boolean;
   readonly canOpenOperatorSelector?: boolean;
-  readonly onOpenOperatorSelector: () => void;
+  readonly onOpenOperatorSelector?: () => void;
   readonly authActionLabel?: string;
   readonly onAuthAction?: () => void;
   readonly onItemSelect: (itemId: string) => void;
@@ -28,68 +25,46 @@ export function LeftNavRail({
   items,
   activeItemId,
   actorDisplayName,
-  actorRoleLabel,
-  actorRegisterSummary,
-  actorSessionLabel,
   isLoadingActor = false,
-  canOpenOperatorSelector = true,
+  isAuthenticated,
+  canOpenOperatorSelector = false,
   onOpenOperatorSelector,
   authActionLabel,
   onAuthAction,
   onItemSelect,
 }: LeftNavRailProps): JSX.Element {
   const { messages } = useI18n();
+  const authActionDisplayLabel =
+    isAuthenticated && !isLoadingActor && authActionLabel
+      ? `${authActionLabel} · ${actorDisplayName}`
+      : authActionLabel;
 
   return (
-    <aside className="overflow-y-auto bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-4 text-slate-100 lg:h-full lg:min-h-0 lg:p-6">
-      <button
-        type="button"
-        onClick={onOpenOperatorSelector}
-        data-testid="open-operator-selector-button"
-        disabled={!canOpenOperatorSelector}
-        className="mt-4 flex w-full items-center gap-3 rounded-[1.3rem] px-1 py-1 text-left transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-80"
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-3 text-slate-100 lg:p-4">
+      <div
+        data-testid="app-logo-slot"
+        className="mt-1 flex flex-col items-center rounded-[1.2rem] border border-[#1f2735] bg-[#0b1220] px-2 py-2"
       >
-        <div className="flex size-12 items-center justify-center rounded-full bg-[#222b3a] text-sm font-semibold text-slate-200">
-          👩🏼
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[2rem] leading-none font-semibold tracking-tight">
-            {isLoadingActor ? messages.accessControl.loadingActor : actorDisplayName}
-          </p>
-          <p className="mt-1 text-[0.85rem] text-slate-400">
-            {isLoadingActor ? messages.common.states.loading : actorRoleLabel}
-          </p>
-          {actorRegisterSummary ? (
-            <p className="mt-1 truncate text-[0.78rem] text-slate-500">
-              {actorRegisterSummary}
-            </p>
-          ) : null}
-          {actorSessionLabel ? (
-            <p
-              data-testid="actor-session-source-label"
-              className="mt-2 inline-flex w-fit items-center rounded-full border border-[#2b3342] bg-[#0f1725] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-300"
-            >
-              {actorSessionLabel}
-            </p>
-          ) : null}
-        </div>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#2b3342] bg-[#0f1725] text-slate-300">
-          <ChevronsUpDown size={16} />
+        <span className="inline-flex size-8 items-center justify-center rounded-xl bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-base font-bold text-white shadow-[0_8px_16px_rgba(23,104,232,0.32)]">
+          S
         </span>
-      </button>
+        <p className="mt-2 whitespace-nowrap text-[0.86rem] font-semibold tracking-[0.02em] text-white">
+          simple pos
+        </p>
+      </div>
 
-      {authActionLabel && onAuthAction ? (
+      {canOpenOperatorSelector && onOpenOperatorSelector ? (
         <button
           type="button"
-          data-testid="actor-auth-action-button"
-          onClick={onAuthAction}
-          className="mt-4 inline-flex min-h-[3rem] w-full items-center justify-center rounded-2xl border border-[#2b3342] bg-[#0f1725] px-4 text-sm font-semibold text-slate-200 transition hover:border-[#3b465a] hover:text-white"
+          data-testid="open-operator-selector-button"
+          onClick={onOpenOperatorSelector}
+          className="mt-2 inline-flex min-h-[2.6rem] w-full items-center justify-center rounded-xl border border-[#2b3342] bg-[#0f1725] px-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-slate-200 transition hover:border-[#3b465a] hover:text-white"
         >
-          {authActionLabel}
+          {messages.accessControl.operatorSelectorTitle}
         </button>
       ) : null}
 
-      <nav className="mt-12 flex gap-3 overflow-x-auto pb-1 lg:mt-12 lg:flex-col lg:overflow-visible">
+      <nav className="mt-6 flex flex-1 gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === activeItemId;
@@ -101,7 +76,7 @@ export function LeftNavRail({
               onClick={() => onItemSelect(item.id)}
               data-testid={`nav-item-${item.id}`}
               className={[
-                "flex min-h-[86px] min-w-[90px] flex-col items-center justify-center gap-2 rounded-2xl text-center text-sm font-medium transition",
+                "flex min-h-[4rem] min-w-[5.25rem] flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 text-center text-sm font-medium transition",
                 isActive
                   ? "bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-white shadow-[0_12px_24px_rgba(23,104,232,0.45)]"
                   : "text-slate-200 hover:text-white",
@@ -111,19 +86,40 @@ export function LeftNavRail({
             >
               <span
                 className={[
-                  "flex size-11 items-center justify-center rounded-full border text-slate-100",
+                  "flex size-9 items-center justify-center rounded-full border text-slate-100",
                   isActive
                     ? "border-transparent bg-transparent"
                     : "border-[#2b3342] bg-[#0f1725]",
                 ].join(" ")}
               >
-                <Icon size={19} />
+                <Icon size={17} />
               </span>
-              <span className="text-[1.12rem] leading-none lg:block">{item.label}</span>
+              <span className="text-[1.05rem] leading-none lg:block">{item.label}</span>
             </button>
           );
         })}
       </nav>
+
+      {authActionDisplayLabel && onAuthAction ? (
+        <div className="mt-3 border-t border-[#1f2735] pt-3">
+          {isAuthenticated ? (
+            <p
+              data-testid="actor-session-source-label"
+              className="mb-1 truncate text-[0.68rem] font-medium uppercase tracking-[0.13em] text-slate-400"
+            >
+              {isLoadingActor ? messages.common.states.loading : actorDisplayName}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            data-testid="actor-auth-action-button"
+            onClick={onAuthAction}
+            className="inline-flex min-h-[2.7rem] w-full items-center justify-center rounded-xl border border-[#2b3342] bg-[#0f1725] px-3 text-center text-[0.98rem] font-semibold text-slate-200 transition hover:border-[#3b465a] hover:text-white"
+          >
+            <span className="truncate">{authActionDisplayLabel}</span>
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

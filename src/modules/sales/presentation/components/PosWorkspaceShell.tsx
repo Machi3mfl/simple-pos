@@ -62,33 +62,14 @@ export function PosWorkspaceShell({
     ),
     [messages, permissionSnapshot],
   );
-  const actorRoleLabel =
-    currentActor?.roleNames[0] ??
-    (sessionSource === "authenticated_unmapped"
-      ? messages.accessControl.unmappedActorRole
-      : messages.shell.cashierRole);
-  const actorRegisterSummary =
-    currentActor && currentActor.assignedRegisterIds.length > 0
-      ? messages.accessControl.assignedRegistersSummary(
-          currentActor.assignedRegisterIds.length,
-        )
-      : undefined;
-  const actorSessionLabel =
-    status === "loading"
-      ? undefined
-      : sessionSource === "authenticated"
-        ? messages.accessControl.sessionSourceAuthenticated
-        : sessionSource === "authenticated_unmapped"
-          ? messages.accessControl.sessionSourceAuthenticatedUnmapped
-          : sessionSource === "assumed_user"
-            ? messages.accessControl.sessionSourceAssumedUser
-            : messages.accessControl.sessionSourceDefaultActor;
   const authActionLabel =
     status === "loading"
       ? undefined
       : isAuthenticated
         ? messages.accessControl.signOutAction
         : messages.accessControl.signInAction;
+  const canOpenOperatorSelector =
+    canSwitchActor && currentActor?.roleCodes.includes("system_admin") === true;
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
@@ -97,11 +78,9 @@ export function PosWorkspaceShell({
           items={navItems}
           activeItemId={activeItemId}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
-          actorRoleLabel={actorRoleLabel}
-          actorRegisterSummary={actorRegisterSummary}
-          actorSessionLabel={actorSessionLabel}
           isLoadingActor={status === "loading"}
-          canOpenOperatorSelector={canSwitchActor}
+          isAuthenticated={isAuthenticated}
+          canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
           onAuthAction={() => {

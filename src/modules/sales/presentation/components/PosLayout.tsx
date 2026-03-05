@@ -12,6 +12,8 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
+import { showErrorToast } from "@/hooks/use-app-toast";
 import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
 import { WorkspaceBlockedState } from "@/modules/access-control/presentation/components/WorkspaceBlockedState";
 import { UsersAdminPanel } from "@/modules/access-control/presentation/components/UsersAdminPanel";
@@ -157,6 +159,7 @@ export function PosLayout({
   const [cartItems, setCartItems] = useState<readonly CheckoutOrderItem[]>([]);
   const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
   const [cashSessionRefreshToken, setCashSessionRefreshToken] = useState<number>(0);
+  const [isCashSessionModalOpen, setIsCashSessionModalOpen] = useState<boolean>(false);
   const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
@@ -177,33 +180,14 @@ export function PosLayout({
     ),
     [messages, permissionSnapshot],
   );
-  const actorRoleLabel =
-    currentActor?.roleNames[0] ??
-    (sessionSource === "authenticated_unmapped"
-      ? messages.accessControl.unmappedActorRole
-      : messages.shell.cashierRole);
-  const actorRegisterSummary =
-    currentActor && currentActor.assignedRegisterIds.length > 0
-      ? messages.accessControl.assignedRegistersSummary(
-          currentActor.assignedRegisterIds.length,
-        )
-      : undefined;
-  const actorSessionLabel =
-    status === "loading"
-      ? undefined
-      : sessionSource === "authenticated"
-        ? messages.accessControl.sessionSourceAuthenticated
-        : sessionSource === "authenticated_unmapped"
-          ? messages.accessControl.sessionSourceAuthenticatedUnmapped
-          : sessionSource === "assumed_user"
-            ? messages.accessControl.sessionSourceAssumedUser
-            : messages.accessControl.sessionSourceDefaultActor;
   const authActionLabel =
     status === "loading"
       ? undefined
       : isAuthenticated
         ? messages.accessControl.signOutAction
         : messages.accessControl.signInAction;
+  const canOpenOperatorSelector =
+    canSwitchActor && currentActor?.roleCodes.includes("system_admin") === true;
   const categories = useMemo(() => {
     const categoryCodes = sortCategoryCodes(
       dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
@@ -240,14 +224,27 @@ export function PosLayout({
     try {
       const products = await loadCatalogProducts();
       setCatalogProducts(products);
+    } catch (error: unknown) {
+      setCatalogProducts([]);
+      showErrorToast({
+        title: "No se pudo cargar el catálogo",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Reintentá en unos segundos.",
+      });
     } finally {
       setIsLoadingProducts(false);
     }
   }, [loadCatalogProducts]);
 
   useEffect(() => {
+    if (currentWorkspace !== "cash-register") {
+      return;
+    }
+
     void refreshCatalog();
-  }, [refreshCatalog]);
+  }, [currentWorkspace, refreshCatalog]);
 
   useEffect(() => {
     if (
@@ -267,6 +264,12 @@ export function PosLayout({
 
     setActiveCategoryId("all");
   }, [activeCategoryId, categories]);
+
+  useEffect(() => {
+    if (currentWorkspace !== "cash-register") {
+      setIsCashSessionModalOpen(false);
+    }
+  }, [currentWorkspace]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -488,28 +491,15 @@ export function PosLayout({
       return (
         <>
           <ProductCatalogPanel
-            topContent={
-              <CashRegisterSessionPanel
-                preferredRegisterIds={currentActor?.assignedRegisterIds ?? []}
-                selectedRegisterId={selectedCashRegisterId}
-                onSelectedRegisterIdChange={setSelectedCashRegisterId}
-                currentActorId={currentActor?.actorId}
-                refreshToken={cashSessionRefreshToken}
-                canOpenSession={
-                  permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
-                }
-                canCloseSession={
-                  permissionSnapshot?.workspaces.cashRegister.canCloseSession ?? false
-                }
-                canRecordManualCashMovement={
-                  permissionSnapshot?.workspaces.cashRegister
-                    .canRecordManualCashMovement ?? false
-                }
-                canApproveDiscrepancyClose={
-                  permissionSnapshot?.workspaces.cashRegister
-                    .canApproveDiscrepancyClose ?? false
-                }
-              />
+            headerActions={
+              <button
+                type="button"
+                data-testid="open-cash-session-modal-button"
+                onClick={() => setIsCashSessionModalOpen(true)}
+                className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_14px_24px_rgba(28,109,234,0.28)]"
+              >
+                {messages.sales.cashSession.viewSessionAction}
+              </button>
             }
             categories={categories}
             activeCategoryId={activeCategoryId}
@@ -533,6 +523,51 @@ export function PosLayout({
             onCheckoutSuccess={handleCheckoutSuccess}
             onCashSessionMutation={handleCashSessionMutation}
           />
+          {isCashSessionModalOpen ? (
+            <div
+              className="fixed inset-0 z-40 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4"
+              onClick={() => setIsCashSessionModalOpen(false)}
+            >
+              <div className="relative flex min-h-full items-center justify-center">
+                <FloatingModalCloseButton
+                  ariaLabel={messages.common.actions.close}
+                  onClick={() => setIsCashSessionModalOpen(false)}
+                />
+
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  data-testid="cash-session-overview-modal"
+                  className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[72rem] flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-[#fbfbfc] shadow-[0_32px_80px_rgba(15,23,42,0.24)] md:max-h-[calc(100dvh-2rem)]"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="min-h-0 overflow-y-auto p-3 md:p-4 lg:p-6">
+                    <CashRegisterSessionPanel
+                      preferredRegisterIds={currentActor?.assignedRegisterIds ?? []}
+                      selectedRegisterId={selectedCashRegisterId}
+                      onSelectedRegisterIdChange={setSelectedCashRegisterId}
+                      currentActorId={currentActor?.actorId}
+                      refreshToken={cashSessionRefreshToken}
+                      canOpenSession={
+                        permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
+                      }
+                      canCloseSession={
+                        permissionSnapshot?.workspaces.cashRegister.canCloseSession ?? false
+                      }
+                      canRecordManualCashMovement={
+                        permissionSnapshot?.workspaces.cashRegister
+                          .canRecordManualCashMovement ?? false
+                      }
+                      canApproveDiscrepancyClose={
+                        permissionSnapshot?.workspaces.cashRegister
+                          .canApproveDiscrepancyClose ?? false
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       );
     }
@@ -547,11 +582,9 @@ export function PosLayout({
           items={navItems}
           activeItemId={currentWorkspace}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
-          actorRoleLabel={actorRoleLabel}
-          actorRegisterSummary={actorRegisterSummary}
-          actorSessionLabel={actorSessionLabel}
           isLoadingActor={status === "loading"}
-          canOpenOperatorSelector={canSwitchActor}
+          isAuthenticated={isAuthenticated}
+          canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
           onAuthAction={() => {

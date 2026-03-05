@@ -26,6 +26,7 @@ export interface CatalogProduct {
 
 interface ProductCatalogPanelProps {
   readonly topContent?: React.ReactNode;
+  readonly headerActions?: React.ReactNode;
   readonly categories: readonly CatalogCategory[];
   readonly activeCategoryId: string;
   readonly products: readonly CatalogProduct[];
@@ -72,6 +73,7 @@ function formatStockCount(stock: number): string {
 
 export function ProductCatalogPanel({
   topContent,
+  headerActions,
   categories,
   activeCategoryId,
   products,
@@ -318,17 +320,11 @@ export function ProductCatalogPanel({
         <h1 className="whitespace-nowrap text-[2.45rem] font-semibold tracking-tight text-slate-900">
           {messages.sales.catalog.title}
         </h1>
-        <label className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 shadow-[0_10px_30px_rgba(16,24,40,0.05)] lg:w-[300px]">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(event) => onSearchTermChange(event.target.value)}
-            placeholder={messages.common.placeholders.searchProducts}
-            className="w-full bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
-            aria-label={messages.common.placeholders.searchMenuAria}
-          />
-          <span className="ml-2 text-xl text-slate-400">⌕</span>
-        </label>
+        {headerActions ? (
+          <div className="flex w-full items-center justify-start lg:w-auto lg:justify-end">
+            {headerActions}
+          </div>
+        ) : null}
       </header>
 
       <div className="mt-5 flex gap-2 overflow-x-auto pb-2 pr-1">
@@ -358,9 +354,22 @@ export function ProductCatalogPanel({
         })}
       </div>
 
-      <h2 className="mt-6 text-[2.3rem] font-semibold tracking-tight text-slate-900">
-        {sectionTitle}
-      </h2>
+      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <h2 className="text-[2.3rem] font-semibold tracking-tight text-slate-900">
+          {sectionTitle}
+        </h2>
+        <label className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 shadow-[0_10px_30px_rgba(16,24,40,0.05)] lg:w-[300px]">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => onSearchTermChange(event.target.value)}
+            placeholder={messages.common.placeholders.searchProducts}
+            className="w-full bg-transparent text-sm text-slate-600 outline-none placeholder:text-slate-400"
+            aria-label={messages.common.placeholders.searchMenuAria}
+          />
+          <span className="ml-2 text-xl text-slate-400">⌕</span>
+        </label>
+      </div>
       <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 pr-1">
         {alphabetLetters.map((letter) => {
           const isActive = activeLetter === letter;
