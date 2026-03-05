@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
@@ -46,6 +46,7 @@ export function PosWorkspaceShell({
     status,
   } =
     useActorSession();
+  const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
       { id: "cash-register", label: messages.shell.nav.cashRegister, icon: ShoppingCart },
@@ -63,7 +64,7 @@ export function PosWorkspaceShell({
     [messages, permissionSnapshot],
   );
   const authActionLabel =
-    status === "loading"
+    status === "loading" || isSigningOut
       ? undefined
       : isAuthenticated
         ? messages.accessControl.signOutAction
@@ -78,27 +79,37 @@ export function PosWorkspaceShell({
           items={navItems}
           activeItemId={activeItemId}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
-          isLoadingActor={status === "loading"}
+          isLoadingActor={status === "loading" || isSigningOut}
           isAuthenticated={isAuthenticated}
           canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
           onAuthAction={() => {
             if (isAuthenticated) {
-              void signOut().then(() => {
-                router.push("/login");
-              });
+              setIsSigningOut(true);
+              void signOut()
+                .then(() => {
+                  router.replace("/login");
+                })
+                .catch(() => {
+                  setIsSigningOut(false);
+                });
               return;
             }
 
             if (sessionSource === "assumed_user") {
-              void clearAssumedActor().then(() => {
-                router.push("/login");
-              });
+              setIsSigningOut(true);
+              void clearAssumedActor()
+                .then(() => {
+                  router.replace("/login");
+                })
+                .catch(() => {
+                  setIsSigningOut(false);
+                });
               return;
             }
 
-            router.push("/login");
+            router.replace("/login");
           }}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {

@@ -160,6 +160,7 @@ export function PosLayout({
   const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
   const [cashSessionRefreshToken, setCashSessionRefreshToken] = useState<number>(0);
   const [isCashSessionModalOpen, setIsCashSessionModalOpen] = useState<boolean>(false);
+  const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
   const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
     [initialWorkspace, pathname],
@@ -181,7 +182,7 @@ export function PosLayout({
     [messages, permissionSnapshot],
   );
   const authActionLabel =
-    status === "loading"
+    status === "loading" || isSigningOut
       ? undefined
       : isAuthenticated
         ? messages.accessControl.signOutAction
@@ -461,6 +462,23 @@ export function PosLayout({
   };
 
   const renderWorkspaceState = (): JSX.Element => {
+    if (isSigningOut) {
+      return (
+        <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
+          <div className="flex min-h-[calc(100dvh-6rem)] items-center justify-center rounded-[2rem] border border-slate-200 bg-white text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {messages.accessControl.signOutAction}
+              </p>
+              <p className="mt-3 text-[1.2rem] font-semibold text-slate-900">
+                {messages.common.states.loading}
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     if (status === "loading") {
       return (
         <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
@@ -582,27 +600,37 @@ export function PosLayout({
           items={navItems}
           activeItemId={currentWorkspace}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
-          isLoadingActor={status === "loading"}
+          isLoadingActor={status === "loading" || isSigningOut}
           isAuthenticated={isAuthenticated}
           canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
           onAuthAction={() => {
             if (isAuthenticated) {
-              void signOut().then(() => {
-                router.push("/login");
-              });
+              setIsSigningOut(true);
+              void signOut()
+                .then(() => {
+                  router.replace("/login");
+                })
+                .catch(() => {
+                  setIsSigningOut(false);
+                });
               return;
             }
 
             if (sessionSource === "assumed_user") {
-              void clearAssumedActor().then(() => {
-                router.push("/login");
-              });
+              setIsSigningOut(true);
+              void clearAssumedActor()
+                .then(() => {
+                  router.replace("/login");
+                })
+                .catch(() => {
+                  setIsSigningOut(false);
+                });
               return;
             }
 
-            router.push("/login");
+            router.replace("/login");
           }}
           onItemSelect={(itemId) => {
             if (isPosWorkspaceId(itemId)) {
