@@ -108,38 +108,6 @@ set
   code = excluded.code,
   name = excluded.name;
 
-insert into public.app_users (id, display_name, actor_kind, is_active)
-values
-  ('user_cashier_putri', 'Putri', 'human', true),
-  ('user_collections_marta', 'Marta', 'human', true),
-  ('user_supervisor_bruno', 'Bruno', 'human', true),
-  ('user_catalog_lucia', 'Lucía', 'human', true),
-  ('user_manager_maxi', 'Maxi', 'human', true),
-  ('user_exec_ana', 'Ana', 'human', true),
-  ('user_admin_soporte', 'Soporte', 'human', true),
-  ('svc_sync', 'Offline sync', 'system', true)
-on conflict (id) do update
-set
-  display_name = excluded.display_name,
-  actor_kind = excluded.actor_kind,
-  is_active = excluded.is_active;
-
-insert into public.user_role_assignments (id, user_id, role_id, assigned_by_user_id)
-values
-  ('ura_user_cashier_putri_cashier', 'user_cashier_putri', 'cashier', 'user_admin_soporte'),
-  ('ura_user_collections_marta_collections', 'user_collections_marta', 'collections_clerk', 'user_admin_soporte'),
-  ('ura_user_supervisor_bruno_supervisor', 'user_supervisor_bruno', 'shift_supervisor', 'user_admin_soporte'),
-  ('ura_user_catalog_lucia_catalog', 'user_catalog_lucia', 'catalog_manager', 'user_admin_soporte'),
-  ('ura_user_manager_maxi_manager', 'user_manager_maxi', 'business_manager', 'user_admin_soporte'),
-  ('ura_user_exec_ana_exec', 'user_exec_ana', 'executive_readonly', 'user_admin_soporte'),
-  ('ura_user_admin_soporte_admin', 'user_admin_soporte', 'system_admin', 'user_admin_soporte'),
-  ('ura_svc_sync_service', 'svc_sync', 'service_account', 'user_admin_soporte')
-on conflict (id) do update
-set
-  user_id = excluded.user_id,
-  role_id = excluded.role_id,
-  assigned_by_user_id = excluded.assigned_by_user_id;
-
 insert into public.role_permission_assignments (id, role_id, permission_id)
 values
   ('rpa_cashier_checkout', 'cashier', 'checkout.sale.create'),
@@ -210,19 +178,3 @@ on conflict (id) do update
 set
   role_id = excluded.role_id,
   permission_id = excluded.permission_id;
-
-insert into public.cash_register_user_assignments (
-  id,
-  cash_register_id,
-  user_id,
-  assigned_by_user_id
-)
-values
-  ('crua_front_putri', 'front-counter', 'user_cashier_putri', 'user_admin_soporte'),
-  ('crua_front_bruno', 'front-counter', 'user_supervisor_bruno', 'user_admin_soporte'),
-  ('crua_front_maxi', 'front-counter', 'user_manager_maxi', 'user_admin_soporte')
-on conflict (id) do update
-set
-  cash_register_id = excluded.cash_register_id,
-  user_id = excluded.user_id,
-  assigned_by_user_id = excluded.assigned_by_user_id;

@@ -726,7 +726,7 @@ curl -X POST /api/v1/cash-register-sessions/session_123/close \
 
 Current implementation status:
 
-- migration `20260303130000_access_control_slice_zero.sql` now creates and seeds `app_users`, `roles`, `permissions`, and drawer assignments,
+- migration `20260303130000_access_control_slice_zero.sql` now creates `app_users` and seeds only the base authorization catalog (`roles`, `permissions`, `role_permission_assignments`); demo operators are provisioned by the injector,
 - `GET /api/v1/me`, `GET /api/v1/app-users`, `POST /api/v1/me/assume-user`, and `DELETE /api/v1/me/assume-user` are live,
 - the shell now renders a real `Seleccionar operador` modal plus operator context in the rail,
 - navigation and direct workspace access are filtered from `permissionSnapshot`,
