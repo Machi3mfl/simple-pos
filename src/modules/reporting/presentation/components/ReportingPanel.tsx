@@ -34,6 +34,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { DatePicker } from "@/components/ui/date-picker";
 import { showErrorToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { cn } from "@/lib/utils";
@@ -486,16 +487,30 @@ function SnapshotMetricCard({
 function SecondaryStat({
   label,
   value,
+  compact = false,
 }: {
   readonly label: string;
   readonly value: string;
+  readonly compact?: boolean;
 }): JSX.Element {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <div
+      className={cn(
+        "rounded-2xl border border-slate-200 bg-slate-50 px-3",
+        compact ? "py-2" : "py-2.5",
+      )}
+    >
       <p className="text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold tracking-tight text-slate-950">{value}</p>
+      <p
+        className={cn(
+          "text-lg font-semibold tracking-tight text-slate-950",
+          compact ? "mt-0.5" : "mt-1",
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -812,11 +827,13 @@ export function ReportingPanel({
               <span className="text-sm font-semibold text-slate-700">
                 {messages.common.labels.periodStart}
               </span>
-              <input
-                type="date"
+              <DatePicker
+                testId="reporting-period-start-input"
                 value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-                className="min-h-[3.35rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400"
+                onChange={setPeriodStart}
+                placeholder={messages.common.labels.periodStart}
+                max={periodEnd || undefined}
+                buttonClassName="min-h-[3.35rem]"
               />
             </label>
 
@@ -824,11 +841,13 @@ export function ReportingPanel({
               <span className="text-sm font-semibold text-slate-700">
                 {messages.common.labels.periodEnd}
               </span>
-              <input
-                type="date"
+              <DatePicker
+                testId="reporting-period-end-input"
                 value={periodEnd}
-                onChange={(event) => setPeriodEnd(event.target.value)}
-                className="min-h-[3.35rem] rounded-2xl border border-slate-300 bg-white px-4 text-base text-slate-800 outline-none transition focus:border-blue-400"
+                onChange={setPeriodEnd}
+                placeholder={messages.common.labels.periodEnd}
+                min={periodStart || undefined}
+                buttonClassName="min-h-[3.35rem]"
               />
             </label>
 
@@ -1002,68 +1021,143 @@ export function ReportingPanel({
         </div>
       </section>
 
-      <section className="mt-7 grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-          <div className="mb-4">
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
-              {messages.reporting.dailyTrendTitle}
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              {messages.reporting.dailyTrendDescription}
-            </p>
+      <section className="mt-7 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <div className="grid content-start gap-4">
+          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+            <div className="mb-4">
+              <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+                {messages.reporting.dailyTrendTitle}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {messages.reporting.dailyTrendDescription}
+              </p>
+            </div>
+
+            {dailyTrendData.length === 0 ? (
+              <EmptyChartState message={messages.reporting.noTrendData} />
+            ) : (
+              <ChartContainer config={dailyTrendChartConfig} className="h-[320px] w-full">
+                <AreaChart data={dailyTrendData} margin={{ left: 10, right: 10, top: 8, bottom: 0 }}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                  />
+                  <YAxis tickLine={false} axisLine={false} width={74} />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) => formatCurrency(Number(value))}
+                      />
+                    }
+                  />
+                  <ChartLegend content={<ChartLegendContent className="pt-3" />} />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="var(--color-revenue)"
+                    fill="var(--color-revenue)"
+                    fillOpacity={0.16}
+                    strokeWidth={2.4}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="collected"
+                    stroke="var(--color-collected)"
+                    fill="var(--color-collected)"
+                    fillOpacity={0.1}
+                    strokeWidth={2.2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="outstanding"
+                    stroke="var(--color-outstanding)"
+                    fill="var(--color-outstanding)"
+                    fillOpacity={0.08}
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            )}
           </div>
 
-          {dailyTrendData.length === 0 ? (
-            <EmptyChartState message={messages.reporting.noTrendData} />
-          ) : (
-            <ChartContainer config={dailyTrendChartConfig} className="h-[320px] w-full">
-              <AreaChart data={dailyTrendData} margin={{ left: 10, right: 10, top: 8, bottom: 0 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                />
-                <YAxis tickLine={false} axisLine={false} width={74} />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) => formatCurrency(Number(value))}
+          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+            <div className="mb-4">
+              <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+                {messages.reporting.topProducts}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {messages.reporting.topProductsDescription}
+              </p>
+            </div>
+
+            {topProductsChartData.length === 0 ? (
+              <EmptyChartState message={messages.reporting.noTopProducts} />
+            ) : (
+              <>
+                <ChartContainer config={topProductsChartConfig} className="h-[280px] w-full">
+                  <BarChart
+                    data={topProductsChartData}
+                    layout="vertical"
+                    margin={{ left: 10, right: 10, top: 6, bottom: 6 }}
+                  >
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" tickLine={false} axisLine={false} hide />
+                    <YAxis
+                      type="category"
+                      dataKey="shortName"
+                      tickLine={false}
+                      axisLine={false}
+                      width={140}
                     />
-                  }
-                />
-                <ChartLegend content={<ChartLegendContent className="pt-3" />} />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--color-revenue)"
-                  fill="var(--color-revenue)"
-                  fillOpacity={0.16}
-                  strokeWidth={2.4}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="collected"
-                  stroke="var(--color-collected)"
-                  fill="var(--color-collected)"
-                  fillOpacity={0.1}
-                  strokeWidth={2.2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="outstanding"
-                  stroke="var(--color-outstanding)"
-                  fill="var(--color-outstanding)"
-                  fillOpacity={0.08}
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ChartContainer>
-          )}
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value) => formatCurrency(Number(value))}
+                          hideLabel
+                        />
+                      }
+                    />
+                    <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[0, 14, 14, 0]} />
+                  </BarChart>
+                </ChartContainer>
+
+                <div className="mt-4 space-y-3">
+                  {topProducts.slice(0, 5).map((item) => (
+                    <div
+                      key={item.productId}
+                      data-testid={`reporting-top-product-item-${item.productId}`}
+                      className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-slate-950">
+                            {item.name}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {messages.reporting.quantitySold(item.quantitySold)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            {messages.common.labels.revenue}
+                          </p>
+                          <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+                            {formatCurrency(item.revenue)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid content-start gap-4">
           <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
             <div className="mb-4">
               <h3 className="text-xl font-semibold tracking-tight text-slate-950">
@@ -1191,117 +1285,42 @@ export function ReportingPanel({
               )}
             </div>
           ) : null}
-        </div>
-      </section>
 
-      <section className="mt-7 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-          <div className="mb-4">
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
-              {messages.reporting.topProducts}
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              {messages.reporting.topProductsDescription}
-            </p>
-          </div>
-
-          {topProductsChartData.length === 0 ? (
-            <EmptyChartState message={messages.reporting.noTopProducts} />
-          ) : (
-            <>
-              <ChartContainer config={topProductsChartConfig} className="h-[280px] w-full">
-                <BarChart
-                  data={topProductsChartData}
-                  layout="vertical"
-                  margin={{ left: 10, right: 10, top: 6, bottom: 6 }}
-                >
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" tickLine={false} axisLine={false} hide />
-                  <YAxis
-                    type="category"
-                    dataKey="shortName"
-                    tickLine={false}
-                    axisLine={false}
-                    width={140}
-                  />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value) => formatCurrency(Number(value))}
-                        hideLabel
-                      />
-                    }
-                  />
-                  <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[0, 14, 14, 0]} />
-                </BarChart>
-              </ChartContainer>
-
-              <div className="mt-4 space-y-3">
-                {topProducts.slice(0, 5).map((item) => (
-                  <div
-                    key={item.productId}
-                    data-testid={`reporting-top-product-item-${item.productId}`}
-                    className="rounded-[1.35rem] border border-slate-200 bg-slate-50 px-4 py-3"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-semibold text-slate-950">
-                          {item.name}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {messages.reporting.quantitySold(item.quantitySold)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[0.74rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          {messages.common.labels.revenue}
-                        </p>
-                        <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-                          {formatCurrency(item.revenue)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-          <div className="mb-4">
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
-              {messages.reporting.executiveInsightsTitle}
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              {messages.reporting.executiveInsightsDescription}
-            </p>
-          </div>
-
-          {canViewCreditExposure ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SecondaryStat
-                label={messages.reporting.debtorsMetric}
-                value={integerFormatter.format(debtorCount)}
-              />
-              <SecondaryStat
-                label={messages.reporting.openOrdersMetric}
-                value={integerFormatter.format(openOrderCount)}
-              />
+          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+            <div className="mb-4">
+              <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+                {messages.reporting.executiveInsightsTitle}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {messages.reporting.executiveInsightsDescription}
+              </p>
             </div>
-          ) : null}
 
-          <div className="mt-4 space-y-3">
-            {insights.length > 0 ? (
-              insights.map((item) => <InsightCard key={item.id} item={item} />)
-            ) : (
-              <EmptyChartState message={messages.reporting.noInsights} />
-            )}
+            {canViewCreditExposure ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SecondaryStat
+                  label={messages.reporting.debtorsMetric}
+                  value={integerFormatter.format(debtorCount)}
+                />
+                <SecondaryStat
+                  label={messages.reporting.openOrdersMetric}
+                  value={integerFormatter.format(openOrderCount)}
+                />
+              </div>
+            ) : null}
+
+            <div className="mt-4 space-y-3">
+              {insights.length > 0 ? (
+                insights.map((item) => <InsightCard key={item.id} item={item} />)
+              ) : (
+                <EmptyChartState message={messages.reporting.noInsights} />
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="mt-7 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+      <section className="mt-4 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
@@ -1324,11 +1343,17 @@ export function ReportingPanel({
               <article
                 key={sale.saleId}
                 data-testid={`reporting-sales-item-${sale.saleId}`}
-                className="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4"
+                className="rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-3"
               >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-slate-500">
+                        {formatDateTime(sale.createdAt)}
+                        {sale.customerName
+                          ? ` • ${messages.reporting.customerLabel(sale.customerName)}`
+                          : ""}
+                      </span>
                       <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700">
                         <CreditCard size={14} className="text-slate-400" />
                         {labelForPaymentMethod(sale.paymentMethod)}
@@ -1349,36 +1374,29 @@ export function ReportingPanel({
                             ? "Parcial"
                             : "Pendiente"}
                       </span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-600">
+                        <ReceiptText size={14} className="text-slate-400" />
+                        {sale.itemCount} {messages.common.labels.items.toLowerCase()}
+                      </span>
                     </div>
 
-                    <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+                    <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
                       {formatCurrency(sale.total)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {formatDateTime(sale.createdAt)}
-                      {sale.customerName
-                        ? ` • ${messages.reporting.customerLabel(sale.customerName)}`
-                        : ""}
                     </p>
                   </div>
 
-                  <div className="grid min-w-[15rem] gap-3 sm:grid-cols-2 lg:min-w-[20rem]">
+                  <div className="grid min-w-[13rem] gap-2 sm:grid-cols-2 lg:min-w-[18rem]">
                     <SecondaryStat
                       label={messages.common.labels.paid}
                       value={formatCurrency(sale.amountPaid)}
+                      compact
                     />
                     <SecondaryStat
                       label={messages.common.labels.remaining}
                       value={formatCurrency(sale.outstandingAmount)}
+                      compact
                     />
                   </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-600">
-                    <ReceiptText size={14} className="text-slate-400" />
-                    {sale.itemCount} {messages.common.labels.items.toLowerCase()}
-                  </span>
                 </div>
               </article>
             ))}

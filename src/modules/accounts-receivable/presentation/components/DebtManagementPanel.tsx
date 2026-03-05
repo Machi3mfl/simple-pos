@@ -13,6 +13,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   showErrorToast,
   showInfoToast,
@@ -1215,12 +1216,13 @@ export function DebtManagementPanel({
             <span className="text-sm font-semibold text-slate-700">
               {messages.receivables.lastActivityFromLabel}
             </span>
-            <input
-              data-testid="debt-activity-start-input"
-              type="date"
+            <DatePicker
+              testId="debt-activity-start-input"
               value={activityStart}
-              onChange={(event) => setActivityStart(event.target.value)}
-              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+              onChange={setActivityStart}
+              placeholder={messages.receivables.lastActivityFromLabel}
+              max={activityEnd || undefined}
+              buttonClassName="min-h-[3.85rem] text-[1.05rem] font-medium"
             />
           </label>
 
@@ -1228,12 +1230,13 @@ export function DebtManagementPanel({
             <span className="text-sm font-semibold text-slate-700">
               {messages.receivables.lastActivityToLabel}
             </span>
-            <input
-              data-testid="debt-activity-end-input"
-              type="date"
+            <DatePicker
+              testId="debt-activity-end-input"
               value={activityEnd}
-              onChange={(event) => setActivityEnd(event.target.value)}
-              className="min-h-[3.85rem] rounded-2xl border border-slate-300 bg-white px-4 text-[1.05rem] font-medium text-slate-800 outline-none transition focus:border-blue-400"
+              onChange={setActivityEnd}
+              placeholder={messages.receivables.lastActivityToLabel}
+              min={activityStart || undefined}
+              buttonClassName="min-h-[3.85rem] text-[1.05rem] font-medium"
             />
           </label>
 
