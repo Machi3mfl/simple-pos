@@ -390,7 +390,8 @@ export function PosLayout({
   const handleCheckoutSuccess = useCallback((): void => {
     setCartItems([]);
     setSalesRefreshToken((current) => current + 1);
-  }, []);
+    void refreshCatalog();
+  }, [refreshCatalog]);
   const handleCashSessionMutation = useCallback((): void => {
     setCashSessionRefreshToken((current) => current + 1);
   }, []);

@@ -21,6 +21,10 @@ import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infr
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
 import type { CustomerRepository } from "@/modules/customers/domain/repositories/CustomerRepository";
 import { SupabaseCustomerRepository } from "@/modules/customers/infrastructure/repositories/SupabaseCustomerRepository";
+import { SaleInventoryRecorderAdapter } from "@/modules/inventory/application/services/SaleInventoryRecorderAdapter";
+import { RegisterStockMovementUseCase } from "@/modules/inventory/application/use-cases/RegisterStockMovementUseCase";
+import { InventoryDomainError } from "@/modules/inventory/domain/errors/InventoryDomainError";
+import { SupabaseInventoryRepository } from "@/modules/inventory/infrastructure/repositories/SupabaseInventoryRepository";
 import { CreateSaleUseCase } from "@/modules/sales/application/use-cases/CreateSaleUseCase";
 import { SaleDomainError } from "@/modules/sales/domain/errors/SaleDomainError";
 import type { SaleRepository } from "@/modules/sales/domain/repositories/SaleRepository";
@@ -56,6 +60,7 @@ function createSaleRuntime(): {
     supabaseClient,
   );
   const cashMovementRepository = new SupabaseCashMovementRepository(supabaseClient);
+  const inventoryRepository = new SupabaseInventoryRepository(supabaseClient);
   const findOrCreateCustomerUseCase = new FindOrCreateCustomerUseCase(customerRepository);
   const recordOnAccountDebtUseCase = new RecordOnAccountDebtUseCase(debtLedgerRepository);
   const onAccountDebtRecorder = new OnAccountDebtRecorderAdapter(
@@ -68,6 +73,13 @@ function createSaleRuntime(): {
   const cashSaleRecorder = new CashSaleRecorderAdapter(
     recordAutomaticCashMovementUseCase,
   );
+  const registerStockMovementUseCase = new RegisterStockMovementUseCase(
+    inventoryRepository,
+    productRepository,
+  );
+  const saleInventoryRecorder = new SaleInventoryRecorderAdapter(
+    registerStockMovementUseCase,
+  );
 
   return {
     createSaleUseCase: new CreateSaleUseCase(
@@ -76,6 +88,7 @@ function createSaleRuntime(): {
       findOrCreateCustomerUseCase,
       onAccountDebtRecorder,
       cashSaleRecorder,
+      saleInventoryRecorder,
     ),
   };
 }
@@ -139,6 +152,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (error instanceof SaleDomainError) {
       return errorResponse(400, {
         code: "sale_rule_error",
+        message: error.message,
+      });
+    }
+
+    if (error instanceof InventoryDomainError) {
+      return errorResponse(409, {
+        code: "inventory_conflict",
         message: error.message,
       });
     }

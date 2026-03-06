@@ -9,6 +9,10 @@ import {
   NoopOnAccountDebtRecorder,
   type OnAccountDebtRecorder,
 } from "@/modules/sales/domain/services/OnAccountDebtRecorder";
+import {
+  NoopSaleInventoryRecorder,
+  type SaleInventoryRecorder,
+} from "@/modules/sales/domain/services/SaleInventoryRecorder";
 import { calculateSaleTotal } from "@/modules/sales/domain/policies/SalePricingPolicy";
 
 import { Sale } from "../../domain/entities/Sale";
@@ -48,6 +52,7 @@ export class CreateSaleUseCase {
     private readonly findOrCreateCustomerUseCase: FindOrCreateCustomerUseCase,
     private readonly onAccountDebtRecorder: OnAccountDebtRecorder = new NoopOnAccountDebtRecorder(),
     private readonly cashSaleRecorder: CashSaleRecorder = new NoopCashSaleRecorder(),
+    private readonly saleInventoryRecorder: SaleInventoryRecorder = new NoopSaleInventoryRecorder(),
   ) {}
 
   async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
@@ -86,6 +91,13 @@ export class CreateSaleUseCase {
     }
 
     await this.saleRepository.save(sale);
+    await this.saleInventoryRecorder.recordSaleInventory({
+      saleId: sale.getId(),
+      items: sale.getItems().map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+    });
 
     if (sale.getPaymentMethod() === "on_account" && sale.getCustomerId()) {
       await this.onAccountDebtRecorder.recordOnAccountDebt({
