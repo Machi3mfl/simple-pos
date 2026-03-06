@@ -9,8 +9,10 @@ import {
   buildAuthorizationHeaders,
   ensureDemoAuthUsers,
   getDemoAuthUserCredentials,
+  provisionAndLoginAsAppUser,
   signInAsDemoAppUser,
   signInThroughLoginPage,
+  waitForSignInReadiness,
 } from "./access-control-auth";
 
 interface AuthenticatedFixtures {
@@ -34,6 +36,8 @@ export const test = base.extend<AuthenticatedFixtures & AuthenticatedOptions>({
   loginAsAppUserId: ["user_manager_maxi", { option: true }],
 
   page: async ({ page, loginAsAppUserId }, use) => {
+    let provisionedCredentialsCleanup: (() => Promise<void>) | null = null;
+
     if (loginAsAppUserId) {
       await ensureDemoAuthUsers();
       const credentials = getDemoAuthUserCredentials(loginAsAppUserId);
@@ -49,14 +53,32 @@ export const test = base.extend<AuthenticatedFixtures & AuthenticatedOptions>({
       };
 
       if (!(await isAuthenticated())) {
-        await signInThroughLoginPage(page, credentials);
+        try {
+          await waitForSignInReadiness(credentials);
+          await signInThroughLoginPage(page, credentials);
 
-        await page.waitForURL(
-          /\/(cash-register|sales|products|receivables|reporting|users-admin|sync)$/,
-          {
-            timeout: 15_000,
-          },
-        );
+          await page.waitForURL(
+            /\/(cash-register|sales|products|receivables|reporting|users-admin|sync)$/,
+            {
+              timeout: 15_000,
+            },
+          );
+        } catch {
+          const provisionedCredentials = await provisionAndLoginAsAppUser({
+            page,
+            appUserId: loginAsAppUserId,
+            label: `fixture-${loginAsAppUserId}`,
+          });
+
+          provisionedCredentialsCleanup = provisionedCredentials.cleanup;
+
+          await page.waitForURL(
+            /\/(cash-register|sales|products|receivables|reporting|users-admin|sync)$/,
+            {
+              timeout: 15_000,
+            },
+          );
+        }
 
         if (!(await isAuthenticated())) {
           throw new Error(
@@ -66,7 +88,13 @@ export const test = base.extend<AuthenticatedFixtures & AuthenticatedOptions>({
       }
     }
 
-    await use(page);
+    try {
+      await use(page);
+    } finally {
+      if (provisionedCredentialsCleanup) {
+        await provisionedCredentialsCleanup();
+      }
+    }
   },
 
   request: async ({ baseURL }, use) => {

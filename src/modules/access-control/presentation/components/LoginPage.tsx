@@ -8,9 +8,50 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { getSupabaseBrowserClient } from "@/infrastructure/config/supabase";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import type { CurrentActorSnapshot } from "@/modules/access-control/domain/types/PermissionSnapshot";
 import { useActorSession } from "@/modules/access-control/presentation/context/ActorSessionContext";
 import { resolvePreferredWorkspaceId } from "@/modules/access-control/presentation/workspaceAccess";
 import { workspacePathById } from "@/modules/sales/presentation/posWorkspace";
+
+async function waitForActorSessionSnapshot(params: {
+  readonly refreshActorSession: () => Promise<CurrentActorSnapshot | null>;
+  readonly accessToken?: string;
+}): Promise<CurrentActorSnapshot | null> {
+  const deadline = Date.now() + 4_000;
+
+  while (Date.now() < deadline) {
+    let snapshot: CurrentActorSnapshot | null = null;
+
+    if (params.accessToken) {
+      const response = await fetch("/api/v1/me", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${params.accessToken}`,
+        },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        snapshot = (await response.json()) as CurrentActorSnapshot;
+      }
+    }
+
+    if (!snapshot) {
+      snapshot = await params.refreshActorSession();
+    }
+
+    if (snapshot) {
+      return snapshot;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 250);
+    });
+  }
+
+  return null;
+}
 
 export function LoginPage(): JSX.Element {
   const { messages } = useI18n();
@@ -56,7 +97,7 @@ export function LoginPage(): JSX.Element {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -72,7 +113,12 @@ export function LoginPage(): JSX.Element {
         },
       });
 
-      const snapshot = await refreshActorSession();
+      // Supabase Auth cookies and actor resolution can lag slightly after a
+      // fresh sign-in, so we retry the snapshot before surfacing an error.
+      const snapshot = await waitForActorSessionSnapshot({
+        accessToken: data.session?.access_token,
+        refreshActorSession,
+      });
       if (!snapshot) {
         throw new Error(messages.accessControl.loginInvalidCredentials);
       }

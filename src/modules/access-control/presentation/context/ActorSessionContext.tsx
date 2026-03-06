@@ -98,11 +98,19 @@ export function ActorSessionProvider({
       setErrorMessage(null);
 
       try {
+        const {
+          data: { session },
+        } = await getSupabaseBrowserClient().auth.getSession();
+        const headers: Record<string, string> = {
+          accept: "application/json",
+        };
+        if (session?.access_token) {
+          headers.authorization = `Bearer ${session.access_token}`;
+        }
+
         const response = await fetch("/api/v1/me", {
           method: "GET",
-          headers: {
-            accept: "application/json",
-          },
+          headers,
           cache: "no-store",
         });
         const payload = (await response.json()) as

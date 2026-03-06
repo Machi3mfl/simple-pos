@@ -1,4 +1,45 @@
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { defineConfig } from "@playwright/test";
+
+function readLocalEnvValue(name: string): string | null {
+  const envFilePath = join(process.cwd(), ".env.local");
+  if (!existsSync(envFilePath)) {
+    return null;
+  }
+
+  const matchedLine = readFileSync(envFilePath, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.startsWith(`${name}=`));
+
+  if (!matchedLine) {
+    return null;
+  }
+
+  const rawValue = matchedLine.slice(name.length + 1).trim();
+  if (
+    (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+    (rawValue.startsWith("'") && rawValue.endsWith("'"))
+  ) {
+    return rawValue.slice(1, -1);
+  }
+
+  return rawValue;
+}
+
+for (const envName of [
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+]) {
+  if (!process.env[envName]) {
+    const localValue = readLocalEnvValue(envName);
+    if (localValue) {
+      process.env[envName] = localValue;
+    }
+  }
+}
 
 const defaultBaseUrl = "http://127.0.0.1:3010";
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;

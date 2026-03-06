@@ -47,18 +47,29 @@ function readRequiredEnv(name: string): string {
     return value;
   }
 
-  try {
-    const envFile = readFileSync(join(process.cwd(), ".env.local"), "utf8");
-    const matchedLine = envFile
-      .split("\n")
-      .map((line) => line.trim())
-      .find((line) => line.startsWith(`${name}=`));
+  // Local E2E runs should prefer the seeded local Supabase env, while still allowing a production env fallback.
+  for (const fileName of [".env.local", ".env.production.local"]) {
+    try {
+      const envFile = readFileSync(join(process.cwd(), fileName), "utf8");
+      const matchedLine = envFile
+        .split("\n")
+        .map((line) => line.trim())
+        .find((line) => line.startsWith(`${name}=`));
 
-    if (matchedLine) {
-      return matchedLine.slice(name.length + 1).trim();
+      if (matchedLine) {
+        const rawValue = matchedLine.slice(name.length + 1).trim();
+        if (
+          (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+          (rawValue.startsWith("'") && rawValue.endsWith("'"))
+        ) {
+          return rawValue.slice(1, -1);
+        }
+
+        return rawValue;
+      }
+    } catch {
+      // Fall through to the next file and surface a single error below.
     }
-  } catch {
-    // The tests already surface the missing variable clearly below.
   }
 
   throw new Error(`Missing required env var: ${name}`);
@@ -350,12 +361,37 @@ export async function signInWithPassword(params: {
   };
 }
 
+export async function waitForSignInReadiness(
+  credentials: BrowserLoginCredentials,
+): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  let lastError: Error | null = null;
+
+  while (Date.now() < deadline) {
+    try {
+      await signInWithPassword(credentials);
+      return;
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 250);
+      });
+    }
+  }
+
+  throw new Error(
+    `Timed out waiting for credentials to become available for login: ${lastError?.message ?? "unknown error"}`,
+  );
+}
+
 export async function provisionPasswordCredentialsForAppUser(params: {
   readonly appUserId: string;
   readonly label: string;
 }): Promise<ProvisionedAppUserCredentials> {
   const adminClient = createServiceRoleClient();
-  const email = `${params.label}-${Date.now()}@example.com`;
+  // Parallel Playwright workers can provision the same app user at once, so
+  // timestamp-only emails are not unique enough under concurrent retries.
+  const email = `${params.label}-${crypto.randomUUID()}@example.com`;
   const password = `Pass-${crypto.randomUUID()}Aa1!`;
 
   const existingUserResponse = await adminClient
@@ -427,6 +463,7 @@ export async function provisionAndLoginAsAppUser(params: {
   });
 
   try {
+    await waitForSignInReadiness(credentials);
     await signInThroughLoginPage(params.page, credentials);
     return credentials;
   } catch (error) {
