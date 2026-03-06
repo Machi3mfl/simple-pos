@@ -29,13 +29,16 @@ import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-b
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import { BulkProductProfileUpdatePanel } from "@/modules/products/presentation/components/BulkProductProfileUpdatePanel";
-import { useProductOnboarding } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
+import {
+  useProductOnboarding,
+} from "@/modules/catalog/presentation/hooks/useProductOnboarding";
 import { dedupeCategoryCodes } from "@/shared/core/category/categoryNaming";
 import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
 import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
@@ -173,6 +176,19 @@ interface StockFormState {
   readonly reason: string;
 }
 
+interface ProductEditorFieldErrors {
+  name?: string;
+  categoryId?: string;
+  price?: string;
+  cost?: string;
+  minStock?: string;
+}
+
+interface StockFormFieldErrors {
+  quantity?: string;
+  unitCost?: string;
+}
+
 interface ProductsInventoryPanelCapabilities {
   readonly canCreateFromSourcing: boolean;
   readonly canUpdatePrice: boolean;
@@ -280,6 +296,76 @@ function mergeWorkspaceItems(
   return merged;
 }
 
+function resolveProductEditorFieldErrors(
+  form: EditProductFormState,
+  messages: ReturnType<typeof useI18n>["messages"],
+): ProductEditorFieldErrors {
+  const errors: ProductEditorFieldErrors = {};
+  const parsedPrice = Number(form.price);
+  const parsedMinStock = Number(form.minStock);
+  const parsedCost = form.cost.trim().length > 0 ? Number(form.cost) : undefined;
+
+  if (form.name.trim().length < 2) {
+    errors.name = messages.catalog.onboarding.invalidName;
+  }
+
+  if (form.categoryId.trim().length === 0) {
+    errors.categoryId = messages.catalog.onboarding.invalidCategory;
+  }
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+    errors.price = messages.catalog.onboarding.invalidPrice;
+  }
+
+  if (!Number.isFinite(parsedMinStock) || !Number.isInteger(parsedMinStock) || parsedMinStock < 0) {
+    errors.minStock = messages.catalog.onboarding.invalidMinStock;
+  }
+
+  if (parsedCost !== undefined && (!Number.isFinite(parsedCost) || parsedCost <= 0)) {
+    errors.cost = messages.catalog.onboarding.invalidCost;
+  }
+
+  return errors;
+}
+
+function resolveStockFormFieldErrors(
+  form: StockFormState,
+  messages: ReturnType<typeof useI18n>["messages"],
+): StockFormFieldErrors {
+  const errors: StockFormFieldErrors = {};
+  const parsedQuantity = Number(form.quantity);
+  const parsedUnitCost = Number(form.unitCost);
+
+  if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+    errors.quantity = messages.inventory.invalidQuantity;
+  }
+
+  if (
+    form.movementType === "inbound" &&
+    (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
+  ) {
+    errors.unitCost = messages.inventory.invalidInboundCost;
+  }
+
+  return errors;
+}
+
+function resolveFirstProductEditorError(
+  fieldErrors: ProductEditorFieldErrors,
+): string | undefined {
+  return (
+    fieldErrors.name ??
+    fieldErrors.categoryId ??
+    fieldErrors.price ??
+    fieldErrors.cost ??
+    fieldErrors.minStock
+  );
+}
+
+function resolveFirstStockFormError(fieldErrors: StockFormFieldErrors): string | undefined {
+  return fieldErrors.quantity ?? fieldErrors.unitCost;
+}
+
 export function ProductsInventoryPanel({
   capabilities = {
     canCreateFromSourcing: true,
@@ -318,6 +404,12 @@ export function ProductsInventoryPanel({
   const [stockForm, setStockForm] = useState<StockFormState>(defaultStockFormState("inbound"));
   const [bulkProductsInput, setBulkProductsInput] = useState<string>("");
   const [bulkStockInput, setBulkStockInput] = useState<string>("");
+  const [shouldShowEditFieldErrors, setShouldShowEditFieldErrors] = useState<boolean>(false);
+  const [shouldShowStockFieldErrors, setShouldShowStockFieldErrors] = useState<boolean>(false);
+  const [shouldShowBulkProductsFieldError, setShouldShowBulkProductsFieldError] =
+    useState<boolean>(false);
+  const [shouldShowBulkStockFieldError, setShouldShowBulkStockFieldError] =
+    useState<boolean>(false);
   const [refreshToken, setRefreshToken] = useState<number>(0);
   const workspaceRequestTokenRef = useRef<number>(0);
   const publishWorkspaceFeedback = useCallback(
@@ -347,9 +439,11 @@ export function ProductsInventoryPanel({
   );
   const {
     categories: onboardingCategories,
+    fieldErrors: onboardingFieldErrors,
     feedback: onboardingFeedback,
     form: onboardingForm,
     isSubmitting: isSubmittingCreate,
+    shouldShowFieldErrors: shouldShowOnboardingFieldErrors,
     setForm: setOnboardingForm,
     submit: submitProductOnboarding,
   } = useProductOnboarding({
@@ -385,6 +479,18 @@ export function ProductsInventoryPanel({
 
   const selectedProduct =
     workspace?.items.find((item) => item.id === selectedProductId) ?? workspace?.items[0] ?? null;
+  const editFieldErrors = useMemo(
+    () => resolveProductEditorFieldErrors(editForm, messages),
+    [editForm, messages],
+  );
+  const stockFieldErrors = useMemo(
+    () => resolveStockFormFieldErrors(stockForm, messages),
+    [messages, stockForm],
+  );
+  const isBulkProductsInputInvalid =
+    shouldShowBulkProductsFieldError && parsePastedRows(bulkProductsInput).length === 0;
+  const isBulkStockInputInvalid =
+    shouldShowBulkStockFieldError && parsePastedRows(bulkStockInput).length === 0;
 
   const categoryOptions = useMemo(() => {
     return ["all", ...dedupeCategoryCodes((workspace?.items ?? []).map((item) => item.categoryId))];
@@ -500,6 +606,7 @@ export function ProductsInventoryPanel({
       return;
     }
 
+    setShouldShowEditFieldErrors(false);
     setEditForm({
       name: selectedProduct.name,
       sku: selectedProduct.sku,
@@ -512,6 +619,20 @@ export function ProductsInventoryPanel({
       isActive: selectedProduct.isActive,
     });
   }, [selectedProduct]);
+
+  useEffect(() => {
+    if (openDialog !== "stock") {
+      setShouldShowStockFieldErrors(false);
+    }
+
+    if (openDialog !== "bulkProducts") {
+      setShouldShowBulkProductsFieldError(false);
+    }
+
+    if (openDialog !== "bulkStock") {
+      setShouldShowBulkStockFieldError(false);
+    }
+  }, [openDialog]);
 
   useEffect(() => {
     if (openDialog !== "detail" || !selectedProduct) {
@@ -566,6 +687,16 @@ export function ProductsInventoryPanel({
       return;
     }
 
+    setShouldShowEditFieldErrors(true);
+    const firstFieldError = resolveFirstProductEditorError(editFieldErrors);
+    if (firstFieldError) {
+      publishWorkspaceFeedback({
+        type: "error",
+        message: firstFieldError,
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/v1/products/${selectedProduct.id}`, {
@@ -602,6 +733,7 @@ export function ProductsInventoryPanel({
           (payload as ProductResponse).item.name,
         ),
       });
+      setShouldShowEditFieldErrors(false);
       setOpenDialog(null);
       await refreshWorkspace();
     } catch {
@@ -667,27 +799,18 @@ export function ProductsInventoryPanel({
       return;
     }
 
+    setShouldShowStockFieldErrors(true);
+    const firstFieldError = resolveFirstStockFormError(stockFieldErrors);
+    if (firstFieldError) {
+      publishWorkspaceFeedback({
+        type: "error",
+        message: firstFieldError,
+      });
+      return;
+    }
+
     const parsedQuantity = Number(stockForm.quantity);
     const parsedUnitCost = Number(stockForm.unitCost);
-
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      publishWorkspaceFeedback({
-        type: "error",
-        message: messages.inventory.invalidQuantity,
-      });
-      return;
-    }
-
-    if (
-      stockForm.movementType === "inbound" &&
-      (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0)
-    ) {
-      publishWorkspaceFeedback({
-        type: "error",
-        message: messages.inventory.invalidInboundCost,
-      });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -721,6 +844,7 @@ export function ProductsInventoryPanel({
         type: "success",
         message: messages.productsWorkspace.feedback.stockRegistered(selectedProduct.name),
       });
+      setShouldShowStockFieldErrors(false);
       setStockForm(defaultStockFormState(stockForm.movementType));
       setOpenDialog("detail");
       await refreshWorkspace();
@@ -736,6 +860,7 @@ export function ProductsInventoryPanel({
 
   async function handleBulkProducts(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setShouldShowBulkProductsFieldError(true);
     const rows = parsePastedRows(bulkProductsInput);
     if (rows.length === 0) {
       publishWorkspaceFeedback({
@@ -786,6 +911,7 @@ export function ProductsInventoryPanel({
           result.invalidItems.length,
         ),
       });
+      setShouldShowBulkProductsFieldError(false);
       setBulkProductsInput("");
       setOpenDialog(null);
       await refreshWorkspace();
@@ -801,6 +927,7 @@ export function ProductsInventoryPanel({
 
   async function handleBulkStock(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setShouldShowBulkStockFieldError(true);
     const rows = parsePastedRows(bulkStockInput);
     if (rows.length === 0) {
       publishWorkspaceFeedback({
@@ -862,6 +989,7 @@ export function ProductsInventoryPanel({
           result.invalidItems.length,
         ),
       });
+      setShouldShowBulkStockFieldError(false);
       setBulkStockInput("");
       setOpenDialog(null);
       await refreshWorkspace();
@@ -1486,15 +1614,16 @@ export function ProductsInventoryPanel({
 
       {openDialog === "create" ? (
         <Dialog title={messages.productsWorkspace.dialogs.createTitle} onClose={() => setOpenDialog(null)}>
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={submitProductOnboarding}>
+          <form className="grid gap-4 md:grid-cols-2" noValidate onSubmit={submitProductOnboarding}>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.name}
               </span>
               <input
                 data-testid="products-workspace-create-name-input"
-                required
-                minLength={2}
+                {...getFormControlValidationProps(
+                  shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.name),
+                )}
                 value={onboardingForm.name}
                 onChange={(event) =>
                   setOnboardingForm((current) => ({ ...current, name: event.target.value }))
@@ -1520,6 +1649,9 @@ export function ProductsInventoryPanel({
               inputTestId="products-workspace-create-category-input"
               categoryCode={onboardingForm.categoryId}
               knownCategoryCodes={onboardingCategories}
+              invalid={
+                shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.categoryId)
+              }
               onCategoryCodeChange={(nextCategoryCode) =>
                 setOnboardingForm((current) => ({
                   ...current,
@@ -1534,7 +1666,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-create-price-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.price),
+                )}
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -1551,6 +1685,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-create-cost-input"
+                {...getFormControlValidationProps(
+                  shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.cost),
+                )}
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -1567,7 +1704,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-create-stock-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.initialStock),
+                )}
                 type="number"
                 min="0"
                 step="1"
@@ -1587,7 +1726,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-create-min-stock-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowOnboardingFieldErrors && Boolean(onboardingFieldErrors.minStock),
+                )}
                 type="number"
                 min="0"
                 step="1"
@@ -1681,14 +1822,16 @@ export function ProductsInventoryPanel({
 
       {openDialog === "edit" && selectedProduct ? (
         <Dialog title={messages.productsWorkspace.dialogs.editTitle} onClose={() => setOpenDialog(null)}>
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleEditProduct}>
+          <form className="grid gap-4 md:grid-cols-2" noValidate onSubmit={handleEditProduct}>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.name}
               </span>
               <input
                 data-testid="products-workspace-edit-name-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowEditFieldErrors && Boolean(editFieldErrors.name),
+                )}
                 value={editForm.name}
                 onChange={(event) =>
                   setEditForm((current) => ({ ...current, name: event.target.value }))
@@ -1717,6 +1860,7 @@ export function ProductsInventoryPanel({
                 ...onboardingCategories,
                 ...((workspace?.items ?? []).map((item) => item.categoryId)),
               ]}
+              invalid={shouldShowEditFieldErrors && Boolean(editFieldErrors.categoryId)}
               onCategoryCodeChange={(nextCategoryCode) =>
                 setEditForm((current) => ({ ...current, categoryId: nextCategoryCode }))
               }
@@ -1728,7 +1872,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-edit-price-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowEditFieldErrors && Boolean(editFieldErrors.price),
+                )}
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -1745,6 +1891,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-edit-cost-input"
+                {...getFormControlValidationProps(
+                  shouldShowEditFieldErrors && Boolean(editFieldErrors.cost),
+                )}
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -1761,7 +1910,9 @@ export function ProductsInventoryPanel({
               </span>
               <input
                 data-testid="products-workspace-edit-min-stock-input"
-                required
+                {...getFormControlValidationProps(
+                  shouldShowEditFieldErrors && Boolean(editFieldErrors.minStock),
+                )}
                 type="number"
                 min="0"
                 step="1"
@@ -1869,7 +2020,9 @@ export function ProductsInventoryPanel({
                   </span>
                   <input
                     data-testid="products-workspace-stock-quantity-input"
-                    required
+                    {...getFormControlValidationProps(
+                      shouldShowStockFieldErrors && Boolean(stockFieldErrors.quantity),
+                    )}
                     type="number"
                     min="0.01"
                     step="0.01"
@@ -1889,7 +2042,9 @@ export function ProductsInventoryPanel({
                     type="number"
                     min="0.01"
                     step="0.01"
-                    required={stockForm.movementType === "inbound"}
+                    {...getFormControlValidationProps(
+                      shouldShowStockFieldErrors && Boolean(stockFieldErrors.unitCost),
+                    )}
                     disabled={stockForm.movementType !== "inbound"}
                     value={stockForm.unitCost}
                     onChange={(event) =>
@@ -1975,6 +2130,7 @@ export function ProductsInventoryPanel({
             </div>
             <textarea
               data-testid="products-workspace-bulk-products-input"
+              {...getFormControlValidationProps(isBulkProductsInputInvalid)}
               value={bulkProductsInput}
               onChange={(event) => setBulkProductsInput(event.target.value)}
               placeholder={messages.productsWorkspace.bulk.productsPlaceholder}
@@ -2016,6 +2172,7 @@ export function ProductsInventoryPanel({
             </div>
             <textarea
               data-testid="products-workspace-bulk-stock-input"
+              {...getFormControlValidationProps(isBulkStockInputInvalid)}
               value={bulkStockInput}
               onChange={(event) => setBulkStockInput(event.target.value)}
               placeholder={messages.productsWorkspace.bulk.stockPlaceholder}

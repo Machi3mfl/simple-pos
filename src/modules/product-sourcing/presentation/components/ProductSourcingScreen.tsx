@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   ArrowLeft,
   CheckSquare,
   Loader2,
@@ -14,8 +13,10 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { ToastAction } from "@/components/ui/toast";
 import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
 import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import {
@@ -166,6 +167,16 @@ interface FeedbackState {
 
 interface ImportActionOptions {
   readonly sourceProductIds?: readonly string[];
+  readonly skipStocklessConfirmation?: boolean;
+}
+
+interface ImportDraftFieldErrors {
+  name?: string;
+  categoryId?: string;
+  price?: string;
+  initialStock?: string;
+  cost?: string;
+  minStock?: string;
 }
 
 type FailedQueueFilter =
@@ -252,6 +263,61 @@ function hasZeroInitialStockWithoutCost(draft: ImportDraft): boolean {
   const cost = parseOptionalDecimal(draft.cost);
 
   return initialStock === 0 && (cost === undefined || cost <= 0);
+}
+
+function resolveImportDraftFieldErrors(
+  draft: ImportDraft,
+  sourceName: string,
+): ImportDraftFieldErrors {
+  const fieldErrors: ImportDraftFieldErrors = {};
+  const normalizedName = draft.name.trim();
+  const normalizedCategoryId = draft.categoryId.trim();
+  const price = parseRequiredDecimal(draft.price);
+  const initialStock = parseIntegerInput(draft.initialStock);
+  const minStock = parseIntegerInput(draft.minStock);
+  const cost = parseOptionalDecimal(draft.cost);
+  const hasCostInput = draft.cost.trim().length > 0;
+
+  if (normalizedName.length < 2) {
+    fieldErrors.name = `Completa un nombre valido para ${sourceName}.`;
+  }
+
+  if (normalizedCategoryId.length === 0) {
+    fieldErrors.categoryId = `Completa la categoria final para ${sourceName}.`;
+  }
+
+  if (price === null || price <= 0) {
+    fieldErrors.price = `Ingresa un precio valido para ${sourceName}.`;
+  }
+
+  if (initialStock === null || initialStock < 0) {
+    fieldErrors.initialStock = `Ingresa un stock inicial entero valido para ${sourceName}.`;
+  }
+
+  if (minStock === null || minStock < 0) {
+    fieldErrors.minStock = `Ingresa un stock minimo entero valido para ${sourceName}.`;
+  }
+
+  if (hasCostInput && (cost === undefined || cost <= 0)) {
+    fieldErrors.cost = `Ingresa un costo valido para ${sourceName}.`;
+  }
+
+  if (initialStock !== null && initialStock > 0 && (cost === undefined || cost <= 0)) {
+    fieldErrors.cost = `Si cargas stock inicial para ${sourceName}, tambien debes informar el costo.`;
+  }
+
+  return fieldErrors;
+}
+
+function resolveFirstImportDraftError(fieldErrors: ImportDraftFieldErrors): string | undefined {
+  return (
+    fieldErrors.name ??
+    fieldErrors.categoryId ??
+    fieldErrors.price ??
+    fieldErrors.initialStock ??
+    fieldErrors.cost ??
+    fieldErrors.minStock
+  );
 }
 
 function toTestIdFragment(value: string): string {
@@ -406,6 +472,9 @@ export function ProductSourcingScreen({
   const abortControllerRef = useRef<AbortController | null>(null);
   const shouldSkipNextAutoSearchRef = useRef<boolean>(false);
   const resultsRef = useRef<readonly ExternalCatalogCandidateItem[]>([]);
+  const selectedIdsRef = useRef<readonly string[]>([]);
+  const importDraftsRef = useRef<Record<string, ImportDraft>>({});
+  const importConfirmationToastRef = useRef<ReturnType<typeof showInfoToast> | null>(null);
   const effectiveKnownCategoryCodes = useMemo(
     () =>
       dedupeCategoryCodes([
@@ -514,6 +583,14 @@ export function ProductSourcingScreen({
   useEffect(() => {
     resultsRef.current = results;
   }, [results]);
+
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
+
+  useEffect(() => {
+    importDraftsRef.current = importDrafts;
+  }, [importDrafts]);
 
   useEffect(() => {
     const snapshot = readProductSourcingSessionSnapshot();
@@ -878,6 +955,8 @@ export function ProductSourcingScreen({
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
+      importConfirmationToastRef.current?.dismiss();
+      importConfirmationToastRef.current = null;
     };
   }, []);
 
@@ -922,14 +1001,6 @@ export function ProductSourcingScreen({
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.includes(item.sourceProductId)),
     [results, selectedIds],
-  );
-  const zeroStockWithoutCostCount = useMemo(
-    () =>
-      selectedItems.reduce((count, item) => {
-        const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
-        return hasZeroInitialStockWithoutCost(draft) ? count + 1 : count;
-      }, 0),
-    [importDrafts, selectedItems],
   );
   const failedQueueCounts = useMemo(
     () => ({
@@ -982,6 +1053,19 @@ export function ProductSourcingScreen({
     [importResult],
   );
   const hasPendingInvalidItems = (importResult?.invalidItems.length ?? 0) > 0;
+  const importDraftFieldErrorsBySourceId = useMemo(
+    () =>
+      Object.fromEntries(
+        selectedItems.map((item) => {
+          const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
+          return [
+            item.sourceProductId,
+            resolveImportDraftFieldErrors(draft, item.name),
+          ] as const;
+        }),
+      ) as Record<string, ImportDraftFieldErrors>,
+    [importDrafts, selectedItems],
+  );
 
   function toggleSelection(sourceProductId: string): void {
     setSelectedIds((current) =>
@@ -1025,6 +1109,8 @@ export function ProductSourcingScreen({
   function handleDiscardSession(): void {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    importConfirmationToastRef.current?.dismiss();
+    importConfirmationToastRef.current = null;
     resultsRef.current = [];
     clearProductSourcingSessionSnapshot();
     setQuery("");
@@ -1098,60 +1184,23 @@ export function ProductSourcingScreen({
 
     for (const item of itemsToImport) {
       const draft = resolveDraft(item);
+      const fieldErrors = resolveImportDraftFieldErrors(draft, item.name);
+      const firstFieldError = resolveFirstImportDraftError(fieldErrors);
+
+      if (firstFieldError) {
+        setImportFeedback({
+          type: "error",
+          message: firstFieldError,
+        });
+        return null;
+      }
+
       const normalizedName = draft.name.trim();
       const normalizedCategoryId = draft.categoryId.trim();
       const price = parseRequiredDecimal(draft.price);
       const initialStock = parseIntegerInput(draft.initialStock);
       const minStock = parseIntegerInput(draft.minStock);
       const cost = parseOptionalDecimal(draft.cost);
-
-      if (normalizedName.length < 2) {
-        setImportFeedback({
-          type: "error",
-          message: `Completa un nombre valido para ${item.name}.`,
-        });
-        return null;
-      }
-
-      if (normalizedCategoryId.length === 0) {
-        setImportFeedback({
-          type: "error",
-          message: `Completa la categoria final para ${item.name}.`,
-        });
-        return null;
-      }
-
-      if (price === null || price <= 0) {
-        setImportFeedback({
-          type: "error",
-          message: `Ingresa un precio valido para ${item.name}.`,
-        });
-        return null;
-      }
-
-      if (initialStock === null || initialStock < 0) {
-        setImportFeedback({
-          type: "error",
-          message: `Ingresa un stock inicial entero valido para ${item.name}.`,
-        });
-        return null;
-      }
-
-      if (minStock === null || minStock < 0) {
-        setImportFeedback({
-          type: "error",
-          message: `Ingresa un stock minimo entero valido para ${item.name}.`,
-        });
-        return null;
-      }
-
-      if (initialStock > 0 && (cost === undefined || cost <= 0)) {
-        setImportFeedback({
-          type: "error",
-          message: `Si cargas stock inicial para ${item.name}, tambien debes informar el costo.`,
-        });
-        return null;
-      }
 
       payloadItems.push({
         providerId: item.providerId,
@@ -1161,9 +1210,9 @@ export function ProductSourcingScreen({
         ean: item.ean,
         categoryTrail: item.categoryTrail,
         categoryId: normalizedCategoryId,
-        price,
-        initialStock,
-        minStock,
+        price: price as number,
+        initialStock: initialStock as number,
+        minStock: minStock as number,
         cost,
         sourceImageUrl: item.imageUrl,
         productUrl: item.productUrl,
@@ -1236,6 +1285,8 @@ export function ProductSourcingScreen({
       return;
     }
 
+    importConfirmationToastRef.current?.dismiss();
+    importConfirmationToastRef.current = null;
     setIsImporting(true);
     setImportFeedback(null);
     setImportResult(null);
@@ -1293,14 +1344,55 @@ export function ProductSourcingScreen({
     const sourceProductIds =
       options.sourceProductIds && options.sourceProductIds.length > 0
         ? options.sourceProductIds
-        : selectedIds;
-    const itemsToImport = selectedItems.filter((item) =>
+        : selectedIdsRef.current;
+    const itemsToImport = resultsRef.current.filter((item) =>
       sourceProductIds.includes(item.sourceProductId),
     );
+    const resolveDraft = (item: ExternalCatalogCandidateItem): ImportDraft =>
+      importDraftsRef.current[item.sourceProductId] ?? createImportDraft(item);
+
+    if (!options.skipStocklessConfirmation) {
+      const stocklessItems = itemsToImport.filter((item) =>
+        hasZeroInitialStockWithoutCost(resolveDraft(item)),
+      );
+
+      if (stocklessItems.length > 0) {
+        const affectedCount = stocklessItems.length;
+        importConfirmationToastRef.current?.dismiss();
+        importConfirmationToastRef.current = showInfoToast({
+          title:
+            affectedCount === 1
+              ? "Importar sin stock inicial"
+              : "Importar productos sin stock inicial",
+          description:
+            affectedCount === 1
+              ? "Hay 1 producto sin stock inicial ni costo. Se guardará sin inventario. Tocá Continuar para importarlo o cerrá este aviso para revisar los datos."
+              : `Hay ${affectedCount} productos sin stock inicial ni costo. Se guardarán sin inventario. Tocá Continuar para importarlos o cerrá este aviso para revisar los datos.`,
+          duration: 15000,
+          testId: "product-sourcing-import-confirmation-toast",
+          action: (
+            <ToastAction
+              altText="Continuar importacion"
+              onClick={() => {
+                importConfirmationToastRef.current?.dismiss();
+                importConfirmationToastRef.current = null;
+                void handleImportSelected({
+                  sourceProductIds: itemsToImport.map((item) => item.sourceProductId),
+                  skipStocklessConfirmation: true,
+                });
+              }}
+            >
+              Continuar
+            </ToastAction>
+          ),
+        });
+        return;
+      }
+    }
 
     await runImportBatch(
       itemsToImport,
-      (item) => importDrafts[item.sourceProductId] ?? createImportDraft(item),
+      resolveDraft,
     );
   }
 
@@ -1603,27 +1695,6 @@ export function ProductSourcingScreen({
                 </button>
               </div>
 
-              {zeroStockWithoutCostCount > 0 ? (
-                <div
-                  data-testid="product-sourcing-zero-stock-warning"
-                  className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 px-4 py-3"
-                >
-                  <div className="flex items-start gap-2 text-amber-900">
-                    <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">
-                        {zeroStockWithoutCostCount === 1
-                          ? "Hay 1 producto sin stock inicial ni costo."
-                          : `Hay ${zeroStockWithoutCostCount} productos sin stock inicial ni costo.`}
-                      </p>
-                      <p className="text-sm text-amber-800">
-                        Si estas seguro de guardar, podes continuar e ingresar stock despues.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
               {hasPendingInvalidItems ? (
                 <div
                   data-testid="product-sourcing-pending-invalid-panel"
@@ -1691,7 +1762,8 @@ export function ProductSourcingScreen({
                     const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
                     const skuPreview = resolveImportedProductSku(item.providerId, item.sourceProductId);
                     const invalidItem = invalidItemsBySourceId.get(item.sourceProductId);
-                    const shouldWarnZeroStockWithoutCost = hasZeroInitialStockWithoutCost(draft);
+                    const fieldErrors =
+                      importDraftFieldErrorsBySourceId[item.sourceProductId] ?? {};
 
                     return (
                       <article
@@ -1727,20 +1799,12 @@ export function ProductSourcingScreen({
                           </div>
                         ) : null}
 
-                        {shouldWarnZeroStockWithoutCost ? (
-                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-                            <p className="font-semibold">Sin stock inicial ni costo</p>
-                            <p className="mt-1 text-xs text-amber-800">
-                              Este producto se guardara sin inventario. Si estas seguro, podes continuar.
-                            </p>
-                          </div>
-                        ) : null}
-
                         <div className="mt-4 grid gap-3">
                           <label className="grid gap-1 text-sm text-slate-600">
                             <span className="font-medium text-slate-700">Nombre final</span>
                             <input
                               data-testid={`product-sourcing-import-name-${item.sourceProductId}`}
+                              {...getFormControlValidationProps(Boolean(fieldErrors.name))}
                               type="text"
                               value={draft.name}
                               onChange={(event) =>
@@ -1755,6 +1819,7 @@ export function ProductSourcingScreen({
                             inputTestId={`product-sourcing-import-category-${item.sourceProductId}`}
                             categoryCode={draft.categoryId}
                             knownCategoryCodes={effectiveKnownCategoryCodes}
+                            invalid={Boolean(fieldErrors.categoryId)}
                             onCategoryCodeChange={(nextCategoryCode) =>
                               updateDraft(item.sourceProductId, "categoryId", nextCategoryCode)
                             }
@@ -1766,6 +1831,7 @@ export function ProductSourcingScreen({
                               <span className="font-medium text-slate-700">Precio</span>
                               <input
                                 data-testid={`product-sourcing-import-price-${item.sourceProductId}`}
+                                {...getFormControlValidationProps(Boolean(fieldErrors.price))}
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -1781,6 +1847,9 @@ export function ProductSourcingScreen({
                               <span className="font-medium text-slate-700">Stock inicial</span>
                               <input
                                 data-testid={`product-sourcing-import-stock-${item.sourceProductId}`}
+                                {...getFormControlValidationProps(
+                                  Boolean(fieldErrors.initialStock),
+                                )}
                                 type="number"
                                 min="0"
                                 step="1"
@@ -1798,6 +1867,7 @@ export function ProductSourcingScreen({
                               <span className="font-medium text-slate-700">Costo</span>
                               <input
                                 data-testid={`product-sourcing-import-cost-${item.sourceProductId}`}
+                                {...getFormControlValidationProps(Boolean(fieldErrors.cost))}
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -1813,6 +1883,7 @@ export function ProductSourcingScreen({
                               <span className="font-medium text-slate-700">Stock minimo</span>
                               <input
                                 data-testid={`product-sourcing-import-min-stock-${item.sourceProductId}`}
+                                {...getFormControlValidationProps(Boolean(fieldErrors.minStock))}
                                 type="number"
                                 min="0"
                                 step="1"

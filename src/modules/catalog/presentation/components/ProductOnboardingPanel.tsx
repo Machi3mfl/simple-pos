@@ -4,8 +4,10 @@ import { useEffect } from "react";
 
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import {
+  type ProductOnboardingFieldErrors,
   type ProductOnboardingProduct,
   useProductOnboarding,
 } from "@/modules/catalog/presentation/hooks/useProductOnboarding";
@@ -22,6 +24,7 @@ export function ProductOnboardingPanel({
   const { messages, formatCurrency, labelForCategory } = useI18n();
   const {
     categories,
+    fieldErrors,
     feedback,
     form,
     isLoadingProducts,
@@ -29,11 +32,16 @@ export function ProductOnboardingPanel({
     products,
     reloadProducts,
     setForm,
+    shouldShowFieldErrors,
     submit,
   } = useProductOnboarding({
     onProductCreated,
     refreshToken,
   });
+
+  function isInvalid(field: keyof ProductOnboardingFieldErrors): boolean {
+    return shouldShowFieldErrors && Boolean(fieldErrors[field]);
+  }
 
   useEffect(() => {
     if (!feedback) {
@@ -66,15 +74,14 @@ export function ProductOnboardingPanel({
         </div>
       </header>
 
-      <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submit}>
+      <form className="mt-4 grid gap-3 md:grid-cols-2" noValidate onSubmit={submit}>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">
             {messages.catalog.onboarding.nameLabel}
           </span>
           <input
             data-testid="onboarding-name-input"
-            required
-            minLength={2}
+            {...getFormControlValidationProps(isInvalid("name"))}
             value={form.name}
             onChange={(event) =>
               setForm((current) => ({ ...current, name: event.target.value }))
@@ -90,6 +97,7 @@ export function ProductOnboardingPanel({
           </span>
           <select
             data-testid="onboarding-category-select"
+            {...getFormControlValidationProps(isInvalid("categoryId"))}
             value={form.categoryId}
             onChange={(event) =>
               setForm((current) => ({ ...current, categoryId: event.target.value }))
@@ -110,6 +118,7 @@ export function ProductOnboardingPanel({
           </span>
           <input
             data-testid="onboarding-price-input"
+            {...getFormControlValidationProps(isInvalid("price"))}
             type="number"
             step="0.01"
             min="0.01"
@@ -127,6 +136,7 @@ export function ProductOnboardingPanel({
           </span>
           <input
             data-testid="onboarding-cost-input"
+            {...getFormControlValidationProps(isInvalid("cost"))}
             type="number"
             step="0.01"
             min="0.01"
@@ -144,6 +154,7 @@ export function ProductOnboardingPanel({
           </span>
           <input
             data-testid="onboarding-stock-input"
+            {...getFormControlValidationProps(isInvalid("initialStock"))}
             type="number"
             min="0"
             step="1"

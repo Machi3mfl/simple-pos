@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
   dedupeCategoryCodes,
@@ -77,6 +78,14 @@ interface DraftPlanChange {
   readonly after: string;
 }
 
+interface BulkDraftFieldErrors {
+  name?: string;
+  price?: string;
+  cost?: string;
+  minStock?: string;
+  targetStock?: string;
+}
+
 const wizardStepOrder: readonly WizardStepId[] = ["scope", "edit", "confirm"];
 
 function isWizardStepId(value: string): value is WizardStepId {
@@ -105,6 +114,48 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function resolveBulkDraftFieldErrors(input: {
+  readonly canAdjustStock: boolean;
+  readonly draft: BulkProductDraft;
+  readonly messages: ReturnType<typeof useI18n>["messages"];
+  readonly product: BulkProductItem;
+}): BulkDraftFieldErrors {
+  const { canAdjustStock, draft, messages, product } = input;
+  const errors: BulkDraftFieldErrors = {};
+  const nextName = draft.name.trim();
+  const nextPrice = Number(draft.price);
+  const nextMinStock = Number(draft.minStock);
+  const nextCostRaw = draft.cost.trim();
+  const nextTargetStock = Number(draft.targetStock);
+
+  if (nextName.length < 2) {
+    errors.name = messages.productsWorkspace.bulkProfileUpdate.errors.invalidName;
+  }
+
+  if (!Number.isFinite(nextPrice) || nextPrice <= 0) {
+    errors.price = messages.productsWorkspace.bulkProfileUpdate.errors.invalidPrice;
+  }
+
+  if (!Number.isInteger(nextMinStock) || nextMinStock < 0) {
+    errors.minStock = messages.productsWorkspace.bulkProfileUpdate.errors.invalidMinStock;
+  }
+
+  if (nextCostRaw.length > 0) {
+    const nextCost = Number(nextCostRaw);
+    if (!Number.isFinite(nextCost) || nextCost <= 0) {
+      errors.cost = messages.productsWorkspace.bulkProfileUpdate.errors.invalidCost;
+    }
+  }
+
+  if (!Number.isFinite(nextTargetStock) || nextTargetStock < 0) {
+    errors.targetStock = messages.productsWorkspace.bulkProfileUpdate.errors.invalidStock;
+  } else if (!canAdjustStock && Math.abs(nextTargetStock - product.stock) >= 0.0001) {
+    errors.targetStock = messages.productsWorkspace.bulkProfileUpdate.errors.stockPermission;
+  }
+
+  return errors;
 }
 
 export function BulkProductProfileUpdatePanel({
@@ -751,6 +802,12 @@ export function BulkProductProfileUpdatePanel({
             <ul className="max-h-[26rem] space-y-3 overflow-y-auto p-3">
               {scopedProducts.map((product) => {
                 const draft = draftByProductId[product.id] ?? toDefaultDraft(product);
+                const draftFieldErrors = resolveBulkDraftFieldErrors({
+                  canAdjustStock,
+                  draft,
+                  messages,
+                  product,
+                });
 
                 return (
                   <li
@@ -789,6 +846,7 @@ export function BulkProductProfileUpdatePanel({
                         </span>
                         <input
                           data-testid={`bulk-profile-edit-name-input-${product.id}`}
+                          {...getFormControlValidationProps(Boolean(draftFieldErrors.name))}
                           type="text"
                           value={draft.name}
                           onChange={(event) => updateDraft(product.id, { name: event.target.value })}
@@ -802,6 +860,7 @@ export function BulkProductProfileUpdatePanel({
                         </span>
                         <input
                           data-testid={`bulk-profile-edit-price-input-${product.id}`}
+                          {...getFormControlValidationProps(Boolean(draftFieldErrors.price))}
                           type="number"
                           min="0.01"
                           step="0.01"
@@ -817,6 +876,7 @@ export function BulkProductProfileUpdatePanel({
                         </span>
                         <input
                           data-testid={`bulk-profile-edit-cost-input-${product.id}`}
+                          {...getFormControlValidationProps(Boolean(draftFieldErrors.cost))}
                           type="number"
                           min="0"
                           step="0.01"
@@ -832,6 +892,7 @@ export function BulkProductProfileUpdatePanel({
                         </span>
                         <input
                           data-testid={`bulk-profile-edit-min-stock-input-${product.id}`}
+                          {...getFormControlValidationProps(Boolean(draftFieldErrors.minStock))}
                           type="number"
                           min="0"
                           step="1"
@@ -847,6 +908,9 @@ export function BulkProductProfileUpdatePanel({
                         </span>
                         <input
                           data-testid={`bulk-profile-edit-target-stock-input-${product.id}`}
+                          {...getFormControlValidationProps(
+                            Boolean(draftFieldErrors.targetStock),
+                          )}
                           type="number"
                           min="0"
                           step="0.01"

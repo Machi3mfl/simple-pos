@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import {
   type BulkPriceUpdateResponse,
   useBulkPriceUpdate,
@@ -95,6 +96,8 @@ export function BulkPriceUpdatePanel({
   });
 
   const isValueValid = Number.isFinite(Number(value));
+  const isCategoryInvalid = scopeType === "category" && categoryId.trim().length === 0;
+  const isSelectionInvalid = scopeType === "selection" && selectedProductIds.length === 0;
   const step1Ready = hasValidScopeSelection && !shouldBlockByEmptyScope;
   const step2Ready = step1Ready && isValueValid;
   const adjustmentValueLabel =
@@ -308,6 +311,7 @@ export function BulkPriceUpdatePanel({
               </span>
               <select
                 data-testid="bulk-category-select"
+                {...getFormControlValidationProps(isCategoryInvalid)}
                 value={categoryId}
                 onChange={(event) => setCategoryId(event.target.value)}
                 disabled={scopeType !== "category" || categories.length === 0}
@@ -326,10 +330,17 @@ export function BulkPriceUpdatePanel({
             <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
               {messages.catalog.bulkPriceUpdate.noProductsForScope}
             </p>
-          ) : null}
+            ) : null}
 
           {scopeType === "selection" ? (
-            <div className="mt-3 rounded-xl border border-slate-200 p-3">
+            <div
+              className={[
+                "mt-3 rounded-xl border p-3",
+                isSelectionInvalid
+                  ? "border-rose-300 bg-rose-50/60"
+                  : "border-slate-200",
+              ].join(" ")}
+            >
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                 {messages.catalog.bulkPriceUpdate.selectProducts}
               </p>
@@ -461,6 +472,7 @@ export function BulkPriceUpdatePanel({
               </span>
               <input
                 data-testid="bulk-value-input"
+                {...getFormControlValidationProps(!isValueValid)}
                 type="number"
                 step="0.01"
                 value={value}

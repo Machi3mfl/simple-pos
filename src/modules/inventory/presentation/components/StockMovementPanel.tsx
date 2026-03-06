@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 
 interface ProductItem {
@@ -72,6 +73,7 @@ export function StockMovementPanel({
   const [reason, setReason] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [shouldShowFieldErrors, setShouldShowFieldErrors] = useState<boolean>(false);
 
   const publishError = useCallback(
     (description: string): void => {
@@ -93,6 +95,15 @@ export function StockMovementPanel({
   );
 
   const hasProducts = products.length > 0;
+  const parsedQuantity = useMemo(() => Number(quantity), [quantity]);
+  const parsedUnitCost = useMemo(() => Number(unitCost), [unitCost]);
+  const isProductInvalid = shouldShowFieldErrors && !productId;
+  const isQuantityInvalid =
+    shouldShowFieldErrors && (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0);
+  const isUnitCostInvalid =
+    shouldShowFieldErrors &&
+    movementType === "inbound" &&
+    (!Number.isFinite(parsedUnitCost) || parsedUnitCost <= 0);
   const productNameById = useMemo(
     () =>
       new Map<string, string>(
@@ -150,9 +161,7 @@ export function StockMovementPanel({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-
-    const parsedQuantity = Number(quantity);
-    const parsedUnitCost = Number(unitCost);
+    setShouldShowFieldErrors(true);
 
     if (!productId) {
       publishError(messages.inventory.missingProduct);
@@ -200,6 +209,7 @@ export function StockMovementPanel({
           labelForMovementType((payload as StockMovementItem).movementType).toLowerCase(),
         ),
       );
+      setShouldShowFieldErrors(false);
       setQuantity("1");
       setReason("");
       await loadMovementHistory();
@@ -221,13 +231,14 @@ export function StockMovementPanel({
         </p>
       </header>
 
-      <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleSubmit}>
+      <form className="mt-4 grid gap-3 md:grid-cols-2" noValidate onSubmit={handleSubmit}>
         <label className="flex flex-col gap-1 md:col-span-2">
           <span className="text-xs font-semibold text-slate-600">
             {messages.common.labels.product}
           </span>
           <select
             data-testid="inventory-product-select"
+            {...getFormControlValidationProps(isProductInvalid)}
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
             disabled={isLoading || !hasProducts}
@@ -266,6 +277,7 @@ export function StockMovementPanel({
           </span>
           <input
             data-testid="inventory-quantity-input"
+            {...getFormControlValidationProps(isQuantityInvalid)}
             type="number"
             min="0.01"
             step="0.01"
@@ -281,6 +293,7 @@ export function StockMovementPanel({
           </span>
           <input
             data-testid="inventory-unit-cost-input"
+            {...getFormControlValidationProps(isUnitCostInvalid)}
             type="number"
             min="0.01"
             step="0.01"

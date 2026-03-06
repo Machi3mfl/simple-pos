@@ -49,6 +49,15 @@ export interface ProductOnboardingFeedbackState {
   readonly message: string;
 }
 
+export interface ProductOnboardingFieldErrors {
+  name?: string;
+  categoryId?: string;
+  price?: string;
+  cost?: string;
+  initialStock?: string;
+  minStock?: string;
+}
+
 export interface ProductOnboardingFormState {
   readonly name: string;
   readonly sku: string;
@@ -68,6 +77,7 @@ interface UseProductOnboardingOptions {
 
 interface UseProductOnboardingResult {
   readonly categories: readonly string[];
+  readonly fieldErrors: ProductOnboardingFieldErrors;
   readonly feedback: ProductOnboardingFeedbackState | null;
   readonly form: ProductOnboardingFormState;
   readonly isLoadingProducts: boolean;
@@ -76,6 +86,7 @@ interface UseProductOnboardingResult {
   readonly reloadProducts: () => Promise<void>;
   readonly resetForm: () => void;
   readonly setForm: Dispatch<SetStateAction<ProductOnboardingFormState>>;
+  readonly shouldShowFieldErrors: boolean;
   readonly submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
@@ -108,6 +119,60 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+function resolveProductOnboardingFieldErrors(
+  form: ProductOnboardingFormState,
+  messages: ReturnType<typeof useI18n>["messages"],
+): ProductOnboardingFieldErrors {
+  const parsedPrice = Number(form.price);
+  const parsedStock = Number(form.initialStock);
+  const parsedCost = form.cost.trim().length > 0 ? Number(form.cost) : undefined;
+  const parsedMinStock = Number(form.minStock);
+  const errors: ProductOnboardingFieldErrors = {};
+
+  if (form.name.trim().length < 2) {
+    errors.name = messages.catalog.onboarding.invalidName;
+  }
+
+  if (form.categoryId.trim().length === 0) {
+    errors.categoryId = messages.catalog.onboarding.invalidCategory;
+  }
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+    errors.price = messages.catalog.onboarding.invalidPrice;
+  }
+
+  if (!Number.isFinite(parsedStock) || !Number.isInteger(parsedStock) || parsedStock < 0) {
+    errors.initialStock = messages.catalog.onboarding.invalidInitialStock;
+  }
+
+  if (!Number.isFinite(parsedMinStock) || !Number.isInteger(parsedMinStock) || parsedMinStock < 0) {
+    errors.minStock = messages.catalog.onboarding.invalidMinStock;
+  }
+
+  if (parsedCost !== undefined && (!Number.isFinite(parsedCost) || parsedCost <= 0)) {
+    errors.cost = messages.catalog.onboarding.invalidCost;
+  }
+
+  if (parsedStock > 0 && parsedCost === undefined) {
+    errors.cost = messages.catalog.onboarding.costRequiredForInitialStock;
+  }
+
+  return errors;
+}
+
+function resolveFirstFieldError(
+  fieldErrors: ProductOnboardingFieldErrors,
+): string | undefined {
+  return (
+    fieldErrors.name ??
+    fieldErrors.categoryId ??
+    fieldErrors.price ??
+    fieldErrors.initialStock ??
+    fieldErrors.minStock ??
+    fieldErrors.cost
+  );
+}
+
 export function useProductOnboarding({
   onProductCreated,
   refreshToken,
@@ -118,6 +183,7 @@ export function useProductOnboarding({
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<ProductOnboardingFeedbackState | null>(null);
+  const [shouldShowFieldErrors, setShouldShowFieldErrors] = useState<boolean>(false);
 
   const categories = useMemo(() => {
     return sortCategoryCodes(dedupeCategoryCodes([
@@ -125,6 +191,10 @@ export function useProductOnboarding({
       ...products.map((product) => product.categoryId),
     ]));
   }, [products]);
+  const fieldErrors = useMemo(
+    () => resolveProductOnboardingFieldErrors(form, messages),
+    [form, messages],
+  );
 
   const reloadProducts = useCallback(async (): Promise<void> => {
     setIsLoadingProducts(true);
@@ -152,6 +222,7 @@ export function useProductOnboarding({
   function resetForm(): void {
     setForm(buildDefaultFormState());
     setFeedback(null);
+    setShouldShowFieldErrors(false);
   }
 
   useEffect(() => {
@@ -171,51 +242,21 @@ export function useProductOnboarding({
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setFeedback(null);
+    setShouldShowFieldErrors(true);
+
+    const firstFieldError = resolveFirstFieldError(fieldErrors);
+    if (firstFieldError) {
+      setFeedback({
+        type: "error",
+        message: firstFieldError,
+      });
+      return;
+    }
 
     const parsedPrice = Number(form.price);
     const parsedStock = Number(form.initialStock);
     const parsedCost = form.cost.trim().length > 0 ? Number(form.cost) : undefined;
     const parsedMinStock = Number(form.minStock);
-
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setFeedback({
-        type: "error",
-        message: messages.catalog.onboarding.invalidPrice,
-      });
-      return;
-    }
-
-    if (!Number.isFinite(parsedStock) || !Number.isInteger(parsedStock) || parsedStock < 0) {
-      setFeedback({
-        type: "error",
-        message: messages.catalog.onboarding.invalidInitialStock,
-      });
-      return;
-    }
-
-    if (!Number.isFinite(parsedMinStock) || !Number.isInteger(parsedMinStock) || parsedMinStock < 0) {
-      setFeedback({
-        type: "error",
-        message: messages.catalog.onboarding.invalidMinStock,
-      });
-      return;
-    }
-
-    if (parsedCost !== undefined && (!Number.isFinite(parsedCost) || parsedCost <= 0)) {
-      setFeedback({
-        type: "error",
-        message: messages.catalog.onboarding.invalidCost,
-      });
-      return;
-    }
-
-    if (parsedStock > 0 && parsedCost === undefined) {
-      setFeedback({
-        type: "error",
-        message: messages.catalog.onboarding.costRequiredForInitialStock,
-      });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -253,6 +294,7 @@ export function useProductOnboarding({
         message: messages.catalog.onboarding.createSuccess(createdProduct.name),
       });
       setForm(buildDefaultFormState());
+      setShouldShowFieldErrors(false);
       await reloadProducts();
       await onProductCreated?.(createdProduct);
     } catch {
@@ -267,6 +309,7 @@ export function useProductOnboarding({
 
   return {
     categories,
+    fieldErrors,
     feedback,
     form,
     isLoadingProducts,
@@ -275,6 +318,7 @@ export function useProductOnboarding({
     reloadProducts,
     resetForm,
     setForm,
+    shouldShowFieldErrors,
     submit,
   };
 }
