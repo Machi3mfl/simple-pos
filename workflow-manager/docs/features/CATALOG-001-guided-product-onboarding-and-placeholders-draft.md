@@ -88,6 +88,10 @@ export interface BulkPriceUpdateDTO {
   - operator-facing labels stay human-readable (example: `Desayuno y merienda`)
   - persisted category ids are canonical slug codes (example: `desayuno-y-merienda`)
   - normalization removes duplicate variants caused by alternate separators, casing, or symbols
+- Onboarding validation contract:
+  - guided product creation now resolves client-side validation through a reusable result object
+  - the UI receives both `errorsByField` for input highlighting and `issues[]` for rendering a summary list of actionable messages
+  - current entry points: `useProductOnboarding`, `ProductOnboardingPanel`, and the create flow embedded in `/products`
 - Bulk repricing API route:
   - `src/app/api/v1/products/price-batches/route.ts`
 - Repricing application use case:

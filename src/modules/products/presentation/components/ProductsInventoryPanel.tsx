@@ -445,6 +445,7 @@ export function ProductsInventoryPanel({
     isSubmitting: isSubmittingCreate,
     shouldShowFieldErrors: shouldShowOnboardingFieldErrors,
     setForm: setOnboardingForm,
+    validation: onboardingValidation,
     submit: submitProductOnboarding,
   } = useProductOnboarding({
     onProductCreated: async (createdProduct) => {
@@ -1615,6 +1616,19 @@ export function ProductsInventoryPanel({
       {openDialog === "create" ? (
         <Dialog title={messages.productsWorkspace.dialogs.createTitle} onClose={() => setOpenDialog(null)}>
           <form className="grid gap-4 md:grid-cols-2" noValidate onSubmit={submitProductOnboarding}>
+            {shouldShowOnboardingFieldErrors && onboardingValidation.hasErrors ? (
+              <div className="md:col-span-2 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p className="font-semibold text-rose-800">
+                  Revisá los campos obligatorios antes de crear el producto.
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {onboardingValidation.issues.map((issue) => (
+                    <li key={`${issue.field}:${issue.message}`}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             <label className="flex flex-col gap-2">
               <span className="text-sm font-semibold text-slate-700">
                 {messages.productsWorkspace.fields.name}

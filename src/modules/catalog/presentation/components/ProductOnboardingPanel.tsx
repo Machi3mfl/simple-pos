@@ -33,6 +33,7 @@ export function ProductOnboardingPanel({
     reloadProducts,
     setForm,
     shouldShowFieldErrors,
+    validation,
     submit,
   } = useProductOnboarding({
     onProductCreated,
@@ -75,6 +76,17 @@ export function ProductOnboardingPanel({
       </header>
 
       <form className="mt-4 grid gap-3 md:grid-cols-2" noValidate onSubmit={submit}>
+        {shouldShowFieldErrors && validation.hasErrors ? (
+          <div className="md:col-span-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <p className="font-semibold text-rose-800">Revisá los campos obligatorios.</p>
+            <ul className="mt-2 space-y-1">
+              {validation.issues.map((issue) => (
+                <li key={`${issue.field}:${issue.message}`}>{issue.message}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-slate-600">
             {messages.catalog.onboarding.nameLabel}

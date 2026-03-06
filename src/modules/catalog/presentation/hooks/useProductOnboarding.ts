@@ -11,6 +11,11 @@ import {
 } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import {
+  buildFormValidationResult,
+  type FormValidationIssue,
+  type FormValidationResult,
+} from "@/lib/form-validation";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
@@ -75,6 +80,12 @@ interface UseProductOnboardingOptions {
   readonly refreshToken?: number;
 }
 
+export type ProductOnboardingValidationField = keyof ProductOnboardingFieldErrors;
+export type ProductOnboardingValidationIssue =
+  FormValidationIssue<ProductOnboardingValidationField>;
+export type ProductOnboardingValidationResult =
+  FormValidationResult<ProductOnboardingValidationField>;
+
 interface UseProductOnboardingResult {
   readonly categories: readonly string[];
   readonly fieldErrors: ProductOnboardingFieldErrors;
@@ -87,6 +98,7 @@ interface UseProductOnboardingResult {
   readonly resetForm: () => void;
   readonly setForm: Dispatch<SetStateAction<ProductOnboardingFormState>>;
   readonly shouldShowFieldErrors: boolean;
+  readonly validation: ProductOnboardingValidationResult;
   readonly submit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
@@ -119,58 +131,66 @@ function resolveApiMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-function resolveProductOnboardingFieldErrors(
+function validateProductOnboardingForm(
   form: ProductOnboardingFormState,
   messages: ReturnType<typeof useI18n>["messages"],
-): ProductOnboardingFieldErrors {
+): ProductOnboardingValidationResult {
   const parsedPrice = Number(form.price);
   const parsedStock = Number(form.initialStock);
   const parsedCost = form.cost.trim().length > 0 ? Number(form.cost) : undefined;
   const parsedMinStock = Number(form.minStock);
-  const errors: ProductOnboardingFieldErrors = {};
+  const issues: ProductOnboardingValidationIssue[] = [];
 
   if (form.name.trim().length < 2) {
-    errors.name = messages.catalog.onboarding.invalidName;
+    issues.push({
+      field: "name",
+      message: messages.catalog.onboarding.invalidName,
+    });
   }
 
   if (form.categoryId.trim().length === 0) {
-    errors.categoryId = messages.catalog.onboarding.invalidCategory;
+    issues.push({
+      field: "categoryId",
+      message: messages.catalog.onboarding.invalidCategory,
+    });
   }
 
   if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-    errors.price = messages.catalog.onboarding.invalidPrice;
+    issues.push({
+      field: "price",
+      message: messages.catalog.onboarding.invalidPrice,
+    });
   }
 
   if (!Number.isFinite(parsedStock) || !Number.isInteger(parsedStock) || parsedStock < 0) {
-    errors.initialStock = messages.catalog.onboarding.invalidInitialStock;
+    issues.push({
+      field: "initialStock",
+      message: messages.catalog.onboarding.invalidInitialStock,
+    });
   }
 
   if (!Number.isFinite(parsedMinStock) || !Number.isInteger(parsedMinStock) || parsedMinStock < 0) {
-    errors.minStock = messages.catalog.onboarding.invalidMinStock;
+    issues.push({
+      field: "minStock",
+      message: messages.catalog.onboarding.invalidMinStock,
+    });
   }
 
   if (parsedCost !== undefined && (!Number.isFinite(parsedCost) || parsedCost <= 0)) {
-    errors.cost = messages.catalog.onboarding.invalidCost;
+    issues.push({
+      field: "cost",
+      message: messages.catalog.onboarding.invalidCost,
+    });
   }
 
   if (parsedStock > 0 && parsedCost === undefined) {
-    errors.cost = messages.catalog.onboarding.costRequiredForInitialStock;
+    issues.push({
+      field: "cost",
+      message: messages.catalog.onboarding.costRequiredForInitialStock,
+    });
   }
 
-  return errors;
-}
-
-function resolveFirstFieldError(
-  fieldErrors: ProductOnboardingFieldErrors,
-): string | undefined {
-  return (
-    fieldErrors.name ??
-    fieldErrors.categoryId ??
-    fieldErrors.price ??
-    fieldErrors.initialStock ??
-    fieldErrors.minStock ??
-    fieldErrors.cost
-  );
+  return buildFormValidationResult(issues);
 }
 
 export function useProductOnboarding({
@@ -191,10 +211,11 @@ export function useProductOnboarding({
       ...products.map((product) => product.categoryId),
     ]));
   }, [products]);
-  const fieldErrors = useMemo(
-    () => resolveProductOnboardingFieldErrors(form, messages),
+  const validation = useMemo(
+    () => validateProductOnboardingForm(form, messages),
     [form, messages],
   );
+  const fieldErrors = validation.errorsByField;
 
   const reloadProducts = useCallback(async (): Promise<void> => {
     setIsLoadingProducts(true);
@@ -244,11 +265,10 @@ export function useProductOnboarding({
     setFeedback(null);
     setShouldShowFieldErrors(true);
 
-    const firstFieldError = resolveFirstFieldError(fieldErrors);
-    if (firstFieldError) {
+    if (validation.firstIssue) {
       setFeedback({
         type: "error",
-        message: firstFieldError,
+        message: validation.firstIssue.message,
       });
       return;
     }
@@ -319,6 +339,7 @@ export function useProductOnboarding({
     resetForm,
     setForm,
     shouldShowFieldErrors,
+    validation,
     submit,
   };
 }
