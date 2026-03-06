@@ -1171,9 +1171,11 @@ export function ProductSourcingScreen({
   const previewImageItem = useMemo(
     () =>
       previewImageSourceProductId
-        ? selectedItems.find((item) => item.sourceProductId === previewImageSourceProductId) ?? null
+        ? results.find((item) => item.sourceProductId === previewImageSourceProductId) ??
+          selectedItems.find((item) => item.sourceProductId === previewImageSourceProductId) ??
+          null
         : null,
-    [previewImageSourceProductId, selectedItems],
+    [previewImageSourceProductId, results, selectedItems],
   );
   const failedQueueCounts = useMemo(
     () => ({
@@ -2248,13 +2250,26 @@ export function ProductSourcingScreen({
                             }
                             media={
                               item.imageUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element -- External retailer images are dynamic and validated through the sourcing workflow.
-                                <img
-                                  src={item.imageUrl}
-                                  alt={item.name}
-                                  loading="eager"
-                                  className="h-full w-full object-contain"
-                                />
+                                <button
+                                  type="button"
+                                  data-testid={`product-sourcing-search-image-preview-trigger-${item.sourceProductId}`}
+                                  onClick={() =>
+                                    setPreviewImageSourceProductId(item.sourceProductId)
+                                  }
+                                  className="group relative flex h-full w-full items-center justify-center overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white transition hover:border-blue-300 hover:shadow-[0_12px_24px_rgba(37,99,235,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                  aria-label={`Ver imagen ampliada de ${item.name}`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element -- External retailer images are dynamic and validated through the sourcing workflow. */}
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    loading="eager"
+                                    className="h-full w-full object-contain transition group-hover:scale-[1.03]"
+                                  />
+                                  <span className="pointer-events-none absolute inset-x-2 bottom-2 rounded-full bg-slate-950/80 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-white opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100">
+                                    Ver foto
+                                  </span>
+                                </button>
                               ) : (
                                 <Store size={28} className="text-slate-400" />
                               )

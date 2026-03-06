@@ -401,6 +401,7 @@ Why:
 - keep the current selection visible through a highlighted selected-count badge next to the visible-results summary so the operator never loses context while moving between steps,
 - show the first result window quickly and continue appending later pages through infinite scroll, keeping a manual fallback only when `IntersectionObserver` is unavailable,
 - show a Carrefour origin badge and large image preview in result cards,
+- allow opening a larger inspection modal directly from the step-1 result image before selecting the item,
 - allow selecting `1..n` visible results before confirming import,
 - structure the UI as a 3-step wizard (`search/select` -> `adjust data` -> `confirm/import`) so search, editing, and confirmation are not competing on screen at the same time,
 - keep failed queue, learned category mappings, and recent history available as secondary modal surfaces from the header actions instead of inline blocks inside the main flow,
@@ -474,6 +475,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 - [x] The sourcing flow runs in a dedicated screen with enough space to inspect result images comfortably.
 - [x] The sourcing screen preserves the main application shell and navigation rail while the operator works inside `/products/sourcing`.
 - [x] Search results show a large enough image and descriptive title to distinguish nearby variants quickly.
+- [x] The operator can open an enlarged image inspection modal directly from the step-1 search results before selecting a candidate.
 - [x] Search requests are not fired on every keystroke and only run after typing stops or the operator presses `Enter`.
 - [x] The first visible result images load fast enough to support quick product recognition.
 - [x] The operator can select one or many search results and confirm a batch import in one action.
@@ -644,6 +646,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - rendering inside the shared POS shell so the main navigation rail remains visible while sourcing,
   - debounced Carrefour search,
   - multi-select result cards,
+  - enlarged image inspection directly from the step-1 search grid before selection, reusing the same modal preview pattern available later in the draft-review step,
   - infinite scroll result loading with shared observer/fallback primitives instead of classic paginated navigation,
   - a compact selection summary through badges in the search header (`resultados visibles` + highlighted `seleccionados`) instead of a detached selection card,
   - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
@@ -668,6 +671,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - `tests/e2e/product-sourcing-import-ui.spec.ts` verifies `/products -> /products/sourcing -> import -> /products -> /cash-register` and asserts the imported product card now renders from the managed storage URL.
   - `tests/e2e/product-sourcing-import-ui.spec.ts` also verifies a partial import batch where one item succeeds and another is rejected as already imported, keeping the failed item actionable from the same screen.
   - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active and that infinite scroll appends later provider pages without losing the current selection.
+  - `tests/e2e/product-sourcing-ui.spec.ts` also verifies that the operator can inspect a larger product image directly from the step-1 search grid before selecting the candidate.
   - `tests/e2e/product-sourcing-resume-state-ui.spec.ts` verifies that a sourcing session survives a full page reload without re-running the initial search and restores the draft fields exactly as the operator left them.
   - `tests/e2e/product-sourcing-failed-queue-ui.spec.ts` verifies that failed imports persist across sessions, can be filtered by status, retried to resolution, and dismissed into a separate state bucket.
   - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the results/selection badges staying above results and the import CTA remaining visible.

@@ -280,3 +280,28 @@ test("opens the enlarged image modal from the details step", async ({ page }) =>
   await page.getByTestId("product-sourcing-image-preview-dialog-close").click();
   await expect(page.getByTestId("product-sourcing-image-preview-dialog")).toHaveCount(0);
 });
+
+test("opens the enlarged image modal directly from the search results grid", async ({ page }) => {
+  await page.route("**/api/v1/product-sourcing/search**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(firstPageResponse),
+    });
+  });
+
+  await page.goto("/products/sourcing");
+  await page.getByTestId("product-sourcing-search-input").fill("coca cola");
+  await page.waitForTimeout(650);
+
+  await page.getByTestId("product-sourcing-search-image-preview-trigger-393964").click();
+  await expect(page.getByTestId("product-sourcing-image-preview-dialog")).toBeVisible();
+  await expect(
+    page
+      .getByTestId("product-sourcing-image-preview-dialog")
+      .getByRole("heading", { name: "Gaseosa cola Coca Cola Zero 2,25 lts" }),
+  ).toBeVisible();
+
+  await page.getByTestId("product-sourcing-image-preview-dialog-close").click();
+  await expect(page.getByTestId("product-sourcing-image-preview-dialog")).toHaveCount(0);
+});
