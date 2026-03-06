@@ -196,6 +196,21 @@ In this matrix, `UI E2E coverage` means the scenario is executed through user in
 - Runtime mode:
   - `supabase`
 
+## Users-Admin Cash Register Catalog and Assignment
+
+`POS-002 Slice 11` extends `/users-admin` so support/admin operators can manage the register catalog and assign drawers to users from the same access-control workspace.
+
+- Main contracts:
+  - `GET /api/v1/access-control/workspace`
+  - `POST /api/v1/access-control/cash-registers`
+  - `PUT /api/v1/access-control/cash-registers/{id}`
+  - `PUT /api/v1/access-control/users/{id}/cash-registers`
+- Coverage:
+  - UI: [tests/e2e/access-control-role-admin-ui.spec.ts](../../../tests/e2e/access-control-role-admin-ui.spec.ts)
+  - API/contract: [tests/e2e/access-control-role-admin-api.spec.ts](../../../tests/e2e/access-control-role-admin-api.spec.ts)
+- Runtime mode:
+  - `supabase`
+
 ## Real-Backend UI Module Suite
 
 The baseline run that validates UI vertical slices against Supabase is:

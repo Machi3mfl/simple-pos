@@ -1,6 +1,10 @@
 import { expect, test } from "./support/test";
 
-import { accessControlRoleDTOSchema, accessControlWorkspaceResponseDTOSchema } from "../../src/modules/access-control/presentation/dtos/access-control-workspace-response.dto";
+import {
+  accessControlCashRegisterDTOSchema,
+  accessControlRoleDTOSchema,
+  accessControlWorkspaceResponseDTOSchema,
+} from "../../src/modules/access-control/presentation/dtos/access-control-workspace-response.dto";
 import { meResponseDTOSchema } from "../../src/modules/access-control/presentation/dtos/me-response.dto";
 
 test.describe("access control role administration api", () => {
@@ -19,6 +23,13 @@ test.describe("access control role administration api", () => {
     );
     expect(workspace.roles.some((role) => role.code === "cashier")).toBe(true);
     expect(workspace.permissionGroups.length).toBeGreaterThan(0);
+    expect(workspace.cashRegisters.length).toBeGreaterThan(0);
+
+    const originalMarta = workspace.users.find(
+      (user) => user.userId === "user_collections_marta",
+    );
+    expect(originalMarta).toBeDefined();
+    const originalMartaRegisterIds = originalMarta?.assignedRegisterIds ?? [];
 
     const uniqueName = `Caja extendida ${Date.now()}`;
     const createRoleResponse = await supportRequest.post("/api/v1/access-control/roles", {
@@ -40,6 +51,39 @@ test.describe("access control role administration api", () => {
     expect(createdRole.isLocked).toBe(false);
     expect(createdRole.name).toBe(uniqueName);
 
+    const uniqueRegisterName = `Caja soporte ${Date.now()}`;
+    const createRegisterResponse = await supportRequest.post(
+      "/api/v1/access-control/cash-registers",
+      {
+        data: {
+          name: uniqueRegisterName,
+          locationCode: "accesos-admin",
+        },
+      },
+    );
+    expect(createRegisterResponse.status()).toBe(201);
+    const createdRegister = accessControlCashRegisterDTOSchema.parse(
+      await createRegisterResponse.json(),
+    );
+    expect(createdRegister.name).toBe(uniqueRegisterName);
+    expect(createdRegister.isActive).toBe(true);
+
+    const updateRegisterResponse = await supportRequest.put(
+      `/api/v1/access-control/cash-registers/${createdRegister.id}`,
+      {
+        data: {
+          name: `${uniqueRegisterName} v2`,
+          locationCode: "accesos-admin-2",
+          isActive: true,
+        },
+      },
+    );
+    expect(updateRegisterResponse.status()).toBe(200);
+    const updatedRegister = accessControlCashRegisterDTOSchema.parse(
+      await updateRegisterResponse.json(),
+    );
+    expect(updatedRegister.name).toContain("v2");
+
     const assignRoleResponse = await supportRequest.put(
       "/api/v1/access-control/users/user_collections_marta/roles",
       {
@@ -49,6 +93,18 @@ test.describe("access control role administration api", () => {
       },
     );
     expect(assignRoleResponse.status()).toBe(200);
+
+    const assignRegisterResponse = await supportRequest.put(
+      "/api/v1/access-control/users/user_collections_marta/cash-registers",
+      {
+        data: {
+          cashRegisterIds: Array.from(
+            new Set([...originalMartaRegisterIds, createdRegister.id]),
+          ),
+        },
+      },
+    );
+    expect(assignRegisterResponse.status()).toBe(200);
 
     const assumeCollectionsResponse = await supportRequest.post("/api/v1/me/assume-user", {
       data: {
@@ -62,6 +118,7 @@ test.describe("access control role administration api", () => {
       await meAsCollectionsResponse.json(),
     );
     expect(meAsCollections.actor.roleNames).toContain(uniqueName);
+    expect(meAsCollections.actor.assignedRegisterIds).toContain(createdRegister.id);
     expect(meAsCollections.permissionSnapshot.workspaces.cashRegister.canView).toBe(true);
     expect(meAsCollections.permissionSnapshot.workspaces.receivables.canView).toBe(true);
 
@@ -81,6 +138,16 @@ test.describe("access control role administration api", () => {
       },
     );
     expect(restoreAssignmentsResponse.status()).toBe(200);
+
+    const restoreRegisterAssignmentsResponse = await supportRequest.put(
+      "/api/v1/access-control/users/user_collections_marta/cash-registers",
+      {
+        data: {
+          cashRegisterIds: originalMartaRegisterIds,
+        },
+      },
+    );
+    expect(restoreRegisterAssignmentsResponse.status()).toBe(200);
 
     const deleteRoleResponse = await supportRequest.delete(
       `/api/v1/access-control/roles/${createdRole.id}`,

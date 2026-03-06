@@ -118,6 +118,14 @@ Delivered so far:
 - `GET /api/v1/app-users` and `POST /api/v1/me/assume-user` are now restricted to authenticated `system_admin` support flows in runtime and in E2E bootstrap flows
   - support-controlled impersonation now preserves the support controller across assumed operators, so `system_admin` can still switch actors repeatedly after login while validating the resulting UI
   - the rail now clears the assumed-support cookie before returning to `/login`, so real credential login no longer loops back into the delegated session
+- `Slice 11`:
+  - `/users-admin` now exposes a dedicated `Cajas` tab to maintain the cash-register catalog (`crear`, `editar`, `activar/desactivar`) without opening a new route
+  - the user-management modal now persists role and cash-register assignments in a single save action, so operator enablement for `/cash-register` can be solved in one workflow
+  - `GET /api/v1/access-control/workspace` now includes `cashRegisters` in the typed snapshot used by the admin workspace
+  - new admin contracts:
+    - `POST /api/v1/access-control/cash-registers`
+    - `PUT /api/v1/access-control/cash-registers/{id}`
+    - `PUT /api/v1/access-control/users/{id}/cash-registers`
 
 Still pending:
 
