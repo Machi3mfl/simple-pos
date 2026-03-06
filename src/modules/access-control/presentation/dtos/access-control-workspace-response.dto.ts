@@ -60,10 +60,21 @@ export const accessControlUserDTOSchema = z
   })
   .strict();
 
+export const accessControlCashRegisterDTOSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    locationCode: z.string().min(1).optional(),
+    isActive: z.boolean(),
+    assignedUserCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const accessControlWorkspaceResponseDTOSchema = z
   .object({
     roles: z.array(accessControlRoleDTOSchema),
     users: z.array(accessControlUserDTOSchema),
+    cashRegisters: z.array(accessControlCashRegisterDTOSchema),
     permissions: z.array(accessControlPermissionDTOSchema),
     permissionGroups: z.array(accessControlPermissionGroupDTOSchema),
   })

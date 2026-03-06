@@ -5,12 +5,16 @@ import type {
   RawAccessPermissionRecord,
 } from "../../domain/repositories/RoleAdministrationRepository";
 import type {
+  AccessCashRegisterDefinition,
   AccessRoleDefinition,
   AccessUserDefinition,
+  CreateCashRegisterInput,
   CreateAccessUserInput,
   CreateCustomRoleInput,
+  ReplaceUserCashRegistersInput,
   UpsertedUserAuthCredentials,
   UpsertUserAuthCredentialsInput,
+  UpdateCashRegisterInput,
   UpdateCustomRoleInput,
 } from "../../domain/types/RoleAdministration";
 
@@ -55,6 +59,13 @@ interface RolePermissionAssignmentRow {
 interface RegisterAssignmentRow {
   readonly user_id: string;
   readonly cash_register_id: string;
+}
+
+interface CashRegisterRow {
+  readonly id: string;
+  readonly name: string;
+  readonly location_code: string | null;
+  readonly is_active: boolean;
 }
 
 interface AuthUserProfile {
@@ -126,6 +137,67 @@ export class SupabaseRoleAdministrationRepository
     const users = await this.loadUsers([userId]);
     const builtUsers = await this.buildUsers(users);
     return builtUsers[0] ?? null;
+  }
+
+  async listCashRegisters(): Promise<readonly AccessCashRegisterDefinition[]> {
+    const registers = await this.loadCashRegisters();
+    return this.buildCashRegisters(registers);
+  }
+
+  async findCashRegisterById(
+    registerId: string,
+  ): Promise<AccessCashRegisterDefinition | null> {
+    const registers = await this.loadCashRegisters([registerId]);
+    const builtRegisters = await this.buildCashRegisters(registers);
+    return builtRegisters[0] ?? null;
+  }
+
+  async createCashRegister(
+    input: CreateCashRegisterInput,
+  ): Promise<AccessCashRegisterDefinition> {
+    const registerId = `register_${crypto.randomUUID()}`;
+    const { error } = await this.client.from("cash_registers").insert({
+      id: registerId,
+      name: input.name,
+      location_code: input.locationCode ?? null,
+      is_active: true,
+    });
+
+    if (error) {
+      throw new Error(`Failed to create cash register in Supabase: ${error.message}`);
+    }
+
+    const createdRegister = await this.findCashRegisterById(registerId);
+    if (!createdRegister) {
+      throw new Error("No se pudo volver a cargar la caja creada.");
+    }
+
+    return createdRegister;
+  }
+
+  async updateCashRegister(
+    input: UpdateCashRegisterInput,
+  ): Promise<AccessCashRegisterDefinition | null> {
+    const { data, error } = await this.client
+      .from("cash_registers")
+      .update({
+        name: input.name,
+        location_code: input.locationCode ?? null,
+        is_active: input.isActive,
+      })
+      .eq("id", input.registerId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to update cash register in Supabase: ${error.message}`);
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return this.findCashRegisterById(input.registerId);
   }
 
   async createUser(input: CreateAccessUserInput): Promise<AccessUserDefinition> {
@@ -452,6 +524,42 @@ export class SupabaseRoleAdministrationRepository
     }
   }
 
+  async replaceUserCashRegisterAssignments(
+    params: ReplaceUserCashRegistersInput,
+  ): Promise<void> {
+    const { error: deleteError } = await this.client
+      .from("cash_register_user_assignments")
+      .delete()
+      .eq("user_id", params.userId);
+
+    if (deleteError) {
+      throw new Error(
+        `Failed to replace user cash register assignments in Supabase: ${deleteError.message}`,
+      );
+    }
+
+    if (params.cashRegisterIds.length === 0) {
+      return;
+    }
+
+    const { error: insertError } = await this.client
+      .from("cash_register_user_assignments")
+      .insert(
+        params.cashRegisterIds.map((cashRegisterId) => ({
+          id: `crua_${crypto.randomUUID()}`,
+          user_id: params.userId,
+          cash_register_id: cashRegisterId,
+          assigned_by_user_id: params.actorId,
+        })),
+      );
+
+    if (insertError) {
+      throw new Error(
+        `Failed to assign cash registers to the user in Supabase: ${insertError.message}`,
+      );
+    }
+  }
+
   async getUserRoleIds(userId: string): Promise<readonly string[]> {
     const { data, error } = await this.client
       .from("user_role_assignments")
@@ -616,6 +724,54 @@ export class SupabaseRoleAdministrationRepository
                 : "provisioned",
         };
       });
+  }
+
+  private async buildCashRegisters(
+    registers: readonly CashRegisterRow[],
+  ): Promise<readonly AccessCashRegisterDefinition[]> {
+    if (registers.length === 0) {
+      return [];
+    }
+
+    const registerAssignments = await this.loadRegisterAssignmentsByCashRegisterIds(
+      registers.map((register) => register.id),
+    );
+    const assignedUserIdsByRegisterId = new Map<string, Set<string>>();
+    for (const assignment of registerAssignments) {
+      const assignedUserIds = assignedUserIdsByRegisterId.get(assignment.cash_register_id) ?? new Set<string>();
+      assignedUserIds.add(assignment.user_id);
+      assignedUserIdsByRegisterId.set(assignment.cash_register_id, assignedUserIds);
+    }
+
+    return [...registers]
+      .sort((left, right) => left.name.localeCompare(right.name, "es"))
+      .map((register) => ({
+        id: register.id,
+        name: register.name,
+        locationCode: register.location_code ?? undefined,
+        isActive: register.is_active,
+        assignedUserCount: assignedUserIdsByRegisterId.get(register.id)?.size ?? 0,
+      }));
+  }
+
+  private async loadCashRegisters(
+    registerIds?: readonly string[],
+  ): Promise<readonly CashRegisterRow[]> {
+    let query = this.client
+      .from("cash_registers")
+      .select("id, name, location_code, is_active");
+
+    if (registerIds && registerIds.length > 0) {
+      query = query.in("id", [...registerIds]);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to load cash registers in Supabase: ${error.message}`);
+    }
+
+    return (data as readonly CashRegisterRow[] | null) ?? [];
   }
 
   private async loadRoles(roleIds?: readonly string[]): Promise<readonly RoleRow[]> {
@@ -784,6 +940,27 @@ export class SupabaseRoleAdministrationRepository
       .from("cash_register_user_assignments")
       .select("user_id, cash_register_id")
       .in("user_id", [...userIds]);
+
+    if (error) {
+      throw new Error(
+        `Failed to load cash register user assignments in Supabase: ${error.message}`,
+      );
+    }
+
+    return (data as readonly RegisterAssignmentRow[] | null) ?? [];
+  }
+
+  private async loadRegisterAssignmentsByCashRegisterIds(
+    cashRegisterIds: readonly string[],
+  ): Promise<readonly RegisterAssignmentRow[]> {
+    if (cashRegisterIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await this.client
+      .from("cash_register_user_assignments")
+      .select("user_id, cash_register_id")
+      .in("cash_register_id", [...cashRegisterIds]);
 
     if (error) {
       throw new Error(

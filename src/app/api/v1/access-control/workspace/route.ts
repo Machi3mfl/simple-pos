@@ -47,6 +47,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         updatedAt: role.updatedAt.toISOString(),
       })),
       users: snapshot.users,
+      cashRegisters: snapshot.cashRegisters,
       permissions: snapshot.permissions,
       permissionGroups: snapshot.permissionGroups,
     };

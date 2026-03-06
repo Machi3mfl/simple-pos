@@ -51,9 +51,18 @@ export interface AccessUserDefinition {
     | "stale_mapping";
 }
 
+export interface AccessCashRegisterDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly locationCode?: string;
+  readonly isActive: boolean;
+  readonly assignedUserCount: number;
+}
+
 export interface AccessControlWorkspaceSnapshot {
   readonly roles: readonly AccessRoleDefinition[];
   readonly users: readonly AccessUserDefinition[];
+  readonly cashRegisters: readonly AccessCashRegisterDefinition[];
   readonly permissions: readonly AccessPermissionDefinition[];
   readonly permissionGroups: readonly PermissionGroupDefinition[];
 }
@@ -78,6 +87,26 @@ export interface ReplaceUserRolesInput {
   readonly actorId: string;
   readonly userId: string;
   readonly roleIds: readonly string[];
+}
+
+export interface ReplaceUserCashRegistersInput {
+  readonly actorId: string;
+  readonly userId: string;
+  readonly cashRegisterIds: readonly string[];
+}
+
+export interface CreateCashRegisterInput {
+  readonly actorId: string;
+  readonly name: string;
+  readonly locationCode?: string;
+}
+
+export interface UpdateCashRegisterInput {
+  readonly actorId: string;
+  readonly registerId: string;
+  readonly name: string;
+  readonly locationCode?: string;
+  readonly isActive: boolean;
 }
 
 export interface UpsertUserAuthCredentialsInput {

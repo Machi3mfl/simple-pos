@@ -11,9 +11,10 @@ export class GetAccessControlWorkspaceSnapshotUseCase {
   ) {}
 
   async execute(): Promise<AccessControlWorkspaceSnapshot> {
-    const [roles, users, rawPermissions] = await Promise.all([
+    const [roles, users, cashRegisters, rawPermissions] = await Promise.all([
       this.repository.listRoles(),
       this.repository.listUsers(),
+      this.repository.listCashRegisters(),
       this.repository.listPermissions(),
     ]);
 
@@ -23,6 +24,7 @@ export class GetAccessControlWorkspaceSnapshotUseCase {
     return {
       roles,
       users,
+      cashRegisters,
       permissions,
       permissionGroups,
     };

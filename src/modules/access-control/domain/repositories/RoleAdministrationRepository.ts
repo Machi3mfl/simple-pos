@@ -1,11 +1,15 @@
 import type {
+  AccessCashRegisterDefinition,
   AccessPermissionDefinition,
   AccessRoleDefinition,
   AccessUserDefinition,
+  CreateCashRegisterInput,
   CreateAccessUserInput,
   CreateCustomRoleInput,
+  ReplaceUserCashRegistersInput,
   UpsertedUserAuthCredentials,
   UpsertUserAuthCredentialsInput,
+  UpdateCashRegisterInput,
   UpdateCustomRoleInput,
 } from "../types/RoleAdministration";
 
@@ -21,7 +25,13 @@ export interface RoleAdministrationRepository {
   findRoleById(roleId: string): Promise<AccessRoleDefinition | null>;
   listUsers(): Promise<readonly AccessUserDefinition[]>;
   findUserById(userId: string): Promise<AccessUserDefinition | null>;
+  listCashRegisters(): Promise<readonly AccessCashRegisterDefinition[]>;
+  findCashRegisterById(registerId: string): Promise<AccessCashRegisterDefinition | null>;
   createUser(input: CreateAccessUserInput): Promise<AccessUserDefinition>;
+  createCashRegister(input: CreateCashRegisterInput): Promise<AccessCashRegisterDefinition>;
+  updateCashRegister(
+    input: UpdateCashRegisterInput,
+  ): Promise<AccessCashRegisterDefinition | null>;
   listPermissions(): Promise<readonly RawAccessPermissionRecord[]>;
   createCustomRole(input: CreateCustomRoleInput & { readonly code: string }): Promise<AccessRoleDefinition>;
   updateCustomRole(input: UpdateCustomRoleInput): Promise<AccessRoleDefinition | null>;
@@ -31,6 +41,9 @@ export interface RoleAdministrationRepository {
     readonly userId: string;
     readonly roleIds: readonly string[];
   }): Promise<void>;
+  replaceUserCashRegisterAssignments(
+    params: ReplaceUserCashRegistersInput,
+  ): Promise<void>;
   upsertUserAuthCredentials(
     input: UpsertUserAuthCredentialsInput,
   ): Promise<UpsertedUserAuthCredentials>;
