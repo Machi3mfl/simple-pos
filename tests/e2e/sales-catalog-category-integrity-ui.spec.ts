@@ -69,3 +69,60 @@ test("collapses legacy snack category aliases into a single sales chip", async (
   await expect(page.getByText("Snack Plural")).toBeVisible();
   await expect(page.getByText("Bebida Cola")).not.toBeVisible();
 });
+
+test("assigns distinct category icons for broader category families", async ({ page }) => {
+  const items = [
+    createCatalogItem({
+      id: "product-breakfast",
+      name: "Café molido",
+      categoryId: "desayuno-y-merienda",
+    }),
+    createCatalogItem({
+      id: "product-pantry",
+      name: "Fideos secos",
+      categoryId: "almacen",
+    }),
+    createCatalogItem({
+      id: "product-beverage",
+      name: "Agua mineral",
+      categoryId: "bebidas",
+    }),
+    createCatalogItem({
+      id: "product-home",
+      name: "Set de cocina",
+      categoryId: "hogar",
+    }),
+    createCatalogItem({
+      id: "product-toys",
+      name: "Auto de juguete",
+      categoryId: "jugueteria",
+    }),
+    createCatalogItem({
+      id: "product-cleaning",
+      name: "Detergente limón",
+      categoryId: "limpieza",
+    }),
+  ];
+
+  await page.route("**/api/v1/products**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items }),
+    });
+  });
+
+  await page.goto("/cash-register");
+
+  await expect(page.locator('button[title="Desayuno y merienda"]')).toContainText("🥐");
+  await expect(page.locator('button[title="Almacen"]')).toContainText("🥫");
+  await expect(page.locator('button[title="Bebidas"]')).toContainText("🥤");
+  await expect(page.locator('button[title="Hogar"]')).toContainText("🏠");
+  await expect(page.locator('button[title="Jugueteria"]')).toContainText("🧸");
+  await expect(page.locator('button[title="Limpieza"]')).toContainText("🧽");
+});

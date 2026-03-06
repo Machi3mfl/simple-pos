@@ -35,15 +35,158 @@ const CATEGORY_EMOJI_BY_CODE: Record<string, string> = {
   "bebidas-gaseosas": "🥤",
   "bebidas-aguas": "💧",
   alfajores: "🍪",
-  galletitas: "🥐",
+  galletitas: "🍪",
   snacks: "🍟",
-  "desayuno-y-merienda": "🍽️",
+  "desayuno-y-merienda": "🥐",
   other: "📦",
   main: "🍜",
   drink: "🥤",
   snack: "🍔",
   dessert: "🍬",
 };
+
+interface CategoryEmojiRule {
+  readonly emoji: string;
+  readonly keywords: readonly string[];
+}
+
+// Exact matches are preferred, then broader semantic families decide the icon.
+// This keeps new categories visually distinct without hardcoding every single code.
+const CATEGORY_EMOJI_RULES: readonly CategoryEmojiRule[] = [
+  {
+    emoji: "🥤",
+    keywords: [
+      "bebidas",
+      "gaseosas",
+      "jugos",
+      "jugo",
+      "sodas",
+      "soda",
+      "refrescos",
+      "refresco",
+      "cervezas",
+      "cerveza",
+      "vinos",
+      "vino",
+      "licores",
+      "licor",
+      "aperitivos",
+      "aperitivo",
+    ],
+  },
+  {
+    emoji: "💧",
+    keywords: ["aguas", "agua"],
+  },
+  {
+    emoji: "🥐",
+    keywords: [
+      "desayuno",
+      "merienda",
+      "panaderia",
+      "panificados",
+      "infusiones",
+      "infusion",
+      "cafe",
+      "te",
+      "yerba",
+      "cereales",
+      "cereal",
+    ],
+  },
+  {
+    emoji: "🥫",
+    keywords: [
+      "almacen",
+      "despensa",
+      "fideos",
+      "arroz",
+      "harinas",
+      "harina",
+      "salsas",
+      "salsa",
+      "conservas",
+      "conserva",
+      "aceites",
+      "aceite",
+      "legumbres",
+      "legumbre",
+      "condimentos",
+      "condimento",
+    ],
+  },
+  {
+    emoji: "🍬",
+    keywords: ["golosinas", "golosina", "dulces", "dulce", "chocolates", "chocolate"],
+  },
+  {
+    emoji: "🥛",
+    keywords: ["lacteos", "lacteo", "leches", "leche", "quesos", "queso", "yogures", "yogur"],
+  },
+  {
+    emoji: "🍎",
+    keywords: [
+      "frutas",
+      "fruta",
+      "verduras",
+      "verdura",
+      "vegetales",
+      "vegetal",
+      "frescos",
+      "fresco",
+    ],
+  },
+  {
+    emoji: "🧽",
+    keywords: [
+      "limpieza",
+      "detergentes",
+      "detergente",
+      "lavandina",
+      "desinfectantes",
+      "desinfectante",
+      "papeles",
+      "papel",
+    ],
+  },
+  {
+    emoji: "🏠",
+    keywords: ["hogar", "bazar", "cocina", "decoracion", "bano", "baño"],
+  },
+  {
+    emoji: "🧸",
+    keywords: ["jugueteria", "juguetes", "juguete", "infantil", "peluches", "peluche"],
+  },
+  {
+    emoji: "💄",
+    keywords: ["perfumeria", "belleza", "cosmetica", "cosmeticos", "higiene-personal"],
+  },
+  {
+    emoji: "💊",
+    keywords: ["farmacia", "salud", "medicamentos", "medicamento"],
+  },
+  {
+    emoji: "🐶",
+    keywords: ["mascotas", "mascota", "pet"],
+  },
+  {
+    emoji: "🔋",
+    keywords: ["electronica", "electro", "pilas", "pila", "accesorios", "tecnologia"],
+  },
+  {
+    emoji: "👕",
+    keywords: ["indumentaria", "ropa", "textil", "textiles", "calzado"],
+  },
+  {
+    emoji: "📚",
+    keywords: ["libreria", "papeleria", "utiles", "utiles-escolares", "escolar"],
+  },
+];
+
+const CATEGORY_EMOJI_MATCHERS = CATEGORY_EMOJI_RULES.map((rule) => ({
+  emoji: rule.emoji,
+  normalizedKeywords: rule.keywords.map((keyword) => normalizeCategoryCode(keyword)),
+}));
 
 const CATEGORY_ORDER_BY_CODE = new Map<string, number>(
   ["all", ...DEFAULT_KIOSK_CATEGORY_CODES].map((code, index) => [code, index]),
@@ -118,7 +261,32 @@ export function defaultKioskCategoryCodes(): readonly string[] {
 }
 
 export function resolveCategoryEmoji(categoryId: string): string {
-  return CATEGORY_EMOJI_BY_CODE[normalizeCategoryCode(categoryId)] ?? "🍽️";
+  const normalizedCategoryId = normalizeCategoryCode(categoryId);
+  if (normalizedCategoryId.length === 0) {
+    return "📦";
+  }
+
+  const exactEmoji = CATEGORY_EMOJI_BY_CODE[normalizedCategoryId];
+  if (exactEmoji) {
+    return exactEmoji;
+  }
+
+  for (const rule of CATEGORY_EMOJI_MATCHERS) {
+    const hasKeywordMatch = rule.normalizedKeywords.some((normalizedKeyword) => {
+      return (
+        normalizedCategoryId === normalizedKeyword ||
+        normalizedCategoryId.startsWith(`${normalizedKeyword}-`) ||
+        normalizedCategoryId.endsWith(`-${normalizedKeyword}`) ||
+        normalizedCategoryId.includes(`-${normalizedKeyword}-`)
+      );
+    });
+
+    if (hasKeywordMatch) {
+      return rule.emoji;
+    }
+  }
+
+  return "📦";
 }
 
 export function sortCategoryCodes(values: readonly string[]): readonly string[] {

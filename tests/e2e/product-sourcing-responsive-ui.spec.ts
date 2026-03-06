@@ -190,10 +190,13 @@ async function mockSourcingApi(page: Page): Promise<void> {
 
 async function seedFailedQueue(page: Page): Promise<void> {
   await page.addInitScript(
-    ([storageKey, entries]) => {
-      window.localStorage.setItem(storageKey, JSON.stringify(entries));
+    (payload: { storageKey: string; entries: readonly unknown[] }) => {
+      window.localStorage.setItem(payload.storageKey, JSON.stringify(payload.entries));
     },
-    [FAILED_QUEUE_STORAGE_KEY, failedQueueEntries],
+    {
+      storageKey: FAILED_QUEUE_STORAGE_KEY,
+      entries: failedQueueEntries,
+    },
   );
 }
 
