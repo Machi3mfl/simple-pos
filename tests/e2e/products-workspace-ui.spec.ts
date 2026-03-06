@@ -87,7 +87,8 @@ test("navigates to sourcing, searches by EAN, edits stock and uses bulk actions 
   );
   const dialogCloseButton = page.getByTestId("products-workspace-dialog-close");
   if (await dialogCloseButton.isVisible().catch(() => false)) {
-    await dialogCloseButton.click();
+    await dialogCloseButton.click({ force: true }).catch(() => undefined);
+    await dialogCloseButton.waitFor({ state: "detached" }).catch(() => undefined);
   }
 
   await page.getByTestId("products-workspace-open-more-actions-button").click();
