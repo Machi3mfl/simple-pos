@@ -7,6 +7,7 @@ import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-b
 import { Input } from "@/components/ui/input";
 import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
   enqueueOfflineSyncEvent,
@@ -135,6 +136,12 @@ export function CashRegisterSessionPanel({
   const [pendingOfflineMovementCount, setPendingOfflineMovementCount] =
     useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [shouldShowOpeningFieldErrors, setShouldShowOpeningFieldErrors] =
+    useState<boolean>(false);
+  const [shouldShowClosingFieldErrors, setShouldShowClosingFieldErrors] =
+    useState<boolean>(false);
+  const [shouldShowMovementFieldErrors, setShouldShowMovementFieldErrors] =
+    useState<boolean>(false);
 
   const refreshPendingOfflineMovementCount = useCallback((): void => {
     setPendingOfflineMovementCount(getPendingOfflineSyncCount(["cash_movement_recorded"]));
@@ -214,6 +221,10 @@ export function CashRegisterSessionPanel({
     [registers, selectedRegisterId],
   );
   const activeSession = activeSessionDetail ?? selectedRegister?.activeSession ?? null;
+  const openingFloatValue = useMemo(
+    () => parseMonetaryInput(openingFloatAmount),
+    [openingFloatAmount],
+  );
   const countedClosingValue = useMemo(
     () => parseMonetaryInput(countedClosingAmount),
     [countedClosingAmount],
@@ -232,6 +243,14 @@ export function CashRegisterSessionPanel({
   const movementItems = activeSessionDetail?.movements ?? [];
   const isReviewRequiredSession = activeSession?.status === "closing_review_required";
   const isOpenSession = activeSession?.status === "open";
+  const isOpeningFloatInvalid =
+    shouldShowOpeningFieldErrors &&
+    (!Number.isFinite(openingFloatValue) || openingFloatValue < 0);
+  const isCountedClosingInvalid =
+    shouldShowClosingFieldErrors && !Number.isFinite(countedClosingValue);
+  const isMovementAmountInvalid =
+    shouldShowMovementFieldErrors &&
+    (!Number.isFinite(movementAmountValue) || movementAmountValue <= 0);
 
   const loadActiveSession = useCallback(
     async (registerId: string): Promise<void> => {
@@ -271,6 +290,18 @@ export function CashRegisterSessionPanel({
     void loadActiveSession(selectedRegisterId);
   }, [loadActiveSession, refreshToken, selectedRegisterId]);
 
+  useEffect(() => {
+    if (!isCloseModalOpen) {
+      setShouldShowClosingFieldErrors(false);
+    }
+  }, [isCloseModalOpen]);
+
+  useEffect(() => {
+    if (!isMovementModalOpen) {
+      setShouldShowMovementFieldErrors(false);
+    }
+  }, [isMovementModalOpen]);
+
   const retryOfflineMovementSync = useCallback(async (): Promise<void> => {
     const result = await flushOfflineSyncQueue();
     refreshPendingOfflineMovementCount();
@@ -301,7 +332,7 @@ export function CashRegisterSessionPanel({
   ]);
 
   const handleOpenSession = useCallback(async (): Promise<void> => {
-    const openingFloatValue = parseMonetaryInput(openingFloatAmount);
+    setShouldShowOpeningFieldErrors(true);
     if (!selectedRegister || !Number.isFinite(openingFloatValue) || openingFloatValue < 0) {
       showErrorToast({ description: cashSessionMessages.openErrorFallback });
       return;
@@ -341,6 +372,7 @@ export function CashRegisterSessionPanel({
       }
 
       setOpeningNotes("");
+      setShouldShowOpeningFieldErrors(false);
       setCountedClosingAmount("");
       setClosingNotes("");
       showSuccessToast({
@@ -355,12 +387,13 @@ export function CashRegisterSessionPanel({
     cashSessionMessages,
     loadActiveSession,
     loadRegisters,
-    openingFloatAmount,
     openingNotes,
+    openingFloatValue,
     selectedRegister,
   ]);
 
   const handleCloseSession = useCallback(async (): Promise<void> => {
+    setShouldShowClosingFieldErrors(true);
     if (!activeSession || !selectedRegister || !Number.isFinite(countedClosingValue)) {
       showErrorToast({ description: cashSessionMessages.closeErrorFallback });
       return;
@@ -403,6 +436,7 @@ export function CashRegisterSessionPanel({
 
       setCountedClosingAmount("");
       setClosingNotes("");
+      setShouldShowClosingFieldErrors(false);
       setIsCloseModalOpen(false);
       if (parsed.data.status === "closing_review_required") {
         showInfoToast({
@@ -539,6 +573,7 @@ export function CashRegisterSessionPanel({
   ]);
 
   const handleRecordMovement = useCallback(async (): Promise<void> => {
+    setShouldShowMovementFieldErrors(true);
     if (
       !activeSession ||
       !selectedRegister ||
@@ -590,6 +625,7 @@ export function CashRegisterSessionPanel({
       setMovementDirection("inbound");
       setMovementAmount("");
       setMovementNotes("");
+      setShouldShowMovementFieldErrors(false);
       setIsMovementModalOpen(false);
       showSuccessToast({
         description: cashSessionMessages.movementSuccess,
@@ -614,6 +650,7 @@ export function CashRegisterSessionPanel({
       setMovementDirection("inbound");
       setMovementAmount("");
       setMovementNotes("");
+      setShouldShowMovementFieldErrors(false);
       setIsMovementModalOpen(false);
       showInfoToast({
         description: cashSessionMessages.movementSavedOffline,
@@ -978,6 +1015,7 @@ export function CashRegisterSessionPanel({
                 </label>
                 <Input
                   data-testid="cash-session-opening-float-input"
+                  {...getFormControlValidationProps(isOpeningFloatInvalid)}
                   value={openingFloatAmount}
                   onChange={(event) => setOpeningFloatAmount(event.target.value)}
                   inputMode="decimal"
@@ -1108,6 +1146,7 @@ export function CashRegisterSessionPanel({
                     </label>
                     <Input
                       data-testid="cash-session-movement-amount-input"
+                      {...getFormControlValidationProps(isMovementAmountInvalid)}
                       value={movementAmount}
                       onChange={(event) => setMovementAmount(event.target.value)}
                       inputMode="decimal"
@@ -1217,6 +1256,7 @@ export function CashRegisterSessionPanel({
                     </label>
                     <Input
                       data-testid="cash-session-counted-input"
+                      {...getFormControlValidationProps(isCountedClosingInvalid)}
                       value={countedClosingAmount}
                       onChange={(event) => setCountedClosingAmount(event.target.value)}
                       inputMode="decimal"

@@ -20,6 +20,7 @@ import {
   showSuccessToast,
 } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
   listCashRegistersResponseDTOSchema,
@@ -122,6 +123,7 @@ interface DebtDetailDialogProps {
   readonly isSubmitting: boolean;
   readonly paymentRegisters: readonly CashRegisterListItemDTO[];
   readonly selectedPaymentRegisterId: string;
+  readonly invalidPaymentAmount: boolean;
   readonly onPaymentAmountChange: (value: string) => void;
   readonly onPaymentNotesChange: (value: string) => void;
   readonly onSelectedPaymentRegisterIdChange: (value: string) => void;
@@ -256,6 +258,7 @@ function DebtDetailDialog({
   isSubmitting,
   paymentRegisters,
   selectedPaymentRegisterId,
+  invalidPaymentAmount,
   onPaymentAmountChange,
   onPaymentNotesChange,
   onSelectedPaymentRegisterIdChange,
@@ -662,6 +665,7 @@ function DebtDetailDialog({
                   </span>
                   <input
                     data-testid="debt-payment-amount-input"
+                    {...getFormControlValidationProps(invalidPaymentAmount)}
                     type="number"
                     min="0.01"
                     max={
@@ -756,6 +760,8 @@ export function DebtManagementPanel({
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [shouldShowPaymentFieldErrors, setShouldShowPaymentFieldErrors] =
+    useState<boolean>(false);
 
   const publishFeedback = useCallback(
     ({
@@ -943,6 +949,7 @@ export function DebtManagementPanel({
       setActiveCustomerDetail(null);
       setPaymentAmount("");
       setPaymentNotes("");
+      setShouldShowPaymentFieldErrors(false);
       void loadCustomerDetail(customer.customerId);
       void loadPaymentRegisters();
     },
@@ -958,6 +965,7 @@ export function DebtManagementPanel({
     setActiveCustomerDetail(null);
     setPaymentAmount("");
     setPaymentNotes("");
+    setShouldShowPaymentFieldErrors(false);
     setPaymentRegisters([]);
     setSelectedPaymentRegisterId("");
   }, [isSubmitting]);
@@ -1069,6 +1077,7 @@ export function DebtManagementPanel({
 
   async function handleRegisterPayment(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setShouldShowPaymentFieldErrors(true);
 
     if (!canRegisterPayment) {
       publishFeedback({
@@ -1135,6 +1144,7 @@ export function DebtManagementPanel({
           formatCurrency((payload as DebtPaymentResponse).amount),
         ),
       });
+      setShouldShowPaymentFieldErrors(false);
       setPaymentAmount("");
       setPaymentNotes("");
       await loadPaymentRegisters();
@@ -1160,6 +1170,7 @@ export function DebtManagementPanel({
         title: "Pago guardado offline",
         message: messages.receivables.saveOfflineSuccess,
       });
+      setShouldShowPaymentFieldErrors(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -1433,11 +1444,16 @@ export function DebtManagementPanel({
           isLoading={isDetailLoading}
           canRegisterPayment={canRegisterPayment}
           canViewSensitiveNotes={canViewSensitiveNotes}
-          paymentAmount={paymentAmount}
-          paymentNotes={paymentNotes}
-          isSubmitting={isSubmitting}
-          paymentRegisters={paymentRegisters}
-          selectedPaymentRegisterId={selectedPaymentRegisterId}
+        paymentAmount={paymentAmount}
+        paymentNotes={paymentNotes}
+        isSubmitting={isSubmitting}
+        invalidPaymentAmount={
+          shouldShowPaymentFieldErrors &&
+          (!Number.isFinite(parseMonetaryInput(paymentAmount)) ||
+            parseMonetaryInput(paymentAmount) <= 0)
+        }
+        paymentRegisters={paymentRegisters}
+        selectedPaymentRegisterId={selectedPaymentRegisterId}
           onPaymentAmountChange={setPaymentAmount}
           onPaymentNotesChange={setPaymentNotes}
           onSelectedPaymentRegisterIdChange={setSelectedPaymentRegisterId}

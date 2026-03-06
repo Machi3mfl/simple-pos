@@ -29,6 +29,7 @@ import {
 import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import { cn } from "@/lib/utils";
 import type { CustomerSearchResponseDTO } from "@/modules/customers/presentation/dtos/customer-search-response.dto";
 import {
@@ -141,6 +142,7 @@ export function CheckoutPanel({
     useState<string>("");
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [shouldShowFieldErrors, setShouldShowFieldErrors] = useState<boolean>(false);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [recentCustomers, setRecentCustomers] = useState<readonly CustomerLookupItem[]>([]);
   const [customerSearchResults, setCustomerSearchResults] = useState<
@@ -268,6 +270,27 @@ export function CheckoutPanel({
 
     return selectedOnAccountCustomer.name;
   }, [selectedOnAccountCustomer]);
+  const initialPaymentAmount = useMemo(
+    () =>
+      Number.isFinite(onAccountInitialPaymentValue)
+        ? Number(onAccountInitialPaymentValue.toFixed(2))
+        : Number.NaN,
+    [onAccountInitialPaymentValue],
+  );
+  const isCashReceivedInvalid =
+    shouldShowFieldErrors &&
+    paymentMethod === "cash" &&
+    (!Number.isFinite(effectiveCashReceivedValue) || effectiveCashReceivedValue < total);
+  const isOnAccountCustomerInvalid =
+    shouldShowFieldErrors &&
+    paymentMethod === "on_account" &&
+    (!selectedOnAccountCustomer || activeCustomerName.trim().length < 2);
+  const isOnAccountInitialPaymentInvalid =
+    shouldShowFieldErrors &&
+    paymentMethod === "on_account" &&
+    (!Number.isFinite(initialPaymentAmount) ||
+      initialPaymentAmount < 0 ||
+      initialPaymentAmount >= total);
 
   const resetPaymentInputs = useCallback((): void => {
     setCashReceivedAmount("");
@@ -280,6 +303,7 @@ export function CheckoutPanel({
     setPendingNewCustomerName(null);
     setCustomerLookupError(null);
     setIsCustomerAutocompleteOpen(false);
+    setShouldShowFieldErrors(false);
   }, []);
 
   const publishFeedback = useCallback(
@@ -544,6 +568,8 @@ export function CheckoutPanel({
   ]);
 
   async function submitCheckout(): Promise<void> {
+    setShouldShowFieldErrors(true);
+
     if (items.length === 0) {
       publishFeedback({
         tone: "error",
@@ -599,10 +625,6 @@ export function CheckoutPanel({
       });
       return;
     }
-
-    const initialPaymentAmount = Number.isFinite(onAccountInitialPaymentValue)
-      ? Number(onAccountInitialPaymentValue.toFixed(2))
-      : Number.NaN;
 
     if (paymentMethod === "on_account") {
       if (!Number.isFinite(initialPaymentAmount) || initialPaymentAmount < 0) {
@@ -697,6 +719,7 @@ export function CheckoutPanel({
         title: "Venta registrada",
         message: successMessageParts.join(" "),
       });
+      setShouldShowFieldErrors(false);
       if ((successPayload.amountPaid ?? 0) > 0) {
         onCashSessionMutation?.();
       }
@@ -958,6 +981,7 @@ export function CheckoutPanel({
                       </span>
                       <input
                         data-testid="checkout-cash-received-input"
+                        {...getFormControlValidationProps(isCashReceivedInvalid)}
                         type="number"
                         min={total.toFixed(2)}
                         step="0.01"
@@ -1071,6 +1095,9 @@ export function CheckoutPanel({
                                 <Input
                                   ref={customerInputRef}
                                   data-testid="checkout-customer-name-input"
+                                  {...getFormControlValidationProps(
+                                    isOnAccountCustomerInvalid,
+                                  )}
                                   type="text"
                                   placeholder={messages.sales.checkout.customerSearchPlaceholder}
                                   value={customerName}
@@ -1235,6 +1262,9 @@ export function CheckoutPanel({
                       </span>
                       <input
                         data-testid="checkout-on-account-initial-payment-input"
+                        {...getFormControlValidationProps(
+                          isOnAccountInitialPaymentInvalid,
+                        )}
                         type="number"
                         min="0"
                         step="0.01"

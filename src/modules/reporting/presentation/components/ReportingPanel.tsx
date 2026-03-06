@@ -540,6 +540,8 @@ export function ReportingPanel({
   );
   const [periodEnd, setPeriodEnd] = useState<string>(() => toDateInputValue(new Date()));
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodFilter>("all");
+  const [shouldShowPeriodRangeError, setShouldShowPeriodRangeError] =
+    useState<boolean>(false);
 
   const [salesHistory, setSalesHistory] = useState<readonly SalesHistoryItem[]>([]);
   const [topProducts, setTopProducts] = useState<readonly TopProductItem[]>([]);
@@ -552,6 +554,7 @@ export function ReportingPanel({
   >([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isPeriodRangeInvalid = Boolean(periodStart && periodEnd && periodStart > periodEnd);
 
   const queryString = useMemo(() => {
     const searchParams = new URLSearchParams();
@@ -681,8 +684,9 @@ export function ReportingPanel({
 
   async function handleFilterSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    setShouldShowPeriodRangeError(true);
 
-    if (periodStart && periodEnd && periodStart > periodEnd) {
+    if (isPeriodRangeInvalid) {
       showErrorToast({
         title: "Período inválido",
         description: messages.reporting.invalidPeriodRange,
@@ -692,6 +696,7 @@ export function ReportingPanel({
     }
 
     await loadReports();
+    setShouldShowPeriodRangeError(false);
   }
 
   const sortedRecentSales = useMemo(
@@ -833,6 +838,7 @@ export function ReportingPanel({
                 onChange={setPeriodStart}
                 placeholder={messages.common.labels.periodStart}
                 max={periodEnd || undefined}
+                invalid={shouldShowPeriodRangeError && isPeriodRangeInvalid}
                 buttonClassName="min-h-[3.35rem]"
               />
             </label>
@@ -847,6 +853,7 @@ export function ReportingPanel({
                 onChange={setPeriodEnd}
                 placeholder={messages.common.labels.periodEnd}
                 min={periodStart || undefined}
+                invalid={shouldShowPeriodRangeError && isPeriodRangeInvalid}
                 buttonClassName="min-h-[3.35rem]"
               />
             </label>
