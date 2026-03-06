@@ -2,6 +2,7 @@
 
 import {
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -82,9 +83,18 @@ interface AccessControlWorkspaceUser {
     | "stale_mapping";
 }
 
+interface AccessControlWorkspaceCashRegister {
+  readonly id: string;
+  readonly name: string;
+  readonly locationCode?: string;
+  readonly isActive: boolean;
+  readonly assignedUserCount: number;
+}
+
 interface AccessControlWorkspaceResponse {
   readonly roles: readonly AccessControlWorkspaceRole[];
   readonly users: readonly AccessControlWorkspaceUser[];
+  readonly cashRegisters: readonly AccessControlWorkspaceCashRegister[];
   readonly permissions: readonly AccessControlWorkspacePermission[];
   readonly permissionGroups: readonly AccessControlWorkspacePermissionGroup[];
 }
@@ -120,6 +130,14 @@ interface RoleDraftState {
   readonly permissionCodes: readonly string[];
 }
 
+interface CashRegisterDraftState {
+  readonly mode: "create" | "edit";
+  readonly registerId?: string;
+  readonly name: string;
+  readonly locationCode: string;
+  readonly isActive: boolean;
+}
+
 interface AccessMetricCardProps {
   readonly label: string;
   readonly value: string;
@@ -141,6 +159,13 @@ const emptyRoleDraft: RoleDraftState = {
   name: "",
   description: "",
   permissionCodes: [],
+};
+
+const emptyCashRegisterDraft: CashRegisterDraftState = {
+  mode: "create",
+  name: "",
+  locationCode: "",
+  isActive: true,
 };
 
 function resolveApiMessage(payload: unknown, fallback: string): string {
@@ -252,6 +277,18 @@ function toEditableRoleDraft(role: AccessControlWorkspaceRole): RoleDraftState {
   };
 }
 
+function toEditableCashRegisterDraft(
+  cashRegister: AccessControlWorkspaceCashRegister,
+): CashRegisterDraftState {
+  return {
+    mode: "edit",
+    registerId: cashRegister.id,
+    name: cashRegister.name,
+    locationCode: cashRegister.locationCode ?? "",
+    isActive: cashRegister.isActive,
+  };
+}
+
 export function UsersAdminPanel({
   canManageRoles,
   canManageUsers,
@@ -266,23 +303,38 @@ export function UsersAdminPanel({
     useState<boolean>(false);
   const [isSavingUserAuthCredentials, setIsSavingUserAuthCredentials] =
     useState<boolean>(false);
+  const [isSavingCashRegister, setIsSavingCashRegister] = useState<boolean>(false);
   const [isCreatingUser, setIsCreatingUser] = useState<boolean>(false);
   const [selectedCatalogRoleId, setSelectedCatalogRoleId] = useState<string>("");
   const [roleDraft, setRoleDraft] = useState<RoleDraftState>(emptyRoleDraft);
   const [roleSearchTerm, setRoleSearchTerm] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<"all" | "base" | "custom">("all");
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
+  const [cashRegisterDraft, setCashRegisterDraft] = useState<CashRegisterDraftState>(
+    emptyCashRegisterDraft,
+  );
+  const [cashRegisterSearchTerm, setCashRegisterSearchTerm] = useState<string>("");
+  const [cashRegisterFilter, setCashRegisterFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [userSearchTerm, setUserSearchTerm] = useState<string>("");
-  const [adminViewTab, setAdminViewTab] = useState<"roles" | "users">("roles");
+  const [adminViewTab, setAdminViewTab] = useState<
+    "roles" | "users" | "cash_registers"
+  >("roles");
   const [userFilter, setUserFilter] = useState<
     "all" | "with_auth" | "without_auth"
   >("all");
   const [userRoleDraftIds, setUserRoleDraftIds] = useState<readonly string[]>([]);
+  const [userCashRegisterDraftIds, setUserCashRegisterDraftIds] = useState<
+    readonly string[]
+  >([]);
   const [userAuthEmailDraft, setUserAuthEmailDraft] = useState<string>("");
   const [userAuthPasswordDraft, setUserAuthPasswordDraft] = useState<string>("");
   const [isRoleComposerModalOpen, setIsRoleComposerModalOpen] =
     useState<boolean>(false);
   const [isRoleDeleteModalOpen, setIsRoleDeleteModalOpen] = useState<boolean>(false);
+  const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState<boolean>(false);
   const [isUserManagementModalOpen, setIsUserManagementModalOpen] =
     useState<boolean>(false);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState<boolean>(false);
@@ -328,6 +380,13 @@ export function UsersAdminPanel({
 
         return data.users[0]?.userId ?? "";
       });
+      setSelectedCashRegisterId((current) => {
+        if (current && data.cashRegisters.some((cashRegister) => cashRegister.id === current)) {
+          return current;
+        }
+
+        return data.cashRegisters[0]?.id ?? "";
+      });
     } catch (error: unknown) {
       showErrorToast({
         title: "No se pudo cargar accesos",
@@ -354,6 +413,12 @@ export function UsersAdminPanel({
   const selectedUser = useMemo(
     () => workspace?.users.find((user) => user.userId === selectedUserId) ?? null,
     [selectedUserId, workspace?.users],
+  );
+  const selectedCashRegister = useMemo(
+    () =>
+      workspace?.cashRegisters.find((cashRegister) => cashRegister.id === selectedCashRegisterId) ??
+      null,
+    [selectedCashRegisterId, workspace?.cashRegisters],
   );
 
   useEffect(() => {
@@ -382,14 +447,34 @@ export function UsersAdminPanel({
   }, [selectedCatalogRole]);
 
   useEffect(() => {
+    if (!selectedCashRegister) {
+      return;
+    }
+
+    setCashRegisterDraft((currentDraft) => {
+      if (currentDraft.mode === "edit" && currentDraft.registerId === selectedCashRegister.id) {
+        return currentDraft;
+      }
+
+      if (currentDraft.mode === "create" && currentDraft.name.trim().length > 0) {
+        return currentDraft;
+      }
+
+      return toEditableCashRegisterDraft(selectedCashRegister);
+    });
+  }, [selectedCashRegister]);
+
+  useEffect(() => {
     if (!selectedUser) {
       setUserRoleDraftIds([]);
+      setUserCashRegisterDraftIds([]);
       setUserAuthEmailDraft("");
       setUserAuthPasswordDraft("");
       return;
     }
 
     setUserRoleDraftIds(selectedUser.roleIds);
+    setUserCashRegisterDraftIds(selectedUser.assignedRegisterIds);
     setUserAuthEmailDraft(selectedUser.authEmail ?? "");
     setUserAuthPasswordDraft("");
   }, [selectedUser]);
@@ -455,6 +540,32 @@ export function UsersAdminPanel({
     });
   }, [userFilter, userSearchTerm, workspace]);
 
+  const filteredCashRegisters = useMemo(() => {
+    if (!workspace) {
+      return [];
+    }
+
+    const normalizedSearch = cashRegisterSearchTerm.trim().toLowerCase();
+    return workspace.cashRegisters.filter((cashRegister) => {
+      if (cashRegisterFilter === "active" && !cashRegister.isActive) {
+        return false;
+      }
+
+      if (cashRegisterFilter === "inactive" && cashRegister.isActive) {
+        return false;
+      }
+
+      if (normalizedSearch.length === 0) {
+        return true;
+      }
+
+      const haystack = [cashRegister.name, cashRegister.locationCode ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [cashRegisterFilter, cashRegisterSearchTerm, workspace]);
+
   const metrics = useMemo(() => {
     const roles = workspace?.roles ?? [];
     const users = workspace?.users ?? [];
@@ -486,6 +597,7 @@ export function UsersAdminPanel({
 
   const canUpdateUserAssignments = canManageUsers;
   const canManageUserCredentials = canManageUsers;
+  const canManageCashRegisters = canManageUsers;
 
   const selectedUserAuthStatusTone = useMemo(() => {
     switch (selectedUser?.authCredentialStatus) {
@@ -517,6 +629,11 @@ export function UsersAdminPanel({
   const resetToBlankRole = useCallback((): void => {
     setSelectedCatalogRoleId("");
     setRoleDraft(emptyRoleDraft);
+  }, []);
+
+  const resetToBlankCashRegister = useCallback((): void => {
+    setSelectedCashRegisterId("");
+    setCashRegisterDraft(emptyCashRegisterDraft);
   }, []);
 
   const handleToggleGroup = useCallback(
@@ -573,6 +690,18 @@ export function UsersAdminPanel({
         : [...currentRoleIds, roleId];
 
       return [...nextRoleIds].sort((left, right) => left.localeCompare(right, "es"));
+    });
+  }, []);
+
+  const handleToggleUserCashRegister = useCallback((cashRegisterId: string): void => {
+    setUserCashRegisterDraftIds((currentCashRegisterIds) => {
+      const nextCashRegisterIds = currentCashRegisterIds.includes(cashRegisterId)
+        ? currentCashRegisterIds.filter(
+            (currentCashRegisterId) => currentCashRegisterId !== cashRegisterId,
+          )
+        : [...currentCashRegisterIds, cashRegisterId];
+
+      return [...nextCashRegisterIds].sort((left, right) => left.localeCompare(right, "es"));
     });
   }, []);
 
@@ -653,6 +782,69 @@ export function UsersAdminPanel({
     roleDraft,
   ]);
 
+  const handlePersistCashRegister = useCallback(async (): Promise<void> => {
+    if (!canManageCashRegisters) {
+      showInfoToast({
+        title: "Cajas en solo lectura",
+        description: messages.usersAdmin.assignmentReadOnlyHint,
+      });
+      return;
+    }
+
+    setIsSavingCashRegister(true);
+    try {
+      const isEdit =
+        cashRegisterDraft.mode === "edit" && Boolean(cashRegisterDraft.registerId);
+      const payload = {
+        name: cashRegisterDraft.name.trim(),
+        locationCode: cashRegisterDraft.locationCode.trim() || undefined,
+        ...(isEdit ? { isActive: cashRegisterDraft.isActive } : {}),
+      };
+      const { response, data } = await fetchJsonNoStore<AccessControlWorkspaceCashRegister>(
+        isEdit
+          ? `/api/v1/access-control/cash-registers/${cashRegisterDraft.registerId}`
+          : "/api/v1/access-control/cash-registers",
+        {
+          method: isEdit ? "PUT" : "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok || !data) {
+        throw new Error(
+          resolveApiMessage(data, "No se pudo guardar la definición de la caja."),
+        );
+      }
+
+      await loadWorkspace("refresh");
+      setSelectedCashRegisterId(data.id);
+      setCashRegisterDraft(toEditableCashRegisterDraft(data));
+      setIsCashRegisterModalOpen(false);
+      showSuccessToast({
+        title: isEdit ? "Caja actualizada" : "Caja creada",
+        description: `${data.name} ya está disponible para asignaciones.`,
+      });
+    } catch (error: unknown) {
+      showErrorToast({
+        title: "No se pudo guardar la caja",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo guardar la definición de caja.",
+      });
+    } finally {
+      setIsSavingCashRegister(false);
+    }
+  }, [
+    canManageCashRegisters,
+    cashRegisterDraft,
+    loadWorkspace,
+    messages.usersAdmin.assignmentReadOnlyHint,
+  ]);
+
   const handleDeleteRole = useCallback(async (): Promise<void> => {
     if (!roleDraft.roleId || roleDraft.mode !== "edit") {
       return;
@@ -708,7 +900,7 @@ export function UsersAdminPanel({
 
     setIsSavingUserAssignments(true);
     try {
-      const { response, data } = await fetchJsonNoStore<{ readonly ok: boolean }>(
+      const roleAssignmentResult = await fetchJsonNoStore<{ readonly ok: boolean }>(
         `/api/v1/access-control/users/${selectedUser.userId}/roles`,
         {
           method: "PUT",
@@ -720,10 +912,33 @@ export function UsersAdminPanel({
           }),
         },
       );
-
-      if (!response.ok) {
+      if (!roleAssignmentResult.response.ok) {
         throw new Error(
-          resolveApiMessage(data, "No se pudieron actualizar los roles del usuario."),
+          resolveApiMessage(
+            roleAssignmentResult.data,
+            "No se pudieron actualizar los roles del usuario.",
+          ),
+        );
+      }
+
+      const registerAssignmentResult = await fetchJsonNoStore<{ readonly ok: boolean }>(
+        `/api/v1/access-control/users/${selectedUser.userId}/cash-registers`,
+        {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            cashRegisterIds: userCashRegisterDraftIds,
+          }),
+        },
+      );
+      if (!registerAssignmentResult.response.ok) {
+        throw new Error(
+          resolveApiMessage(
+            registerAssignmentResult.data,
+            "No se pudieron actualizar las cajas del usuario.",
+          ),
         );
       }
 
@@ -731,7 +946,7 @@ export function UsersAdminPanel({
       await refreshActorSession();
       showSuccessToast({
         title: "Asignación guardada",
-        description: `Actualizaste los roles de ${selectedUser.displayName}.`,
+        description: `Actualizaste roles y cajas de ${selectedUser.displayName}.`,
         testId: "users-admin-user-assignment-success-toast",
       });
     } catch (error: unknown) {
@@ -740,7 +955,7 @@ export function UsersAdminPanel({
         description:
           error instanceof Error
             ? error.message
-            : "No se pudieron actualizar los roles del usuario.",
+            : "No se pudieron actualizar los datos del usuario.",
         testId: "users-admin-user-assignment-error-toast",
       });
     } finally {
@@ -752,6 +967,7 @@ export function UsersAdminPanel({
     messages.usersAdmin.assignmentReadOnlyHint,
     refreshActorSession,
     selectedUser,
+    userCashRegisterDraftIds,
     userRoleDraftIds,
   ]);
 
@@ -985,9 +1201,18 @@ export function UsersAdminPanel({
     setIsUserManagementModalOpen(true);
   }, []);
 
+  const openCashRegisterComposer = useCallback(
+    (cashRegister: AccessControlWorkspaceCashRegister): void => {
+      setSelectedCashRegisterId(cashRegister.id);
+      setCashRegisterDraft(toEditableCashRegisterDraft(cashRegister));
+      setIsCashRegisterModalOpen(true);
+    },
+    [],
+  );
+
   if (isLoading) {
     return (
-      <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-hidden lg:p-4">
+      <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-4">
         <div className="flex h-full min-h-0 items-center justify-center rounded-[1.6rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-3 text-slate-600">
             <Loader2 className="size-5 animate-spin" aria-hidden />
@@ -999,8 +1224,8 @@ export function UsersAdminPanel({
   }
 
   return (
-    <section className="min-w-0 bg-[#f7f7f8] p-3 lg:col-span-2 lg:min-h-0 lg:overflow-hidden lg:p-4">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[98rem] flex-col gap-4">
+    <section className="min-w-0 bg-[#f7f7f8] p-3 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-4">
+      <div className="mx-auto flex min-h-full w-full max-w-[98rem] flex-col gap-4">
         <article className="rounded-[1.6rem] border border-slate-200 bg-white px-5 py-4 shadow-[0_20px_48px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="max-w-[52rem]">
@@ -1071,7 +1296,7 @@ export function UsersAdminPanel({
           </div>
         </article>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div className="rounded-[1.2rem] border border-slate-200 bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
             <div className="inline-flex w-full rounded-[0.9rem] bg-slate-100 p-1">
               <button
@@ -1100,11 +1325,24 @@ export function UsersAdminPanel({
               >
                 Usuarios
               </button>
+              <button
+                type="button"
+                data-testid="users-admin-tab-cash-registers"
+                onClick={() => setAdminViewTab("cash_registers")}
+                className={[
+                  "inline-flex min-h-[2.4rem] flex-1 items-center justify-center rounded-[0.7rem] px-3 text-sm font-semibold transition",
+                  adminViewTab === "cash_registers"
+                    ? "bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-white shadow-[0_10px_20px_rgba(23,104,232,0.22)]"
+                    : "text-slate-600 hover:text-slate-900",
+                ].join(" ")}
+              >
+                Cajas
+              </button>
             </div>
           </div>
 
           {adminViewTab === "roles" ? (
-            <article className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)]">
+            <article className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)]">
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -1186,7 +1424,7 @@ export function UsersAdminPanel({
               </div>
             </div>
 
-            <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+            <div className="mt-3 space-y-2">
               {filteredRoles.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-sm text-slate-500">
                   No hay roles para el filtro actual.
@@ -1261,8 +1499,8 @@ export function UsersAdminPanel({
               })}
             </div>
             </article>
-          ) : (
-            <article className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)]">
+          ) : adminViewTab === "users" ? (
+            <article className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)]">
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -1331,7 +1569,7 @@ export function UsersAdminPanel({
               </div>
             </div>
 
-            <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+            <div className="mt-3 space-y-2">
               {filteredUsers.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-sm text-slate-500">
                   No hay usuarios para el filtro actual.
@@ -1388,6 +1626,163 @@ export function UsersAdminPanel({
                 );
               })}
             </div>
+            </article>
+          ) : (
+            <article className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.05)]">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h2 className="text-[1.35rem] font-semibold tracking-tight text-slate-950">
+                      Catálogo de cajas
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Creá, editá y desactivá cajas disponibles para operar y asignarlas a usuarios.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetToBlankCashRegister();
+                      setIsCashRegisterModalOpen(true);
+                    }}
+                    disabled={!canManageCashRegisters}
+                    className="inline-flex min-h-[2.6rem] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Plus className="size-4" />
+                    Nueva caja
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="relative block w-full">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={cashRegisterSearchTerm}
+                      onChange={(event) => {
+                        setCashRegisterSearchTerm(event.target.value);
+                      }}
+                      placeholder="Buscar caja por nombre o ubicación"
+                      className="min-h-[2.5rem] rounded-xl border-slate-200 pl-10 text-sm"
+                    />
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                      <button
+                        type="button"
+                        onClick={() => setCashRegisterFilter("all")}
+                        className={[
+                          "rounded-lg px-2.5 py-1 text-xs font-semibold transition",
+                          cashRegisterFilter === "all"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        Todas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCashRegisterFilter("active")}
+                        className={[
+                          "rounded-lg px-2.5 py-1 text-xs font-semibold transition",
+                          cashRegisterFilter === "active"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        Activas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCashRegisterFilter("inactive")}
+                        className={[
+                          "rounded-lg px-2.5 py-1 text-xs font-semibold transition",
+                          cashRegisterFilter === "inactive"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-600 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        Inactivas
+                      </button>
+                    </div>
+                    <p className="text-xs font-medium text-slate-500">
+                      {filteredCashRegisters.length}{" "}
+                      {filteredCashRegisters.length === 1 ? "caja" : "cajas"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {filteredCashRegisters.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-sm text-slate-500">
+                    No hay cajas para el filtro actual.
+                  </div>
+                ) : null}
+                {filteredCashRegisters.map((cashRegister) => {
+                  const isSelected = cashRegister.id === selectedCashRegisterId;
+
+                  return (
+                    <div
+                      key={cashRegister.id}
+                      data-testid={`users-admin-cash-register-card-${cashRegister.id}`}
+                      className={[
+                        "rounded-xl border px-3 py-3 transition",
+                        isSelected
+                          ? "border-blue-200 bg-blue-50/70"
+                          : "border-slate-200 bg-white",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCashRegisterId(cashRegister.id);
+                          }}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-[1.1rem] font-semibold text-slate-950">
+                              {cashRegister.name}
+                            </p>
+                            <span
+                              className={[
+                                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.72rem] font-semibold",
+                                cashRegister.isActive
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-slate-200 bg-slate-100 text-slate-600",
+                              ].join(" ")}
+                            >
+                              {cashRegister.isActive ? "Activa" : "Inactiva"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {cashRegister.locationCode
+                              ? `Ubicación: ${cashRegister.locationCode}`
+                              : "Sin ubicación definida"}
+                          </p>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {cashRegister.assignedUserCount}{" "}
+                            {cashRegister.assignedUserCount === 1
+                              ? "usuario asignado"
+                              : "usuarios asignados"}
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openCashRegisterComposer(cashRegister);
+                          }}
+                          className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600"
+                          aria-label="Editar caja"
+                        >
+                          <Pencil className="size-5" aria-hidden />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </article>
           )}
         </div>
@@ -1639,6 +2034,116 @@ export function UsersAdminPanel({
       </AdminModal>
 
       <AdminModal
+        isOpen={isCashRegisterModalOpen}
+        onClose={() => setIsCashRegisterModalOpen(false)}
+        title={
+          cashRegisterDraft.mode === "edit" ? "Editar caja" : "Crear caja"
+        }
+        description="Definí la caja operativa y su ubicación para asignarla a operadores."
+        testId="users-admin-cash-register-modal"
+        maxWidthClassName="max-w-[34rem]"
+      >
+        {!canManageCashRegisters ? (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {messages.usersAdmin.assignmentReadOnlyHint}
+          </div>
+        ) : null}
+
+        <div className="space-y-3">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+            Nombre de la caja
+            <Input
+              value={cashRegisterDraft.name}
+              onChange={(event) => {
+                setCashRegisterDraft((currentDraft) => ({
+                  ...currentDraft,
+                  name: event.target.value,
+                }));
+              }}
+              disabled={!canManageCashRegisters || isSavingCashRegister}
+              placeholder="Ej. Caja principal"
+              className="min-h-[2.8rem] rounded-xl border-slate-200 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+            Ubicación (opcional)
+            <Input
+              value={cashRegisterDraft.locationCode}
+              onChange={(event) => {
+                setCashRegisterDraft((currentDraft) => ({
+                  ...currentDraft,
+                  locationCode: event.target.value,
+                }));
+              }}
+              disabled={!canManageCashRegisters || isSavingCashRegister}
+              placeholder="Ej. frente-local"
+              className="min-h-[2.8rem] rounded-xl border-slate-200 text-sm"
+            />
+          </label>
+          {cashRegisterDraft.mode === "edit" ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={cashRegisterDraft.isActive}
+                  disabled={!canManageCashRegisters || isSavingCashRegister}
+                  onCheckedChange={(checked) => {
+                    setCashRegisterDraft((currentDraft) => ({
+                      ...currentDraft,
+                      isActive: checked === true,
+                    }));
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={!canManageCashRegisters || isSavingCashRegister}
+                  onClick={() => {
+                    setCashRegisterDraft((currentDraft) => ({
+                      ...currentDraft,
+                      isActive: !currentDraft.isActive,
+                    }));
+                  }}
+                  className="text-left"
+                >
+                  <p className="text-sm font-semibold text-slate-900">Caja activa</p>
+                  <p className="text-xs text-slate-500">
+                    Si la desactivás, no aparecerá disponible para nuevas asignaciones.
+                  </p>
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setIsCashRegisterModalOpen(false)}
+            className="inline-flex min-h-[2.6rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700"
+          >
+            {messages.common.actions.cancel}
+          </button>
+          <button
+            type="button"
+            data-testid="users-admin-save-cash-register-button"
+            onClick={() => {
+              void handlePersistCashRegister();
+            }}
+            disabled={
+              !canManageCashRegisters ||
+              cashRegisterDraft.name.trim().length < 3 ||
+              isSavingCashRegister
+            }
+            className="inline-flex min-h-[2.6rem] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#3f8dff] to-[#1768e8] px-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(23,104,232,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSavingCashRegister ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : null}
+            Guardar caja
+          </button>
+        </div>
+      </AdminModal>
+
+      <AdminModal
         isOpen={isUserManagementModalOpen}
         onClose={() => setIsUserManagementModalOpen(false)}
         title={selectedUser ? selectedUser.displayName : "Gestionar usuario"}
@@ -1782,6 +2287,57 @@ export function UsersAdminPanel({
                       <p className="text-sm font-semibold text-slate-900">{role.name}</p>
                       <p className="text-xs text-slate-500">
                         {role.description ?? "Sin descripción."}
+                      </p>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                Cajas asignadas
+              </p>
+              <div className="mt-3 grid max-h-[16rem] gap-2 overflow-y-auto pr-1 md:grid-cols-2">
+                {workspace?.cashRegisters.map((cashRegister) => (
+                  <div
+                    key={cashRegister.id}
+                    className="flex items-start gap-2 rounded-lg border border-slate-100 px-2 py-2"
+                  >
+                    <Checkbox
+                      checked={userCashRegisterDraftIds.includes(cashRegister.id)}
+                      disabled={!canUpdateUserAssignments || isSavingUserAssignments}
+                      onCheckedChange={() => {
+                        handleToggleUserCashRegister(cashRegister.id);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleToggleUserCashRegister(cashRegister.id);
+                      }}
+                      disabled={!canUpdateUserAssignments || isSavingUserAssignments}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {cashRegister.name}
+                        </p>
+                        <span
+                          className={[
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[0.64rem] font-semibold",
+                            cashRegister.isActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-600",
+                          ].join(" ")}
+                        >
+                          {cashRegister.isActive ? "Activa" : "Inactiva"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {cashRegister.locationCode
+                          ? `Ubicación: ${cashRegister.locationCode}`
+                          : "Sin ubicación definida"}
                       </p>
                     </button>
                   </div>
