@@ -1312,6 +1312,7 @@ Implemented result:
 - the shell now shows `Iniciar sesión` when operating under the temporary preset/bridge and `Cerrar sesión` once the operator is authenticated,
 - successful login redirects the operator to the first workspace allowed by the permission snapshot, so `cashier` lands directly in `/cash-register`,
 - logout clears both the Supabase auth session and any leftover assumed-user cookie before returning to `/login`.
+- logout now enters an explicit "signing out" UI state so the shell does not flash `WorkspaceBlockedState` between session teardown and `/login` redirect.
 
 Completed UI checkpoint:
 

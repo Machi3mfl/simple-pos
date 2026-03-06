@@ -22,6 +22,7 @@ import {
 } from "@/modules/sales/presentation/posWorkspace";
 
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
+import { MobileWorkspaceNav } from "./MobileWorkspaceNav";
 
 interface PosWorkspaceShellProps {
   readonly activeItemId: PosWorkspaceId;
@@ -46,6 +47,7 @@ export function PosWorkspaceShell({
     status,
   } =
     useActorSession();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
   const navItems = useMemo<readonly PosNavItem[]>(
     () => [
@@ -71,54 +73,79 @@ export function PosWorkspaceShell({
         : messages.accessControl.signInAction;
   const canOpenOperatorSelector =
     canSwitchActor && currentActor?.roleCodes.includes("system_admin") === true;
+  const activeWorkspaceLabel =
+    navItems.find((item) => item.id === activeItemId)?.label ?? messages.shell.nav.cashRegister;
+
+  const handleAuthAction = (): void => {
+    if (isAuthenticated) {
+      setIsSigningOut(true);
+      void signOut()
+        .then(() => {
+          router.replace("/login");
+        })
+        .catch(() => {
+          setIsSigningOut(false);
+        });
+      return;
+    }
+
+    if (sessionSource === "assumed_user") {
+      setIsSigningOut(true);
+      void clearAssumedActor()
+        .then(() => {
+          router.replace("/login");
+        })
+        .catch(() => {
+          setIsSigningOut(false);
+        });
+      return;
+    }
+
+    router.replace("/login");
+  };
+
+  const handleItemSelect = (itemId: string): void => {
+    if (isPosWorkspaceId(itemId)) {
+      router.push(workspacePathById[itemId]);
+    }
+  };
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
-      <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <LeftNavRail
-          items={navItems}
+    <main className="min-h-dvh w-full overflow-hidden bg-[#f7f7f8]">
+      <div className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:min-h-0 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <MobileWorkspaceNav
+          isOpen={isMobileNavOpen}
           activeItemId={activeItemId}
+          activeItemLabel={activeWorkspaceLabel}
+          items={navItems}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
           isLoadingActor={status === "loading" || isSigningOut}
           isAuthenticated={isAuthenticated}
           canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
-          onAuthAction={() => {
-            if (isAuthenticated) {
-              setIsSigningOut(true);
-              void signOut()
-                .then(() => {
-                  router.replace("/login");
-                })
-                .catch(() => {
-                  setIsSigningOut(false);
-                });
-              return;
-            }
-
-            if (sessionSource === "assumed_user") {
-              setIsSigningOut(true);
-              void clearAssumedActor()
-                .then(() => {
-                  router.replace("/login");
-                })
-                .catch(() => {
-                  setIsSigningOut(false);
-                });
-              return;
-            }
-
-            router.replace("/login");
-          }}
-          onItemSelect={(itemId) => {
-            if (isPosWorkspaceId(itemId)) {
-              router.push(workspacePathById[itemId]);
-            }
-          }}
+          onAuthAction={handleAuthAction}
+          onItemSelect={handleItemSelect}
+          onToggle={() => setIsMobileNavOpen((current) => !current)}
+          onClose={() => setIsMobileNavOpen(false)}
         />
 
-        <section className="min-w-0 overflow-y-auto bg-[#f7f7f8]">{children}</section>
+        <div className="hidden lg:block">
+          <LeftNavRail
+            items={navItems}
+            activeItemId={activeItemId}
+            actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
+            isLoadingActor={status === "loading" || isSigningOut}
+            isAuthenticated={isAuthenticated}
+            canOpenOperatorSelector={canOpenOperatorSelector}
+            onOpenOperatorSelector={openOperatorSelector}
+            authActionLabel={authActionLabel}
+            onAuthAction={handleAuthAction}
+            onItemSelect={handleItemSelect}
+          />
+        </div>
+
+        <section className="min-h-0 flex-1 overflow-y-auto bg-[#f7f7f8]">{children}</section>
       </div>
     </main>
   );

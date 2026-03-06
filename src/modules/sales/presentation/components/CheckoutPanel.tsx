@@ -746,7 +746,7 @@ export function CheckoutPanel({
   }
 
   return (
-    <section className="min-w-0 border-l border-slate-200 bg-[#f2f2f4] p-5 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:overflow-hidden lg:p-6">
+    <section className="min-w-0 border-t border-slate-200 bg-[#f2f2f4] p-5 lg:h-full lg:min-h-0 lg:border-t-0 lg:border-l lg:flex lg:flex-col lg:overflow-hidden lg:p-6">
       <header className="shrink-0 flex items-baseline justify-between gap-2">
         <h2 className="text-[2.6rem] font-semibold leading-none tracking-tight text-slate-900">
           {messages.sales.checkout.orderListTitle}

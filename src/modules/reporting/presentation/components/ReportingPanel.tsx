@@ -1022,8 +1022,8 @@ export function ReportingPanel({
       </section>
 
       <section className="mt-7 grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-        <div className="grid content-start gap-4">
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+        <div className="grid min-w-0 content-start gap-4">
+          <div className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
             <div className="mb-4">
               <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
                 {messages.reporting.dailyTrendTitle}
@@ -1036,7 +1036,10 @@ export function ReportingPanel({
             {dailyTrendData.length === 0 ? (
               <EmptyChartState message={messages.reporting.noTrendData} />
             ) : (
-              <ChartContainer config={dailyTrendChartConfig} className="h-[320px] w-full">
+              <ChartContainer
+                config={dailyTrendChartConfig}
+                className="h-[280px] w-full min-w-0 sm:h-[320px]"
+              >
                 <AreaChart data={dailyTrendData} margin={{ left: 10, right: 10, top: 8, bottom: 0 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis
@@ -1083,7 +1086,7 @@ export function ReportingPanel({
             )}
           </div>
 
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+          <div className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
             <div className="mb-4">
               <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
                 {messages.reporting.topProducts}
@@ -1097,7 +1100,10 @@ export function ReportingPanel({
               <EmptyChartState message={messages.reporting.noTopProducts} />
             ) : (
               <>
-                <ChartContainer config={topProductsChartConfig} className="h-[280px] w-full">
+                <ChartContainer
+                  config={topProductsChartConfig}
+                  className="h-[260px] w-full min-w-0 sm:h-[280px]"
+                >
                   <BarChart
                     data={topProductsChartData}
                     layout="vertical"
@@ -1110,7 +1116,7 @@ export function ReportingPanel({
                       dataKey="shortName"
                       tickLine={false}
                       axisLine={false}
-                      width={140}
+                      width={96}
                     />
                     <ChartTooltip
                       content={
@@ -1157,8 +1163,8 @@ export function ReportingPanel({
           </div>
         </div>
 
-        <div className="grid content-start gap-4">
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+        <div className="grid min-w-0 content-start gap-4">
+          <div className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
             <div className="mb-4">
               <h3 className="text-xl font-semibold tracking-tight text-slate-950">
                 {messages.reporting.paymentMixTitle}
@@ -1171,8 +1177,11 @@ export function ReportingPanel({
             {paymentMixData.length === 0 ? (
               <EmptyChartState message={messages.reporting.noPaymentMixData} />
             ) : (
-              <div className="grid items-center gap-4 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <ChartContainer config={paymentMixChartConfig} className="h-[240px] w-full">
+              <div className="grid min-w-0 items-center gap-4 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                <ChartContainer
+                  config={paymentMixChartConfig}
+                  className="h-[210px] w-full min-w-0 sm:h-[240px]"
+                >
                   <PieChart>
                     <ChartTooltip
                       content={
@@ -1186,8 +1195,8 @@ export function ReportingPanel({
                       data={paymentMixData}
                       dataKey="value"
                       nameKey="label"
-                      innerRadius={56}
-                      outerRadius={88}
+                      innerRadius={44}
+                      outerRadius={74}
                       paddingAngle={5}
                     >
                       {paymentMixData.map((item) => (
@@ -1202,7 +1211,7 @@ export function ReportingPanel({
                   </PieChart>
                 </ChartContainer>
 
-                <div className="space-y-3">
+                <div className="min-w-0 space-y-3">
                   {paymentMixData.map((item) => (
                     <div
                       key={item.key}
@@ -1239,7 +1248,7 @@ export function ReportingPanel({
           </div>
 
           {canViewInventoryValue ? (
-            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+            <div className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
               <div className="mb-4">
                 <h3 className="text-xl font-semibold tracking-tight text-slate-950">
                   {messages.reporting.inventoryHealthTitle}
@@ -1253,7 +1262,10 @@ export function ReportingPanel({
                 <EmptyChartState message={messages.reporting.noInventoryHealthData} />
               ) : (
                 <>
-                  <ChartContainer config={inventoryHealthChartConfig} className="h-[220px] w-full">
+                  <ChartContainer
+                    config={inventoryHealthChartConfig}
+                    className="h-[210px] w-full min-w-0 sm:h-[220px]"
+                  >
                     <BarChart data={inventoryHealthData} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
                       <CartesianGrid vertical={false} />
                       <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} />
@@ -1286,7 +1298,7 @@ export function ReportingPanel({
             </div>
           ) : null}
 
-          <div className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
+          <div className="min-w-0 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
             <div className="mb-4">
               <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
                 {messages.reporting.executiveInsightsTitle}

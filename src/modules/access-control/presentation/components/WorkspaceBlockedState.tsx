@@ -22,7 +22,10 @@ export function WorkspaceBlockedState({
   const { currentActor, canSwitchActor, openOperatorSelector } = useActorSession();
 
   return (
-    <section className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6">
+    <section
+      data-testid="workspace-blocked-state"
+      className="min-w-0 bg-[#f7f7f8] p-4 lg:col-span-2 lg:min-h-0 lg:overflow-y-auto lg:p-6"
+    >
       <article className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-[58rem] items-center justify-center">
         <div className="w-full rounded-[2rem] border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:px-8 md:py-10">
           <div className="mx-auto flex size-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700">

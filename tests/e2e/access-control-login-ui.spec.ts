@@ -36,6 +36,38 @@ test.describe("access control login ui", () => {
     }
   });
 
+  test("returns to /login without flashing blocked guard from assumed-user session", async ({
+    page,
+  }) => {
+    const session = await provisionAndLoginAsAppUser({
+      page,
+      appUserId: "user_cashier_putri",
+      label: "logout-guard-assumed",
+    });
+
+    try {
+      await expect(page).toHaveURL(/\/cash-register$/);
+      await page.getByTestId("actor-auth-action-button").click();
+
+      const firstTransitionState = await Promise.race([
+        page.waitForURL(/\/login$/, { timeout: 8_000 }).then(() => "login" as const),
+        page
+          .getByTestId("workspace-blocked-state")
+          .first()
+          .waitFor({ state: "visible", timeout: 8_000 })
+          .then(() => "blocked" as const)
+          .catch(() => "blocked-timeout" as const),
+      ]);
+
+      expect(firstTransitionState).toBe("login");
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.getByTestId("workspace-blocked-state")).toHaveCount(0);
+      await expect(page.getByTestId("login-email-input")).toBeVisible();
+    } finally {
+      await session.cleanup();
+    }
+  });
+
   test("signs in with Supabase Auth and returns to login after sign out", async ({
     page,
   }) => {
@@ -63,7 +95,17 @@ test.describe("access control login ui", () => {
       );
 
       await page.getByTestId("actor-auth-action-button").click();
+      const firstTransitionState = await Promise.race([
+        page.waitForURL(/\/login$/, { timeout: 8_000 }).then(() => "login" as const),
+        page
+          .getByTestId("workspace-blocked-state")
+          .first()
+          .waitFor({ state: "visible", timeout: 8_000 })
+          .then(() => "blocked" as const)
+          .catch(() => "blocked-timeout" as const),
+      ]);
 
+      expect(firstTransitionState).toBe("login");
       await expect(page).toHaveURL(/\/login$/);
       await expect(page.getByTestId("login-email-input")).toBeVisible();
     } finally {

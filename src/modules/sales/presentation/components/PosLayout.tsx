@@ -40,6 +40,7 @@ import {
 
 import { CheckoutPanel, type CheckoutOrderItem } from "./CheckoutPanel";
 import { LeftNavRail, type PosNavItem } from "./LeftNavRail";
+import { MobileWorkspaceNav } from "./MobileWorkspaceNav";
 import {
   ProductCatalogPanel,
   type CatalogCategory,
@@ -133,6 +134,8 @@ interface PosLayoutProps {
   readonly initialWorkspace?: PosWorkspaceId;
 }
 
+type MobileCashRegisterView = "catalog" | "checkout";
+
 export function PosLayout({
   initialWorkspace = "cash-register",
 }: PosLayoutProps): JSX.Element {
@@ -160,6 +163,9 @@ export function PosLayout({
   const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string>("");
   const [cashSessionRefreshToken, setCashSessionRefreshToken] = useState<number>(0);
   const [isCashSessionModalOpen, setIsCashSessionModalOpen] = useState<boolean>(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
+  const [mobileCashRegisterView, setMobileCashRegisterView] =
+    useState<MobileCashRegisterView>("catalog");
   const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
   const currentWorkspace = useMemo(
     () => resolveWorkspaceFromPathname(pathname) ?? initialWorkspace,
@@ -189,6 +195,8 @@ export function PosLayout({
         : messages.accessControl.signInAction;
   const canOpenOperatorSelector =
     canSwitchActor && currentActor?.roleCodes.includes("system_admin") === true;
+  const activeWorkspaceLabel =
+    navItems.find((item) => item.id === currentWorkspace)?.label ?? messages.shell.nav.cashRegister;
   const categories = useMemo(() => {
     const categoryCodes = sortCategoryCodes(
       dedupeCategoryCodes(catalogProducts.map((product) => product.categoryId)),
@@ -270,6 +278,18 @@ export function PosLayout({
     if (currentWorkspace !== "cash-register") {
       setIsCashSessionModalOpen(false);
     }
+  }, [currentWorkspace]);
+
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [currentWorkspace]);
+
+  useEffect(() => {
+    if (currentWorkspace !== "cash-register") {
+      return;
+    }
+
+    setMobileCashRegisterView("catalog");
   }, [currentWorkspace]);
 
   const visibleProducts = useMemo(() => {
@@ -362,6 +382,10 @@ export function PosLayout({
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems],
   );
+  const cartQuantity = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems],
+  );
 
   const handleCheckoutSuccess = useCallback((): void => {
     setCartItems([]);
@@ -370,6 +394,43 @@ export function PosLayout({
   const handleCashSessionMutation = useCallback((): void => {
     setCashSessionRefreshToken((current) => current + 1);
   }, []);
+
+  const handleAuthAction = useCallback((): void => {
+    if (isAuthenticated) {
+      setIsSigningOut(true);
+      void signOut()
+        .then(() => {
+          router.replace("/login");
+        })
+        .catch(() => {
+          setIsSigningOut(false);
+        });
+      return;
+    }
+
+    if (sessionSource === "assumed_user") {
+      setIsSigningOut(true);
+      void clearAssumedActor()
+        .then(() => {
+          router.replace("/login");
+        })
+        .catch(() => {
+          setIsSigningOut(false);
+        });
+      return;
+    }
+
+    router.replace("/login");
+  }, [clearAssumedActor, isAuthenticated, router, sessionSource, signOut]);
+
+  const handleItemSelect = useCallback(
+    (itemId: string): void => {
+      if (isPosWorkspaceId(itemId)) {
+        router.push(workspacePathById[itemId]);
+      }
+    },
+    [router],
+  );
 
   const renderNonSalesWorkspace = (): JSX.Element => {
     if (currentWorkspace === "products") {
@@ -506,41 +567,90 @@ export function PosLayout({
     }
 
     if (currentWorkspace === "cash-register") {
+      const isCatalogView = mobileCashRegisterView === "catalog";
+      const isCheckoutView = mobileCashRegisterView === "checkout";
+
       return (
         <>
-          <ProductCatalogPanel
-            headerActions={
+          <section className="border-b border-slate-200 bg-[#f7f7f8] px-4 py-3 lg:hidden">
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-[0_12px_20px_rgba(15,23,42,0.06)]">
               <button
                 type="button"
-                data-testid="open-cash-session-modal-button"
-                onClick={() => setIsCashSessionModalOpen(true)}
-                className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_14px_24px_rgba(28,109,234,0.28)]"
+                data-testid="cash-register-mobile-tab-catalog"
+                onClick={() => setMobileCashRegisterView("catalog")}
+                aria-pressed={isCatalogView}
+                className={[
+                  "inline-flex min-h-[2.7rem] items-center justify-center rounded-xl px-3 text-[0.94rem] font-semibold transition",
+                  isCatalogView
+                    ? "bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] text-white shadow-[0_10px_18px_rgba(28,109,234,0.3)]"
+                    : "text-slate-600 hover:bg-slate-100",
+                ].join(" ")}
               >
-                {messages.sales.cashSession.viewSessionAction}
+                {messages.shell.nav.catalog}
               </button>
-            }
-            categories={categories}
-            activeCategoryId={activeCategoryId}
-            products={visibleProducts}
-            searchTerm={searchTerm}
-            isLoading={isLoadingProducts}
-            onSearchTermChange={setSearchTerm}
-            onCategorySelect={setActiveCategoryId}
-            onProductSelect={addProductToCart}
-            onOpenCatalogWorkspace={() => {
-              router.push(workspacePathById.products);
-            }}
-          />
-          <CheckoutPanel
-            items={cartItems}
-            subtotal={subtotal}
-            cashRegisterId={selectedCashRegisterId || undefined}
-            onIncreaseQuantity={increaseQuantity}
-            onDecreaseQuantity={decreaseQuantity}
-            onRemoveItem={removeItem}
-            onCheckoutSuccess={handleCheckoutSuccess}
-            onCashSessionMutation={handleCashSessionMutation}
-          />
+              <button
+                type="button"
+                data-testid="cash-register-mobile-tab-checkout"
+                onClick={() => setMobileCashRegisterView("checkout")}
+                aria-pressed={isCheckoutView}
+                className={[
+                  "inline-flex min-h-[2.7rem] items-center justify-center gap-2 rounded-xl px-3 text-[0.94rem] font-semibold transition",
+                  isCheckoutView
+                    ? "bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] text-white shadow-[0_10px_18px_rgba(28,109,234,0.3)]"
+                    : "text-slate-600 hover:bg-slate-100",
+                ].join(" ")}
+              >
+                <span>{messages.shell.nav.order}</span>
+                <span
+                  className={[
+                    "inline-flex min-w-[1.4rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[0.72rem] font-semibold",
+                    isCheckoutView ? "bg-white/24 text-white" : "bg-slate-100 text-slate-700",
+                  ].join(" ")}
+                >
+                  {cartQuantity}
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <div className={isCatalogView ? "block lg:contents" : "hidden lg:contents"}>
+            <ProductCatalogPanel
+              headerActions={
+                <button
+                  type="button"
+                  data-testid="open-cash-session-modal-button"
+                  onClick={() => setIsCashSessionModalOpen(true)}
+                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-gradient-to-b from-[#3e8cff] to-[#1c6dea] px-5 text-[0.98rem] font-semibold text-white shadow-[0_14px_24px_rgba(28,109,234,0.28)]"
+                >
+                  {messages.sales.cashSession.viewSessionAction}
+                </button>
+              }
+              categories={categories}
+              activeCategoryId={activeCategoryId}
+              products={visibleProducts}
+              searchTerm={searchTerm}
+              isLoading={isLoadingProducts}
+              onSearchTermChange={setSearchTerm}
+              onCategorySelect={setActiveCategoryId}
+              onProductSelect={addProductToCart}
+              onOpenCatalogWorkspace={() => {
+                router.push(workspacePathById.products);
+              }}
+            />
+          </div>
+
+          <div className={isCheckoutView ? "block lg:contents" : "hidden lg:contents"}>
+            <CheckoutPanel
+              items={cartItems}
+              subtotal={subtotal}
+              cashRegisterId={selectedCashRegisterId || undefined}
+              onIncreaseQuantity={increaseQuantity}
+              onDecreaseQuantity={decreaseQuantity}
+              onRemoveItem={removeItem}
+              onCheckoutSuccess={handleCheckoutSuccess}
+              onCashSessionMutation={handleCashSessionMutation}
+            />
+          </div>
           {isCashSessionModalOpen ? (
             <div
               className="fixed inset-0 z-40 overflow-y-auto bg-slate-950/45 p-3 backdrop-blur-[2px] md:p-4"
@@ -594,52 +704,41 @@ export function PosLayout({
   };
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-[#f7f7f8]">
-      <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
-        <LeftNavRail
-          items={navItems}
+    <main className="min-h-dvh w-full overflow-hidden bg-[#f7f7f8]">
+      <div className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:min-h-0 lg:grid-cols-[180px_minmax(0,1fr)_365px]">
+        <MobileWorkspaceNav
+          isOpen={isMobileNavOpen}
           activeItemId={currentWorkspace}
+          activeItemLabel={activeWorkspaceLabel}
+          items={navItems}
           actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
           isLoadingActor={status === "loading" || isSigningOut}
           isAuthenticated={isAuthenticated}
           canOpenOperatorSelector={canOpenOperatorSelector}
           onOpenOperatorSelector={openOperatorSelector}
           authActionLabel={authActionLabel}
-          onAuthAction={() => {
-            if (isAuthenticated) {
-              setIsSigningOut(true);
-              void signOut()
-                .then(() => {
-                  router.replace("/login");
-                })
-                .catch(() => {
-                  setIsSigningOut(false);
-                });
-              return;
-            }
-
-            if (sessionSource === "assumed_user") {
-              setIsSigningOut(true);
-              void clearAssumedActor()
-                .then(() => {
-                  router.replace("/login");
-                })
-                .catch(() => {
-                  setIsSigningOut(false);
-                });
-              return;
-            }
-
-            router.replace("/login");
-          }}
-          onItemSelect={(itemId) => {
-            if (isPosWorkspaceId(itemId)) {
-              router.push(workspacePathById[itemId]);
-            }
-          }}
+          onAuthAction={handleAuthAction}
+          onItemSelect={handleItemSelect}
+          onToggle={() => setIsMobileNavOpen((current) => !current)}
+          onClose={() => setIsMobileNavOpen(false)}
         />
 
-        {renderWorkspaceState()}
+        <div className="hidden lg:block">
+          <LeftNavRail
+            items={navItems}
+            activeItemId={currentWorkspace}
+            actorDisplayName={currentActor?.displayName ?? messages.accessControl.loadingActor}
+            isLoadingActor={status === "loading" || isSigningOut}
+            isAuthenticated={isAuthenticated}
+            canOpenOperatorSelector={canOpenOperatorSelector}
+            onOpenOperatorSelector={openOperatorSelector}
+            authActionLabel={authActionLabel}
+            onAuthAction={handleAuthAction}
+            onItemSelect={handleItemSelect}
+          />
+        </div>
+
+        <div className="min-h-0 flex-1 lg:contents">{renderWorkspaceState()}</div>
       </div>
     </main>
   );

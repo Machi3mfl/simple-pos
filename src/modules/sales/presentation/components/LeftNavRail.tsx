@@ -40,7 +40,10 @@ export function LeftNavRail({
       : authActionLabel;
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-3 text-slate-100 lg:p-4">
+    <aside
+      data-testid="left-nav-rail"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-gradient-to-b from-[#060910] via-[#04070f] to-[#03050c] p-3 text-slate-100 lg:p-4"
+    >
       <div
         data-testid="app-logo-slot"
         className="mt-1 flex flex-col items-center rounded-[1.2rem] border border-[#1f2735] bg-[#0b1220] px-2 py-2"

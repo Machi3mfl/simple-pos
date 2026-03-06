@@ -100,9 +100,9 @@ export function LoginPage(): JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f7f8]">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#050812] via-[#091121] to-[#102443] px-6 py-10 text-white lg:px-12 lg:py-14">
+    <main className="min-h-dvh bg-[#f7f7f8]">
+      <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+        <section className="relative hidden overflow-hidden bg-gradient-to-br from-[#050812] via-[#091121] to-[#102443] px-6 py-10 text-white lg:flex lg:px-12 lg:py-14">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(63,141,255,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(9,115,85,0.18),transparent_30%)]" />
           <div className="relative mx-auto flex h-full max-w-[40rem] items-center justify-center">
             <div className="w-full max-w-[28rem] rounded-[2.2rem] border border-white/15 bg-white/5 px-8 py-10 text-center shadow-[0_28px_70px_rgba(2,6,23,0.45)] backdrop-blur-sm">
@@ -116,8 +116,17 @@ export function LoginPage(): JSX.Element {
           </div>
         </section>
 
-        <section className="flex items-center justify-center px-5 py-10 lg:px-8">
+        <section className="flex min-h-dvh items-center justify-center px-5 py-8 lg:min-h-0 lg:px-8 lg:py-10">
           <div className="w-full max-w-[32rem] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_28px_60px_rgba(15,23,42,0.08)] lg:p-8">
+            <div className="mb-6 flex items-center gap-3 lg:hidden">
+              <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#3f8dff] to-[#1768e8] text-[1.15rem] font-bold text-white shadow-[0_10px_18px_rgba(23,104,232,0.32)]">
+                S
+              </span>
+              <p className="text-[1.15rem] font-semibold tracking-tight text-slate-900">
+                Simple POS
+              </p>
+            </div>
+
             <div className="flex items-center gap-3">
               <span className="flex size-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
                 <LockKeyhole className="size-5" aria-hidden />
