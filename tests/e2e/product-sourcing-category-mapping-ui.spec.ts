@@ -20,14 +20,21 @@ test.describe("product sourcing UI category mapping reuse", () => {
 
     await expect(page.getByTestId("product-sourcing-result-393964")).toBeVisible();
     await page.getByTestId("product-sourcing-toggle-393964").click();
+    await page.getByTestId("product-sourcing-next-to-details").click();
     await page.getByTestId("product-sourcing-import-category-393964").fill("drink");
     await page.getByTestId("product-sourcing-import-stock-393964").fill("0");
+    await page.getByTestId("product-sourcing-next-to-confirm").click();
+    await page
+      .getByTestId("product-sourcing-import-confirmation-toast")
+      .getByRole("button", { name: "Continuar" })
+      .click();
     await page.getByTestId("product-sourcing-import-button").click();
 
     await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
       "Importacion completada: 1 productos creados.",
     );
 
+    await page.getByTestId("product-sourcing-step-search").click();
     await page.getByTestId("product-sourcing-search-input").fill("");
     await page.waitForTimeout(700);
     await page.getByTestId("product-sourcing-search-input").fill("zero 1,5");
@@ -35,6 +42,7 @@ test.describe("product sourcing UI category mapping reuse", () => {
 
     await expect(page.getByTestId("product-sourcing-result-111111")).toBeVisible();
     await page.getByTestId("product-sourcing-toggle-111111").click();
+    await page.getByTestId("product-sourcing-next-to-details").click();
 
     await expect(
       page.getByTestId("product-sourcing-import-category-111111"),

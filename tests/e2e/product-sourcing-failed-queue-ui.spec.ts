@@ -123,11 +123,17 @@ test("persists failed imports across sessions and allows filtering, retry, and d
   await page.getByTestId("product-sourcing-toggle-393964").click();
   await page.getByTestId("product-sourcing-toggle-30138").click();
   await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("2");
-
+  await page.getByTestId("product-sourcing-next-to-details").click();
+  await page.getByTestId("product-sourcing-next-to-confirm").click();
+  await page
+    .getByTestId("product-sourcing-import-confirmation-toast")
+    .getByRole("button", { name: "Continuar" })
+    .click();
   await page.getByTestId("product-sourcing-import-button").click();
   await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
     "0 productos creados y 2 rechazados",
   );
+  await page.getByTestId("product-sourcing-open-failed-queue").click();
   await expect(page.getByTestId("product-sourcing-failed-queue-entry-393964")).toContainText(
     "Recuperable",
   );
@@ -146,6 +152,7 @@ test("persists failed imports across sessions and allows filtering, retry, and d
 
   await page.reload();
 
+  await page.getByTestId("product-sourcing-open-failed-queue").click();
   await expect(page.getByTestId("product-sourcing-failed-queue-entry-393964")).toBeVisible();
   await expect(page.getByTestId("product-sourcing-failed-queue-entry-30138")).toBeVisible();
 

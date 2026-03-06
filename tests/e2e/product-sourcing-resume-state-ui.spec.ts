@@ -60,6 +60,7 @@ test("restores sourcing query, selection, and drafts after reload", async ({ pag
 
   await page.getByTestId("product-sourcing-toggle-393964").click();
   await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
+  await page.getByTestId("product-sourcing-next-to-details").click();
 
   await page
     .getByTestId("product-sourcing-import-name-393964")
@@ -107,11 +108,7 @@ test("restores sourcing query, selection, and drafts after reload", async ({ pag
   await expect(page.getByTestId("product-sourcing-session-feedback")).toContainText(
     "Se restauró la sesión anterior de sourcing.",
   );
-  await expect(page.getByTestId("product-sourcing-search-input")).toHaveValue("coca cola");
-  await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
-  await expect(page.getByTestId("product-sourcing-result-393964")).toContainText(
-    "Gaseosa cola Coca Cola Zero 2,25 lts",
-  );
+  await expect(page.getByText("1 producto para editar")).toBeVisible();
   await expect(page.getByTestId("product-sourcing-import-name-393964")).toHaveValue(
     "Coca Cola Zero 2,25 importada",
   );
@@ -123,15 +120,18 @@ test("restores sourcing query, selection, and drafts after reload", async ({ pag
   await expect(page.getByTestId("product-sourcing-import-cost-393964")).toHaveValue("3150");
   await expect(page.getByTestId("product-sourcing-import-min-stock-393964")).toHaveValue("2");
 
+  await page.getByTestId("product-sourcing-step-search").click();
+  await expect(page.getByTestId("product-sourcing-search-input")).toHaveValue("coca cola");
+  await expect(page.getByTestId("product-sourcing-result-393964")).toContainText(
+    "Gaseosa cola Coca Cola Zero 2,25 lts",
+  );
   await page.waitForTimeout(650);
   expect(searchRequests).toBe(1);
 
   await page.getByTestId("product-sourcing-discard-session-button").click();
   await expect(page.getByTestId("product-sourcing-search-input")).toHaveValue("");
   await expect(page.getByTestId("product-sourcing-result-393964")).toHaveCount(0);
-  await expect(page.getByTestId("product-sourcing-selection-panel")).toContainText(
-    "Selecciona resultados para completar la importacion",
-  );
+  await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("0");
   await expect
     .poll(async () =>
       page.evaluate((key) => window.localStorage.getItem(key), storageKey),

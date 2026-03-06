@@ -398,11 +398,13 @@ Why:
 - support explicit `Enter` submit for operators who type decisively,
 - cancel in-flight searches with `AbortController`,
 - never auto-import or auto-select the first provider result,
-- keep the selected-items summary directly below the search form and full-width so the operator never loses context while reviewing chosen items,
+- keep the current selection visible through a highlighted selected-count badge next to the visible-results summary so the operator never loses context while moving between steps,
 - show the first result window quickly and continue appending later pages through infinite scroll, keeping a manual fallback only when `IntersectionObserver` is unavailable,
 - show a Carrefour origin badge and large image preview in result cards,
 - allow selecting `1..n` visible results before confirming import,
-- keep a persistent selected-count summary and batch import action,
+- structure the UI as a 3-step wizard (`search/select` -> `adjust data` -> `confirm/import`) so search, editing, and confirmation are not competing on screen at the same time,
+- keep failed queue, learned category mappings, and recent history available as secondary modal surfaces from the header actions instead of inline blocks inside the main flow,
+- if a selected item reaches step 3 with `initialStock = 0`, warn on the transition out of step 2 and let the operator explicitly continue without blocking the rest of the batch, highlighting empty `cost` values inside the affected cards when they still remain unset,
 - keep result pages small (`8-12` items) to reduce cognitive load.
 
 ### Image Loading UX
@@ -476,6 +478,8 @@ Multi-provider search is a valid later extension, but it should be added only af
 - [x] The first visible result images load fast enough to support quick product recognition.
 - [x] The operator can select one or many search results and confirm a batch import in one action.
 - [x] Each selected item allows category confirmation and minimum product field review before import.
+- [x] The sourcing workspace now presents the import flow as a guided 3-step wizard and moves failed queue/history/mapping review into modal side surfaces to reduce distraction during the main task.
+- [x] The sourcing workspace warns on the step-2 to step-3 transition when a selected item would be imported with `stock inicial = 0`, also highlighting empty `cost` values in the affected cards, and lets the operator explicitly continue if that is intended.
 - [x] Category confirmation uses a human-readable label plus a canonical stored code so duplicate internal categories are not created from alternate writing styles.
 - [x] The system stores the selected external image for each successful item in managed storage and creates the product through the internal catalog command path.
 - [x] The imported products are visible in `/products` and usable from the sales workspace after refresh.
@@ -499,7 +503,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 | `SRC-TASK-003` Assisted import slice | done | Batch import, managed image persistence, and source traceability delivered |
 | `SRC-TASK-004` Learned category mappings | done | Reuse, review, update, and delete supported from the sourcing workspace |
 | `SRC-TASK-005` Import history | done | Recent import history persisted and exposed in the sourcing workspace |
-| `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, infinite scroll, and shared product cards delivered |
+| `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, infinite scroll, modal side surfaces, step-2 zero-stock warning with per-item highlighting, and the final 3-step sourcing wizard delivered |
 | `SRC-TASK-007` Provider hardening | done | Rate limiting, structured health logs, deterministic tests, and live smoke probe delivered |
 | `SRC-TASK-008` Resume state across reload/session restore | done | Query, visible result window, selected items, and draft fields now restore from a persisted sourcing session snapshot |
 | `SRC-TASK-009` Failed import queue across sessions | done | Failed imports now persist across sessions with review, filtering, retry, load-into-selection, and dismiss actions |
@@ -641,12 +645,12 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - debounced Carrefour search,
   - multi-select result cards,
   - infinite scroll result loading with shared observer/fallback primitives instead of classic paginated navigation,
-  - a full-width selected-items summary directly below the search form instead of a detached right-side column,
+  - a compact selection summary through badges in the search header (`resultados visibles` + highlighted `seleccionados`) instead of a detached selection card,
   - inline import data completion (`name`, `categoryId`, `price`, `initialStock`, `cost`, `minStock`),
   - category confirmation through the shared `CategoryInputField`, with visible labels plus canonical stored codes,
+  - a step-2 confirmation toast when selected items still have `stock inicial = 0`, including per-item warning emphasis inside the affected cards and extra copy when some of them also keep `cost` empty, allowing the operator to continue explicitly into the final review,
   - assisted batch import execution against the real catalog runtime,
   - actionable partial-failure handling with retryable vs non-recoverable invalid items,
-  - inline failure banners on the selected draft cards that remain pending after a partial import,
   - quick actions to keep only rejected items, retry recoverable ones, or dismiss non-recoverable ones,
   - persisted resume-state recovery across reloads/browser restarts for the active query, loaded results, selected items, and inline import drafts,
   - a clear operator action to discard the restored sourcing session and start clean,
@@ -657,6 +661,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - operator-facing learned mapping management (`list`, `update`, `delete`) from the same screen,
   - persistent recent import history sourced from `imported_product_sources` and internal catalog names/SKUs,
   - managed image persistence plus source trace recording during each successful import,
+  - cleanup of the cached search/session snapshot after a fully successful import so the next sourcing run starts clean,
   - reuse of the same shared infinite-scroll primitives now adopted across `/cash-register`, `/products`, and `/products/sourcing`,
   - and navigation back to `/products` to verify imported products in the live workspace.
 - Real-backend UI proof:
@@ -665,7 +670,7 @@ These are planned continuity follow-ups that extend `SOURCING-001` without block
   - `tests/e2e/product-sourcing-ui.spec.ts` verifies that `/products/sourcing` keeps the main navigation shell mounted while the sourcing flow is active and that infinite scroll appends later provider pages without losing the current selection.
   - `tests/e2e/product-sourcing-resume-state-ui.spec.ts` verifies that a sourcing session survives a full page reload without re-running the initial search and restores the draft fields exactly as the operator left them.
   - `tests/e2e/product-sourcing-failed-queue-ui.spec.ts` verifies that failed imports persist across sessions, can be filtered by status, retried to resolution, and dismissed into a separate state bucket.
-  - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the selected-items summary staying above results and the import CTA remaining visible.
+  - `tests/e2e/product-sourcing-responsive-ui.spec.ts` verifies the same sourcing flow remains usable on tablet and mobile widths, with the results/selection badges staying above results and the import CTA remaining visible.
   - `tests/e2e/product-sourcing-category-mapping-ui.spec.ts` verifies that a category confirmed in one import is reused automatically in a later search result sharing the same external path.
   - `tests/e2e/product-sourcing-category-mapping-management-ui.spec.ts` verifies that a learned mapping can be edited and deleted from `/products/sourcing`, and that later searches immediately reflect that change.
   - `tests/e2e/product-sourcing-import-history-use-case.spec.ts` + `tests/e2e/product-sourcing-import-ui.spec.ts` verify that recent imports remain visible after persistence with internal product name and SKU.

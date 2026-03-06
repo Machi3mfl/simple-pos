@@ -60,6 +60,7 @@ test.describe("product sourcing UI assisted import", () => {
     await expect(page.getByTestId(`product-sourcing-result-${sourceProductId}`)).toBeVisible();
     await page.getByTestId(`product-sourcing-toggle-${sourceProductId}`).click();
     await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("1");
+    await page.getByTestId("product-sourcing-next-to-details").click();
 
     await page.getByTestId(`product-sourcing-import-name-${sourceProductId}`).fill(importedName);
     await page.getByTestId(`product-sourcing-import-category-${sourceProductId}`).fill("drink");
@@ -67,6 +68,7 @@ test.describe("product sourcing UI assisted import", () => {
     await page.getByTestId(`product-sourcing-import-stock-${sourceProductId}`).fill("5");
     await page.getByTestId(`product-sourcing-import-cost-${sourceProductId}`).fill("70");
     await page.getByTestId(`product-sourcing-import-min-stock-${sourceProductId}`).fill("2");
+    await page.getByTestId("product-sourcing-next-to-confirm").click();
     await page.getByTestId("product-sourcing-import-button").click();
 
     await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
@@ -75,12 +77,19 @@ test.describe("product sourcing UI assisted import", () => {
     await expect(page.getByTestId(`product-sourcing-import-result-${sourceProductId}`)).toContainText(
       importedName,
     );
+    await page.getByTestId("product-sourcing-step-search").click();
+    await expect(page.getByTestId("product-sourcing-search-input")).toHaveValue("");
+    await expect(page.getByTestId(`product-sourcing-result-${sourceProductId}`)).toHaveCount(0);
+    await expect(page.getByTestId("product-sourcing-selected-count")).toHaveText("0");
+    await page.getByTestId("product-sourcing-step-confirm").click();
+    await page.getByTestId("product-sourcing-open-history").click();
     await expect(
       page.getByTestId(`product-sourcing-history-row-${sourceProductId}`),
     ).toContainText(importedName);
     await expect(
       page.getByTestId(`product-sourcing-history-row-${sourceProductId}`),
     ).toContainText(`CRF-${sourceProductId.toUpperCase()}`);
+    await page.getByTestId("product-sourcing-import-history-dialog-close").click();
 
     await page.getByTestId("product-sourcing-go-products-link").click();
     await expect(page).toHaveURL(/\/products$/);
@@ -159,6 +168,7 @@ test.describe("product sourcing UI assisted import", () => {
     await page.waitForTimeout(650);
 
     await page.getByTestId(`product-sourcing-toggle-${duplicateSourceId}`).click();
+    await page.getByTestId("product-sourcing-next-to-details").click();
     await page.getByTestId(`product-sourcing-import-name-${duplicateSourceId}`).fill(
       `Importado antes ${marker}`,
     );
@@ -167,14 +177,17 @@ test.describe("product sourcing UI assisted import", () => {
     await page.getByTestId(`product-sourcing-import-stock-${duplicateSourceId}`).fill("1");
     await page.getByTestId(`product-sourcing-import-cost-${duplicateSourceId}`).fill("50");
     await page.getByTestId(`product-sourcing-import-min-stock-${duplicateSourceId}`).fill("0");
+    await page.getByTestId("product-sourcing-next-to-confirm").click();
     await page.getByTestId("product-sourcing-import-button").click();
 
     await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
       "Importacion completada: 1 productos creados.",
     );
 
+    await page.getByTestId("product-sourcing-step-search").click();
     await page.getByTestId(`product-sourcing-toggle-${duplicateSourceId}`).click();
     await page.getByTestId(`product-sourcing-toggle-${newSourceId}`).click();
+    await page.getByTestId("product-sourcing-next-to-details").click();
     await page.getByTestId(`product-sourcing-import-name-${newSourceId}`).fill(
       `Nuevo importado ${marker}`,
     );
@@ -183,6 +196,7 @@ test.describe("product sourcing UI assisted import", () => {
     await page.getByTestId(`product-sourcing-import-stock-${newSourceId}`).fill("2");
     await page.getByTestId(`product-sourcing-import-cost-${newSourceId}`).fill("80");
     await page.getByTestId(`product-sourcing-import-min-stock-${newSourceId}`).fill("1");
+    await page.getByTestId("product-sourcing-next-to-confirm").click();
     await page.getByTestId("product-sourcing-import-button").click();
 
     await expect(page.getByTestId("product-sourcing-import-feedback")).toContainText(
