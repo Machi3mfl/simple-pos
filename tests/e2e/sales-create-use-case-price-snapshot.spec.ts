@@ -48,7 +48,7 @@ test("uses the real catalog price snapshot for on-account totals", async () => {
     execute: async () => ({
       getId: () => "customer-001",
     }),
-  } as FindOrCreateCustomerUseCase;
+  } as unknown as FindOrCreateCustomerUseCase;
   const recordedDebts: Array<{
     readonly amount: number;
     readonly initialPaymentAmount?: number;
