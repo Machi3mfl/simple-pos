@@ -9,6 +9,7 @@ import {
   InvalidUnitCostError,
   MissingInitialStockCostError,
 } from "../errors/ProductDomainError";
+import { DEFAULT_PRODUCT_MIN_STOCK } from "../constants/ProductDefaults";
 import { resolveProductSku } from "../services/ResolveProductSku";
 import { normalizeCategoryCode } from "@/shared/core/category/categoryNaming";
 
@@ -143,7 +144,7 @@ export class Product {
 
     const sku = validateSku(resolveProductSku(categoryId, props.id, props.sku));
     const ean = validateEan(props.ean);
-    const minStock = validateMinStock(props.minStock ?? 0);
+    const minStock = validateMinStock(props.minStock ?? DEFAULT_PRODUCT_MIN_STOCK);
 
     return new Product({
       id: props.id,

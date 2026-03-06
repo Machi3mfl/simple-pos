@@ -1,0 +1,1 @@
+export const DEFAULT_PRODUCT_MIN_STOCK = 2;

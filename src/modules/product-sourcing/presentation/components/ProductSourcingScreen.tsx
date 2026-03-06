@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckSquare,
   Loader2,
@@ -16,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
+import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import {
   dedupeCategoryCodes,
   defaultKioskCategoryCodes,
@@ -211,7 +213,7 @@ function createImportDraft(item: ExternalCatalogCandidateItem): ImportDraft {
     price: item.referencePrice !== null ? String(item.referencePrice) : "",
     initialStock: "0",
     cost: "",
-    minStock: "0",
+    minStock: String(DEFAULT_PRODUCT_MIN_STOCK),
   };
 }
 
@@ -243,6 +245,13 @@ function parseIntegerInput(value: string): number | null {
 
   const parsed = Number(normalized);
   return Number.isInteger(parsed) ? parsed : null;
+}
+
+function hasZeroInitialStockWithoutCost(draft: ImportDraft): boolean {
+  const initialStock = parseIntegerInput(draft.initialStock);
+  const cost = parseOptionalDecimal(draft.cost);
+
+  return initialStock === 0 && (cost === undefined || cost <= 0);
 }
 
 function toTestIdFragment(value: string): string {
@@ -913,6 +922,14 @@ export function ProductSourcingScreen({
   const selectedItems = useMemo(
     () => results.filter((item) => selectedIds.includes(item.sourceProductId)),
     [results, selectedIds],
+  );
+  const zeroStockWithoutCostCount = useMemo(
+    () =>
+      selectedItems.reduce((count, item) => {
+        const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
+        return hasZeroInitialStockWithoutCost(draft) ? count + 1 : count;
+      }, 0),
+    [importDrafts, selectedItems],
   );
   const failedQueueCounts = useMemo(
     () => ({
@@ -1586,6 +1603,27 @@ export function ProductSourcingScreen({
                 </button>
               </div>
 
+              {zeroStockWithoutCostCount > 0 ? (
+                <div
+                  data-testid="product-sourcing-zero-stock-warning"
+                  className="mt-4 rounded-[1.4rem] border border-amber-200 bg-amber-50 px-4 py-3"
+                >
+                  <div className="flex items-start gap-2 text-amber-900">
+                    <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">
+                        {zeroStockWithoutCostCount === 1
+                          ? "Hay 1 producto sin stock inicial ni costo."
+                          : `Hay ${zeroStockWithoutCostCount} productos sin stock inicial ni costo.`}
+                      </p>
+                      <p className="text-sm text-amber-800">
+                        Si estas seguro de guardar, podes continuar e ingresar stock despues.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {hasPendingInvalidItems ? (
                 <div
                   data-testid="product-sourcing-pending-invalid-panel"
@@ -1653,6 +1691,7 @@ export function ProductSourcingScreen({
                     const draft = importDrafts[item.sourceProductId] ?? createImportDraft(item);
                     const skuPreview = resolveImportedProductSku(item.providerId, item.sourceProductId);
                     const invalidItem = invalidItemsBySourceId.get(item.sourceProductId);
+                    const shouldWarnZeroStockWithoutCost = hasZeroInitialStockWithoutCost(draft);
 
                     return (
                       <article
@@ -1685,6 +1724,15 @@ export function ProductSourcingScreen({
                               {invalidItemStatusLabel(invalidItem)}
                             </p>
                             <p className="mt-1 text-xs">{invalidItem.reason}</p>
+                          </div>
+                        ) : null}
+
+                        {shouldWarnZeroStockWithoutCost ? (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                            <p className="font-semibold">Sin stock inicial ni costo</p>
+                            <p className="mt-1 text-xs text-amber-800">
+                              Este producto se guardara sin inventario. Si estas seguro, podes continuar.
+                            </p>
                           </div>
                         ) : null}
 

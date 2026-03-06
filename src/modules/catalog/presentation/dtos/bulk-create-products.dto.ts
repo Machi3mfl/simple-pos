@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import type { CreateProductDTO } from "./create-product.dto";
 import { productDTOSchema } from "./product-response.dto";
 
@@ -12,7 +13,7 @@ const bulkCreateProductItemDTOSchema = z
     price: z.number().positive(),
     cost: z.number().positive().optional(),
     initialStock: z.number().int().min(0),
-    minStock: z.number().int().min(0).default(0),
+    minStock: z.number().int().min(0).default(DEFAULT_PRODUCT_MIN_STOCK),
     imageUrl: z.string().trim().min(1).max(2048).optional(),
   })
   .strict();

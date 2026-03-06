@@ -31,6 +31,7 @@ import { showErrorToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import { BulkPriceUpdatePanel } from "@/modules/catalog/presentation/components/BulkPriceUpdatePanel";
 import { CategoryInputField } from "@/modules/catalog/presentation/components/CategoryInputField";
+import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import { ManagedProductImageField } from "@/modules/catalog/presentation/components/ManagedProductImageField";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import { BulkProductProfileUpdatePanel } from "@/modules/products/presentation/components/BulkProductProfileUpdatePanel";
@@ -196,7 +197,7 @@ const defaultEditFormState: EditProductFormState = {
   categoryId: "other",
   price: "",
   cost: "",
-  minStock: "0",
+  minStock: String(DEFAULT_PRODUCT_MIN_STOCK),
   imageUrl: "",
   imageFile: null,
   isActive: true,
@@ -754,7 +755,7 @@ export function ProductsInventoryPanel({
       price: Number(columns[3] ?? 0),
       cost: columns[4] ? Number(columns[4]) : undefined,
       initialStock: Number(columns[5] ?? 0),
-      minStock: Number(columns[6] ?? 0),
+      minStock: Number(columns[6] ?? DEFAULT_PRODUCT_MIN_STOCK),
       imageUrl: columns[7] || undefined,
       ean: columns[8] || undefined,
     }));

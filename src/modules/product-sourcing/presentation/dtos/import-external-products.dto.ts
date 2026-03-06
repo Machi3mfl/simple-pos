@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import { productDTOSchema } from "@/modules/catalog/presentation/dtos/product-response.dto";
 
 const importExternalProductItemDTOSchema = z
@@ -13,7 +14,7 @@ const importExternalProductItemDTOSchema = z
     categoryId: z.string().trim().min(1).max(80),
     price: z.number().positive(),
     initialStock: z.number().int().min(0),
-    minStock: z.number().int().min(0).default(0),
+    minStock: z.number().int().min(0).default(DEFAULT_PRODUCT_MIN_STOCK),
     cost: z.number().positive().nullable().optional(),
     sourceImageUrl: z.string().trim().min(1).max(2048).nullable().optional(),
     productUrl: z.string().trim().min(1).max(2048).nullable().optional(),

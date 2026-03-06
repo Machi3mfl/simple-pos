@@ -12,6 +12,7 @@ import {
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
+import { DEFAULT_PRODUCT_MIN_STOCK } from "@/modules/catalog/domain/constants/ProductDefaults";
 import { buildProductMutationFormData } from "@/modules/catalog/presentation/handlers/buildProductMutationFormData";
 import {
   dedupeCategoryCodes,
@@ -88,7 +89,7 @@ function buildDefaultFormState(): ProductOnboardingFormState {
     price: "10",
     cost: "",
     initialStock: "0",
-    minStock: "0",
+    minStock: String(DEFAULT_PRODUCT_MIN_STOCK),
     imageUrl: "",
     imageFile: null,
   };
