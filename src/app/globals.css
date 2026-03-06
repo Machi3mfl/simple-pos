@@ -86,6 +86,41 @@
   * {
     @apply border-border;
   }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"])[aria-invalid="true"],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):user-invalid,
+  select[aria-invalid="true"],
+  select:user-invalid,
+  textarea[aria-invalid="true"],
+  textarea:user-invalid,
+  button[data-invalid="true"] {
+    @apply border-rose-300 bg-rose-50 text-slate-900;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"])[aria-invalid="true"]::placeholder,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):user-invalid::placeholder,
+  textarea[aria-invalid="true"]::placeholder,
+  textarea:user-invalid::placeholder {
+    color: rgb(251 113 133 / 0.9);
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"])[aria-invalid="true"]:focus,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):user-invalid:focus,
+  select[aria-invalid="true"]:focus,
+  select:user-invalid:focus,
+  textarea[aria-invalid="true"]:focus,
+  textarea:user-invalid:focus,
+  button[data-invalid="true"]:focus,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"])[aria-invalid="true"]:focus-visible,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):user-invalid:focus-visible,
+  select[aria-invalid="true"]:focus-visible,
+  select:user-invalid:focus-visible,
+  textarea[aria-invalid="true"]:focus-visible,
+  textarea:user-invalid:focus-visible,
+  button[data-invalid="true"]:focus-visible {
+    @apply border-rose-400 ring-2 ring-rose-100;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

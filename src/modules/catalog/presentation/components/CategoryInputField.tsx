@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { getFormControlValidationProps } from "@/lib/form-controls";
 import {
   dedupeCategoryCodes,
   formatCategoryLabel,
@@ -19,6 +20,7 @@ interface CategoryInputFieldProps {
   readonly onCategoryCodeChange: (nextCategoryCode: string) => void;
   readonly placeholder?: string;
   readonly required?: boolean;
+  readonly invalid?: boolean;
 }
 
 function buildOptionId(inputTestId: string): string {
@@ -33,6 +35,7 @@ export function CategoryInputField({
   onCategoryCodeChange,
   placeholder = "Ej. Desayuno y merienda",
   required = false,
+  invalid = false,
 }: CategoryInputFieldProps): JSX.Element {
   const { labelForCategory } = useI18n();
   const [draftValue, setDraftValue] = useState<string>("");
@@ -71,6 +74,7 @@ export function CategoryInputField({
       <input
         data-testid={inputTestId}
         required={required}
+        {...getFormControlValidationProps(invalid)}
         value={draftValue}
         onChange={(event) => {
           const nextDraftValue = event.target.value;

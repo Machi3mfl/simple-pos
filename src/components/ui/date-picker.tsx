@@ -18,6 +18,7 @@ interface DatePickerProps {
   readonly min?: string;
   readonly max?: string;
   readonly allowClear?: boolean;
+  readonly invalid?: boolean;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -72,6 +73,7 @@ export function DatePicker({
   min,
   max,
   allowClear = true,
+  invalid = false,
 }: DatePickerProps): JSX.Element {
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -87,6 +89,7 @@ export function DatePicker({
             type="button"
             data-testid={testId}
             disabled={disabled}
+            data-invalid={invalid || undefined}
             className={cn(
               "flex min-h-[3.35rem] w-full items-center justify-between gap-3 rounded-2xl border border-slate-300 bg-white px-4 text-left text-base text-slate-800 outline-none transition hover:border-slate-400 focus-visible:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60",
               !selectedDate && "text-slate-500",
