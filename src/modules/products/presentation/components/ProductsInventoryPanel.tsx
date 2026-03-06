@@ -1150,7 +1150,7 @@ export function ProductsInventoryPanel({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:px-5">
+              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 lg:px-5">
                 {workspaceItems.map((product) => {
                   const statusTone =
                     product.stockState === "with_stock"
