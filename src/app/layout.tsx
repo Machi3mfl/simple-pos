@@ -13,8 +13,14 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "simple-pos",
+  title: "Simple POS",
   description: "Tablet-first POS MVP for kiosk operations",
+  applicationName: "Simple POS",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
