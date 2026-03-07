@@ -64,7 +64,7 @@ test.describe("products workspace api", () => {
     const lowStockParsed = productResponseDTOSchema.parse(lowStockBody);
 
     const lowStockWorkspaceResponse = await request.get(
-      "/api/v1/products/workspace?stockState=low_stock&activeOnly=true&sort=stock&page=1&pageSize=20",
+      "/api/v1/products/workspace?stockState=low_stock&activeOnly=true&sort=stock_asc&page=1&pageSize=20",
     );
     expect(lowStockWorkspaceResponse.status()).toBe(200);
     const lowStockWorkspaceBody = await lowStockWorkspaceResponse.json();
@@ -87,6 +87,7 @@ test.describe("products workspace api", () => {
     const stockedWorkspaceParsed = productsWorkspaceResponseDTOSchema.parse(
       stockedWorkspaceBody,
     );
+    expect(stockedWorkspaceParsed.items[0]?.id).toBe(lowStockParsed.item.id);
 
     const stockedItem = stockedWorkspaceParsed.items.find(
       (item) => item.id === stockedParsed.item.id,
@@ -94,6 +95,15 @@ test.describe("products workspace api", () => {
     expect(stockedItem?.stock).toBe(6);
     expect(stockedItem?.stockState).toBe("with_stock");
     expect(stockedItem?.ean).toBe(stockedParsed.item.ean);
+
+    const descendingWorkspaceResponse = await request.get(
+      `/api/v1/products/workspace?q=${encodeURIComponent(marker)}&activeOnly=true&sort=stock_desc`,
+    );
+    expect(descendingWorkspaceResponse.status()).toBe(200);
+    const descendingWorkspaceBody = await descendingWorkspaceResponse.json();
+    const descendingWorkspaceParsed =
+      productsWorkspaceResponseDTOSchema.parse(descendingWorkspaceBody);
+    expect(descendingWorkspaceParsed.items[0]?.id).toBe(stockedParsed.item.id);
 
     const eanWorkspaceResponse = await request.get(
       `/api/v1/products/workspace?q=${encodeURIComponent(stockedParsed.item.ean ?? "")}&activeOnly=true`,

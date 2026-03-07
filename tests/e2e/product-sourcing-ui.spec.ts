@@ -186,9 +186,9 @@ test("opens product sourcing from /products and searches through the UI", async 
 
   if (!requestedUrls.some((url) => url.includes("page=2"))) {
     await expect(page.getByTestId("product-sourcing-infinite-scroll-status")).toContainText(
-      "Seguí bajando para ver más resultados.",
+      "Hay más resultados disponibles.",
     );
-    await page.getByTestId("product-sourcing-infinite-scroll-sentinel").scrollIntoViewIfNeeded();
+    await page.getByTestId("product-sourcing-load-more-button").click();
   }
 
   await expect.poll(() => requestedUrls.some((url) => url.includes("page=2"))).toBe(true);

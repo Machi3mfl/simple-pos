@@ -806,21 +806,6 @@ export function ReportingPanel({
             {messages.reporting.subtitle}
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">
-              <Activity size={16} className="text-slate-400" />
-              {messages.reporting.periodSnapshotTitle}
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">
-              <Boxes size={16} className="text-slate-400" />
-              {messages.reporting.currentStateTitle}
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">
-              <CreditCard size={16} className="text-slate-400" />
-              {labelForPaymentMethod(paymentMethod === "all" ? "cash" : paymentMethod)}
-              {paymentMethod === "all" ? ` + ${labelForPaymentMethod("on_account")}` : ""}
-            </div>
-          </div>
         </div>
 
         <form
@@ -905,12 +890,7 @@ export function ReportingPanel({
             </p>
           </div>
         </div>
-        <div
-          className={cn(
-            "grid gap-4",
-            canViewMargin ? "xl:grid-cols-4" : "md:grid-cols-2 xl:grid-cols-4",
-          )}
-        >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <SnapshotMetricCard
             title={messages.reporting.salesCountMetric}
             value={integerFormatter.format(totalSalesCount)}

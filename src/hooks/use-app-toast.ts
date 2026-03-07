@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 
 import { toast, useToast } from "@/hooks/use-toast";
+import { APP_TOAST_DURATION_MS } from "@/hooks/toast-constants";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
-
-export const APP_TOAST_DURATION_MS = 10_000;
 
 type AppToastVariant = Extract<ToastProps["variant"], "default" | "success" | "error">;
 

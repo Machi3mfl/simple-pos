@@ -152,6 +152,7 @@ curl -X POST /api/v1/sales \
   - the top area exposes four snapshot metrics: debtor count, total outstanding balance, open orders, and average outstanding balance
   - debtors are now explored through a scrollable card list with filters for customer name, last-activity date range, open-order count, and sorting by debt/recent activity/name
   - date range filters now use a shared shadcn datepicker (`Popover + Calendar`) instead of native `type="date"`, matching the rest of the shell interactions
+  - tablet layout now keeps `Actividad desde` + `Actividad hasta` on the same row and also keeps `Pedidos abiertos` + `Ordenar por` paired on the next row, while each debtor card keeps the `Pendiente` amount aligned to the upper-right summary area from `md` upward
   - opening a debtor card launches a centered detail modal with the customer snapshot, order-level debt breakdown, full debt ledger, optional payment notes, and direct payment registration from the same context
   - each pending order inside that receivables modal now renders its purchased items with stored product image, quantity x unit price, and subtotal, reusing the same visual language as the `/sales` sale-detail modal
   - receivables, sales-history, and checkout now share the same floating close affordance in the upper-right overlay corner for modal consistency across the POS
@@ -162,6 +163,7 @@ curl -X POST /api/v1/sales \
   - reporting date filters now use the same shared shadcn datepicker used in receivables to keep filter affordances consistent across workspaces
   - reporting combines signals from sales, receivables, and products to surface facturación, costo, profit, margen bruto, ticket promedio, saldo de créditos, stock valorizado, deudores, and pedidos abiertos
   - the dashboard now includes shadcn-style charts for daily revenue/collections/outstanding trend, payment-method mix, inventory health, and top-product concentration
+  - the header helper badges were removed and the `Período seleccionado` metric cards now match the two-up tablet rhythm already used by `Estado actual del negocio`
   - an executive insight section summarizes credit exposure, inventory risk, and revenue concentration so the workspace acts as a decision-support snapshot instead of only a sales-history list
 - Localization updates:
   - the POS shell now renders in Spanish by default through a typed i18n provider mounted in `src/app/layout.tsx`

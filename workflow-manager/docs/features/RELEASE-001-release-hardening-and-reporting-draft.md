@@ -66,8 +66,10 @@ export interface SaleFilters {
   - the UI now exposes CEO-facing metric cards for sales count, revenue, cost, profit, gross margin, collected amount, current credit balance, stock value, debtor count, and open orders
   - the workspace now uses shadcn-style charts for daily trend, payment mix, inventory health, and top-product concentration
   - `2026-03-05`: reporting cards were rebalanced to remove visual dead space by replacing row-based pairing with two independent stacked columns (left: trend + top products, right: mix + inventory + insights). A follow-up UI pass reduced residual spacing before the recent-sales block and reordered each sale row so date/customer appears first on the left.
+  - `2026-03-06`: the reporting header badges were removed to reduce visual noise, and the `Período seleccionado` metric block now uses the same two-cards-per-row tablet behavior already used by `Estado actual del negocio`.
 - Access/session UX hardening (`2026-03-05`):
   - sign-out from POS workspaces now enters an explicit in-progress UI state and redirects with `router.replace("/login")`, preventing the transient `WorkspaceBlockedState` flash before login.
+  - floating app toasts now schedule an explicit auto-dismiss at the shared app duration so success banners do not remain pinned on long-lived screens if the provider timer stalls.
 - Reporting API routes added:
   - `src/app/api/v1/reports/top-products/route.ts`
   - `src/app/api/v1/reports/profit-summary/route.ts`

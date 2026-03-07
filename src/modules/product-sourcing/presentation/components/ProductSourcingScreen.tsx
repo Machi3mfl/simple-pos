@@ -42,7 +42,6 @@ import {
   sortCategoryCodes,
 } from "@/shared/core/category/categoryNaming";
 import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisplayCard";
-import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 import { resolveImportedProductSku } from "../../domain/services/ResolveImportedProductSku";
 import {
@@ -1196,16 +1195,6 @@ export function ProductSourcingScreen({
     () => failedQueueEntries.filter((entry) => matchesFailedQueueFilter(entry, failedQueueFilter)),
     [failedQueueEntries, failedQueueFilter],
   );
-  const {
-    isObserverSupported: isInfiniteScrollObserverSupported,
-    setSentinel: setResultsSentinel,
-  } = useInfiniteScrollTrigger({
-    enabled: searchPerformed && activeSearchQuery.length > 0 && results.length > 0,
-    hasMore: hasMoreResults,
-    isLoading: isLoading || isLoadingMore,
-    onLoadMore: handleShowMore,
-    triggerKey: `${activeSearchQuery}:${searchPage}:${results.length}`,
-  });
   const invalidItemsBySourceId = useMemo(
     () =>
       new Map(
@@ -2333,41 +2322,33 @@ export function ProductSourcingScreen({
                     <div className="mt-5 flex justify-center">
                       {hasMoreResults ? (
                         <div className="flex flex-col items-center gap-3">
-                          <div
-                            ref={setResultsSentinel}
-                            data-testid="product-sourcing-infinite-scroll-sentinel"
-                            className="h-2 w-full"
-                            aria-hidden
-                          />
                           <p
                             data-testid="product-sourcing-infinite-scroll-status"
                             className="text-sm font-medium text-slate-500"
                           >
                             {isLoadingMore
                               ? "Cargando más resultados..."
-                              : "Seguí bajando para ver más resultados."}
+                              : "Hay más resultados disponibles."}
                           </p>
-                          {!isInfiniteScrollObserverSupported ? (
-                            <button
-                              type="button"
-                              data-testid="product-sourcing-load-more-button"
-                              onClick={() => void handleShowMore()}
-                              disabled={isLoadingMore}
-                              className={[
-                                "inline-flex min-h-[3.2rem] items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold",
-                                isLoadingMore
-                                  ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                                  : "border border-slate-200 bg-white text-slate-900 shadow-[0_12px_22px_rgba(15,23,42,0.08)]",
-                              ].join(" ")}
-                            >
-                              {isLoadingMore ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : null}
-                              {isLoadingMore
-                                ? "Cargando más resultados..."
-                                : "Mostrar más resultados"}
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            data-testid="product-sourcing-load-more-button"
+                            onClick={() => void handleShowMore()}
+                            disabled={isLoadingMore}
+                            className={[
+                              "inline-flex min-h-[3.2rem] items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold",
+                              isLoadingMore
+                                ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                                : "border border-slate-200 bg-white text-slate-900 shadow-[0_12px_22px_rgba(15,23,42,0.08)]",
+                            ].join(" ")}
+                          >
+                            {isLoadingMore ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : null}
+                            {isLoadingMore
+                              ? "Cargando más resultados..."
+                              : "Mostrar más resultados"}
+                          </button>
                         </div>
                       ) : searchPerformed ? (
                         <p

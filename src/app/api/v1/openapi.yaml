@@ -716,7 +716,7 @@ paths:
           name: sort
           schema:
             type: string
-            enum: [stock, name, recent, price]
+            enum: [stock_asc, stock_desc, name, recent, price]
         - in: query
           name: page
           schema:

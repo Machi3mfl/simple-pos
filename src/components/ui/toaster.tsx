@@ -3,7 +3,7 @@
 import { AlertCircle, CheckCircle2, Info } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
-import { APP_TOAST_DURATION_MS } from "@/hooks/use-app-toast"
+import { APP_TOAST_DURATION_MS } from "@/hooks/toast-constants"
 import {
   Toast,
   ToastClose,

@@ -20,7 +20,7 @@ import { useI18n } from "@/infrastructure/i18n/I18nProvider";
 
 type ProductCategory = "beverages" | "snacks" | "candy" | "pantry" | "other";
 type StockState = "all" | "with_stock" | "low_stock" | "out_of_stock";
-type SortMode = "stock" | "name" | "recent";
+type SortMode = "stock_asc" | "stock_desc" | "name" | "recent";
 type MockDialogId =
   | "detail"
   | "create"
@@ -277,7 +277,7 @@ export function ProductsInventoryMockPanel(): JSX.Element {
   const [categoryFilter, setCategoryFilter] = useState<ProductCategory | "all">("all");
   const [stockFilter, setStockFilter] = useState<StockState>("all");
   const [activeOnly, setActiveOnly] = useState<boolean>(true);
-  const [sortMode, setSortMode] = useState<SortMode>("stock");
+  const [sortMode, setSortMode] = useState<SortMode>("stock_asc");
   const [selectedProductId, setSelectedProductId] = useState<string>(mockProducts[0].id);
   const [openDialog, setOpenDialog] = useState<MockDialogId>(null);
   const productCategoryLabels = messages.productsWorkspace.categories;
@@ -335,12 +335,24 @@ export function ProductsInventoryMockPanel(): JSX.Element {
           return right.lastMovement.localeCompare(left.lastMovement, "es");
         }
 
+        if (sortMode === "stock_desc") {
+          if (right.stock !== left.stock) {
+            return right.stock - left.stock;
+          }
+
+          return left.name.localeCompare(right.name, "es");
+        }
+
+        if (left.stock !== right.stock) {
+          return left.stock - right.stock;
+        }
+
         const statusDelta = stockStatusWeight(left) - stockStatusWeight(right);
         if (statusDelta !== 0) {
           return statusDelta;
         }
 
-        return right.stock - left.stock;
+        return left.name.localeCompare(right.name, "es");
       });
   }, [activeOnly, categoryFilter, searchTerm, sortMode, stockFilter]);
 
@@ -546,7 +558,12 @@ export function ProductsInventoryMockPanel(): JSX.Element {
                       onChange={(event) => setSortMode(event.target.value as SortMode)}
                       className="bg-transparent outline-none"
                     >
-                      <option value="stock">{messages.productsWorkspace.filters.orderByStock}</option>
+                      <option value="stock_asc">
+                        {messages.productsWorkspace.filters.orderByStockAsc}
+                      </option>
+                      <option value="stock_desc">
+                        {messages.productsWorkspace.filters.orderByStockDesc}
+                      </option>
                       <option value="name">{messages.productsWorkspace.filters.orderByName}</option>
                       <option value="recent">{messages.productsWorkspace.filters.orderByRecent}</option>
                     </select>
@@ -556,7 +573,7 @@ export function ProductsInventoryMockPanel(): JSX.Element {
             </div>
           </header>
 
-          <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:px-5">
+          <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] lg:px-5">
             {visibleProducts.map((product) => {
               const status = resolveStockStatus(product);
               const statusTone = resolveStatusTone(status);

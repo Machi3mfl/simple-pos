@@ -44,7 +44,7 @@ import { ProductDisplayCard } from "@/shared/presentation/components/ProductDisp
 import { useInfiniteScrollTrigger } from "@/shared/presentation/hooks/useInfiniteScrollTrigger";
 
 type StockFilter = "all" | "with_stock" | "low_stock" | "out_of_stock" | "inactive";
-type SortMode = "stock" | "name" | "recent" | "price";
+type SortMode = "stock_asc" | "stock_desc" | "name" | "recent" | "price";
 type StockMovementMode = "inbound" | "adjustment" | "outbound";
 type DialogId =
   | "detail"
@@ -390,7 +390,7 @@ export function ProductsInventoryPanel({
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [activeOnly, setActiveOnly] = useState<boolean>(true);
-  const [sortMode, setSortMode] = useState<SortMode>("stock");
+  const [sortMode, setSortMode] = useState<SortMode>("stock_asc");
   const [workspace, setWorkspace] = useState<WorkspaceProductsResponse | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState<DialogId>(null);
@@ -1260,7 +1260,12 @@ export function ProductsInventoryPanel({
                       onChange={(event) => setSortMode(event.target.value as SortMode)}
                       className="bg-transparent outline-none"
                     >
-                      <option value="stock">{messages.productsWorkspace.filters.orderByStock}</option>
+                      <option value="stock_asc">
+                        {messages.productsWorkspace.filters.orderByStockAsc}
+                      </option>
+                      <option value="stock_desc">
+                        {messages.productsWorkspace.filters.orderByStockDesc}
+                      </option>
                       <option value="name">{messages.productsWorkspace.filters.orderByName}</option>
                       <option value="recent">{messages.productsWorkspace.filters.orderByRecent}</option>
                     </select>
@@ -1280,7 +1285,7 @@ export function ProductsInventoryPanel({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 lg:px-5">
+              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 lg:px-5">
                 {workspaceItems.map((product) => {
                   const statusTone =
                     product.stockState === "with_stock"

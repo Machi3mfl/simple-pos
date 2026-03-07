@@ -505,7 +505,7 @@ Multi-provider search is a valid later extension, but it should be added only af
 | `SRC-TASK-003` Assisted import slice | done | Batch import, managed image persistence, and source traceability delivered |
 | `SRC-TASK-004` Learned category mappings | done | Reuse, review, update, and delete supported from the sourcing workspace |
 | `SRC-TASK-005` Import history | done | Recent import history persisted and exposed in the sourcing workspace |
-| `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, infinite scroll, modal side surfaces, step-2 zero-stock warning with per-item highlighting, and the final 3-step sourcing wizard delivered |
+| `SRC-TASK-006` UI integration and operator UX | done | Shared shell, responsive layout, explicit `Mostrar más resultados` pagination, modal side surfaces, step-2 zero-stock warning with per-item highlighting, and the final 3-step sourcing wizard delivered |
 | `SRC-TASK-007` Provider hardening | done | Rate limiting, structured health logs, deterministic tests, and live smoke probe delivered |
 | `SRC-TASK-008` Resume state across reload/session restore | done | Query, visible result window, selected items, and draft fields now restore from a persisted sourcing session snapshot |
 | `SRC-TASK-009` Failed import queue across sessions | done | Failed imports now persist across sessions with review, filtering, retry, load-into-selection, and dismiss actions |

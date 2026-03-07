@@ -89,3 +89,5 @@ The workspace now makes that decision explicit in the bulk import dialogs by war
 - Top action buttons in `/products` were compacted and aligned to a single desktop row (`Nuevo producto`, `Actualizar precios`, `Modificar ficha de productos`, and overflow actions)
 - Bulk action wizards now use distinct CTA copy between review and final apply steps (`Continuar a confirmar` / `Revisar cambios` -> `Aplicar cambios`) to avoid double-confirm confusion
 - `EAN` is now part of the converged workspace contract: it is persisted on `products`, searchable from the `/products` list, and only displayed inside the detail modal to preserve browsing density
+- The products list now defaults to `stock ascendente`, also exposing an explicit `stock descendente` option through the workspace API and UI contract.
+- Tablet widths now render three product cards per row in `/products` so browsing density matches the operator workflow more closely.

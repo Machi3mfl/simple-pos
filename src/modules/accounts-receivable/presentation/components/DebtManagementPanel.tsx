@@ -1203,8 +1203,8 @@ export function DebtManagementPanel({
           </button>
         </div>
 
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.75fr)]">
-          <label className="flex flex-col gap-2">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.75fr)]">
+          <label className="flex flex-col gap-2 md:col-span-2 xl:col-span-1">
             <span className="text-sm font-semibold text-slate-700">
               {messages.common.labels.customer}
             </span>
@@ -1361,7 +1361,7 @@ export function DebtManagementPanel({
                 onClick={() => handleOpenCustomer(customer)}
                 className="w-full rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.95))] px-4 py-4 text-left shadow-[0_16px_30px_rgba(15,23,42,0.06)] transition hover:border-blue-300 hover:shadow-[0_18px_32px_rgba(15,23,42,0.1)] md:px-5 md:py-5"
               >
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,1),rgba(254,243,199,0.96))] text-amber-700">
@@ -1408,7 +1408,7 @@ export function DebtManagementPanel({
                     </div>
                   </div>
 
-                  <div className="w-full xl:w-auto xl:min-w-[13rem]">
+                  <div className="w-full md:w-auto md:min-w-[13rem]">
                     <ReceivableAmountCard
                       label={messages.common.labels.outstanding}
                       value={formatCompactCurrency(customer.outstandingBalance, formatCurrency)}

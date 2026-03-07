@@ -3,13 +3,13 @@
 // Inspired by react-hot-toast library
 import * as React from "react"
 
+import { APP_TOAST_DURATION_MS, TOAST_REMOVE_DELAY_MS } from "@/hooks/toast-constants"
 import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 400
 
 type ToasterToast = ToastProps & {
   id: string
@@ -57,6 +57,42 @@ interface State {
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const toastDismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const clearToastTimeout = (
+  timeouts: Map<string, ReturnType<typeof setTimeout>>,
+  toastId: string
+) => {
+  const timeout = timeouts.get(toastId)
+  if (timeout) {
+    clearTimeout(timeout)
+    timeouts.delete(toastId)
+  }
+}
+
+const clearToastTimers = (toastId: string) => {
+  clearToastTimeout(toastTimeouts, toastId)
+  clearToastTimeout(toastDismissTimeouts, toastId)
+}
+
+const addToDismissQueue = (toast: ToasterToast) => {
+  clearToastTimeout(toastDismissTimeouts, toast.id)
+
+  const duration =
+    typeof toast.duration === "number" && Number.isFinite(toast.duration) && toast.duration > 0
+      ? toast.duration
+      : APP_TOAST_DURATION_MS
+
+  const timeout = setTimeout(() => {
+    toastDismissTimeouts.delete(toast.id)
+    dispatch({
+      type: "DISMISS_TOAST",
+      toastId: toast.id,
+    })
+  }, duration)
+
+  toastDismissTimeouts.set(toast.id, timeout)
+}
 
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
@@ -69,26 +105,50 @@ const addToRemoveQueue = (toastId: string) => {
       type: "REMOVE_TOAST",
       toastId: toastId,
     })
-  }, TOAST_REMOVE_DELAY)
+  }, TOAST_REMOVE_DELAY_MS)
 
   toastTimeouts.set(toastId, timeout)
 }
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
+    case "ADD_TOAST": {
+      addToDismissQueue(action.toast)
 
-    case "UPDATE_TOAST":
+      const nextToasts = [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)
+      state.toasts
+        .filter((toast) => !nextToasts.some((nextToast) => nextToast.id === toast.id))
+        .forEach((toast) => {
+          clearToastTimers(toast.id)
+        })
+
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        ),
+        toasts: nextToasts,
       }
+    }
+
+    case "UPDATE_TOAST": {
+      const nextToasts = state.toasts.map((toast) => {
+        if (toast.id !== action.toast.id) {
+          return toast
+        }
+
+        const nextToast = { ...toast, ...action.toast }
+        if (nextToast.open === false) {
+          clearToastTimeout(toastDismissTimeouts, nextToast.id)
+        } else {
+          addToDismissQueue(nextToast)
+        }
+
+        return nextToast
+      })
+
+      return {
+        ...state,
+        toasts: nextToasts,
+      }
+    }
 
     case "DISMISS_TOAST": {
       const { toastId } = action
@@ -96,9 +156,11 @@ export const reducer = (state: State, action: Action): State => {
       // ! Side effects ! - This could be extracted into a dismissToast() action,
       // but I'll keep it here for simplicity
       if (toastId) {
+        clearToastTimeout(toastDismissTimeouts, toastId)
         addToRemoveQueue(toastId)
       } else {
         state.toasts.forEach((toast) => {
+          clearToastTimeout(toastDismissTimeouts, toast.id)
           addToRemoveQueue(toast.id)
         })
       }
@@ -117,11 +179,16 @@ export const reducer = (state: State, action: Action): State => {
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
+        state.toasts.forEach((toast) => {
+          clearToastTimers(toast.id)
+        })
         return {
           ...state,
           toasts: [],
         }
       }
+
+      clearToastTimers(action.toastId)
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
@@ -182,7 +249,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,

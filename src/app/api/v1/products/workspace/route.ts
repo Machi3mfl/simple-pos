@@ -70,6 +70,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const pageSize = parsePositiveInt(pageSizeRaw);
   const stockState = url.searchParams.get("stockState");
   const sort = url.searchParams.get("sort");
+  const normalizedSort = sort === "stock" ? "stock_asc" : sort;
   const hasFullProductsAccess = actorHasAnyPermission(actorSnapshot, ["products.view"]);
   const hasInventorySummaryAccess = actorHasAnyPermission(actorSnapshot, [
     "inventory.value.view",
@@ -109,10 +110,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     });
   }
 
-  if (sort !== null && !["stock", "name", "recent", "price"].includes(sort)) {
+  if (
+    normalizedSort !== null &&
+    !["stock_asc", "stock_desc", "name", "recent", "price"].includes(normalizedSort)
+  ) {
     validationDetails.push({
       field: "sort",
-      message: "Se esperaba stock, name, recent o price.",
+      message: "Se esperaba stock_asc, stock_desc, name, recent o price.",
     });
   }
 
@@ -134,7 +138,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     !url.searchParams.get("q") &&
     !url.searchParams.get("categoryId") &&
     (stockState === null || stockState === "all") &&
-    (sort === null || sort === "stock");
+    (normalizedSort === null || normalizedSort === "stock_asc");
 
   if (!hasFullProductsAccess && !isSummaryOnlyRequest) {
     return forbiddenPermissionResponse(
@@ -153,7 +157,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       | "inactive"
       | null) ?? undefined,
     activeOnly,
-    sort: (sort as "stock" | "name" | "recent" | "price" | null) ?? undefined,
+    sort:
+      (normalizedSort as "stock_asc" | "stock_desc" | "name" | "recent" | "price" | null) ??
+      undefined,
     page,
     pageSize,
   });

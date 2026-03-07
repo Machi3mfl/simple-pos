@@ -4,7 +4,7 @@ import type {
   InventorySnapshotItem,
 } from "@/modules/inventory/domain/repositories/InventoryRepository";
 
-export type ProductsWorkspaceSort = "stock" | "name" | "recent" | "price";
+export type ProductsWorkspaceSort = "stock_asc" | "stock_desc" | "name" | "recent" | "price";
 export type ProductsWorkspaceStockState =
   | "all"
   | "with_stock"
@@ -160,7 +160,7 @@ export class ListProductsWorkspaceUseCase {
     });
 
     const sortedItems = [...filteredItems].sort((left, right) => {
-      const sortMode = input.sort ?? "stock";
+      const sortMode = input.sort ?? "stock_asc";
       if (sortMode === "name") {
         return left.name.localeCompare(right.name, "es");
       }
@@ -173,14 +173,28 @@ export class ListProductsWorkspaceUseCase {
         return right.price - left.price;
       }
 
+      if (sortMode === "stock_desc") {
+        if (right.stock !== left.stock) {
+          return right.stock - left.stock;
+        }
+
+        const stockStateDelta =
+          stockStateWeight(left.stockState) - stockStateWeight(right.stockState);
+        if (stockStateDelta !== 0) {
+          return stockStateDelta;
+        }
+
+        return left.name.localeCompare(right.name, "es");
+      }
+
+      if (left.stock !== right.stock) {
+        return left.stock - right.stock;
+      }
+
       const stockStateDelta =
         stockStateWeight(left.stockState) - stockStateWeight(right.stockState);
       if (stockStateDelta !== 0) {
         return stockStateDelta;
-      }
-
-      if (right.stock !== left.stock) {
-        return right.stock - left.stock;
       }
 
       return left.name.localeCompare(right.name, "es");
