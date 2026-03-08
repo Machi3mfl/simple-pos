@@ -8,9 +8,9 @@
 **GitHub Issue**: #18  
 **Owner**: `project-owner`  
 **Author**: `maxi`  
-**Version**: `0.4`
+**Version**: `0.5`
 **Created At**: `2026-03-01`  
-**Last Updated**: `2026-03-04`
+**Last Updated**: `2026-03-08`
 **Source Docs**: `001`, `002`, `003`, `004`, `005`, `006`  
 
 ---
@@ -48,6 +48,7 @@
 | OFFLINE-001 | done |
 | RELEASE-001 | done |
 | I18N-001 | done |
+| TRAINING-001 | done |
 
 ---
 
@@ -150,6 +151,17 @@ Open planning item:
     - `workflow-manager/docs/planning/diagrams/state-cash-register-session.md`
 
 Completed planning item:
+
+- `TRAINING-001` Playwright tutorial video suite:
+  - status: `done`
+  - implementation status: separate tutorial runner, scenario-local tutorial mocks, three operator-facing tutorial flows, and deterministic mp4 export script are delivered
+  - verification status: `npm run build`, `npm run tutorials:smoke:cash`, `npm run tutorials:smoke:checkout`, and `npm run tutorials:smoke:products` all passed on `2026-03-08`
+  - current output:
+    - `playwright.tutorials.config.ts`
+    - `tests/tutorials/cash-register-open-close.tutorial.spec.ts`
+    - `tests/tutorials/checkout-cash-and-on-account.tutorial.spec.ts`
+    - `tests/tutorials/products-search-edit-stock.tutorial.spec.ts`
+    - `tests/scripts/export-tutorial-videos.sh`
 
 - `SOURCING-001` external product sourcing and assisted import:
   - status: `done`

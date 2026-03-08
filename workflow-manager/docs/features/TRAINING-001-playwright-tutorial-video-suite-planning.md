@@ -3,7 +3,7 @@
 ## Metadata
 
 **Feature ID**: `TRAINING-001`
-**Status**: `in_progress`
+**Status**: `done`
 **GitHub Issue**: `TBD`
 **Priority**: `medium`
 **Linked Scope**: `operator enablement`, `tutorial recordings`, `playwright automation`, `demo pacing`
@@ -85,11 +85,95 @@ Acceptance:
 - Tutorial flow uses slower, configurable pacing than E2E.
 - Existing `npm run test:e2e` behavior remains unchanged.
 
+### Slice 1 Status
+
+- Stabilized with scenario-local mocks for `/api/v1/me`, `/api/v1/products`, and cash-register endpoints so the shell bootstrap stays deterministic during recording.
+- Verified on Saturday, March 7, 2026 with:
+  - fast functional run using zeroed pacing env vars
+  - default paced recording run via `npm run tutorials:record:cash`
+- Latest validation result:
+  - spec passed in ~48.5s with tutorial pacing enabled
+  - full wrapper command completed in ~1.1m including local Supabase reset and app boot
+
+### Slice 2: Checkout Tutorial for Cash and On-Account
+
+Deliver:
+
+- `tests/tutorials/checkout-cash-and-on-account.tutorial.spec.ts`
+- dedicated scripts for checkout recording and smoke validation
+
+Acceptance:
+
+- `npm run tutorials:record:checkout` records a checkout tutorial covering `cash` and `on_account`
+- The scenario stays deterministic through scenario-local shell and sales mocks
+- Fast smoke validation does not overwrite the human-paced artifact output
+
+### Slice 2 Status
+
+- Stabilized with scenario-local mocks for `/api/v1/me`, `/api/v1/products`, `/api/v1/customers`, and `/api/v1/sales`.
+- Verified on Saturday, March 7, 2026 with:
+  - fast smoke run via `npm run tutorials:smoke:checkout`
+  - default paced recording run via `npm run tutorials:record:checkout`
+- Latest validation result:
+  - spec passed in ~46.2s with tutorial pacing enabled
+  - generated video duration: ~45.9s at `1000x658`
+  - full wrapper command completed in ~1.0m including local Supabase reset and app boot
+
+### Slice 3: Products Tutorial for Search, Edit, and Stock Add
+
+Deliver:
+
+- `tests/tutorials/products-search-edit-stock.tutorial.spec.ts`
+- dedicated scripts for product-workspace recording and smoke validation
+
+Acceptance:
+
+- `npm run tutorials:record:products` records a product-workspace tutorial covering search, edit, and stock registration
+- The scenario stays deterministic through scenario-local shell, workspace, and stock-movement mocks
+- Fast smoke validation does not overwrite the human-paced artifact output
+
+### Slice 3 Status
+
+- Stabilized with scenario-local mocks for `/api/v1/me`, `/api/v1/products`, `/api/v1/products/workspace`, `/api/v1/stock-movements`, and `PATCH /api/v1/products/:id`.
+- Verified on Saturday, March 7, 2026 with:
+  - fast smoke run via `npm run tutorials:smoke:products`
+  - default paced recording run via `npm run tutorials:record:products`
+- Latest validation result:
+  - spec passed in ~1.0m with tutorial pacing enabled
+  - generated video duration: ~60.4s at `1000x658`
+  - full wrapper command completed in ~1.3m including local Supabase reset and app boot
+
+### Slice 4: MP4 Export and Stable Naming
+
+Deliver:
+
+- `tests/scripts/export-tutorial-videos.sh`
+- stable `.mp4` export command and output folder for review/share flows
+
+Acceptance:
+
+- `npm run tutorials:export` converts the recorded `.webm` tutorial artifacts to `.mp4`
+- exported files use stable names that do not depend on Playwright artifact folder hashes
+
+### Slice 4 Status
+
+- Stabilized with a deterministic export map from the tutorial spec artifacts to:
+  - `simple-pos-01-caja-basica.mp4`
+  - `simple-pos-02-cobro-efectivo-cuenta-corriente.mp4`
+  - `simple-pos-03-productos-busqueda-edicion-stock.mp4`
+- Export output directory defaults to `test-results/tutorial-videos`
+
 ### Planned Next Slices
 
-- Checkout tutorial showing `cash` and `on_account`
-- Products tutorial showing search, edit, and stock add
-- Optional video post-processing to `.mp4` and caption/script generation
+- Optional caption/script generation
+
+### Final Verification
+
+- Verified on Sunday, March 8, 2026 with:
+  - `npm run build`
+  - `npm run tutorials:smoke:cash`
+  - `npm run tutorials:smoke:checkout`
+  - `npm run tutorials:smoke:products`
 
 ---
 
@@ -112,6 +196,12 @@ Recording commands:
 ```bash
 npm run tutorials:record
 npm run tutorials:record:cash
+npm run tutorials:record:checkout
+npm run tutorials:record:products
+npm run tutorials:export
+npm run tutorials:smoke:cash
+npm run tutorials:smoke:checkout
+npm run tutorials:smoke:products
 ```
 
 Tutorial driver shape:
@@ -131,6 +221,25 @@ TUTORIAL_STEP_DELAY_MS=1400 \
 TUTORIAL_SUCCESS_HOLD_MS=2200 \
 npm run tutorials:record:cash
 ```
+
+Configurable recording size:
+
+```bash
+TUTORIAL_VIDEO_WIDTH=1000 \
+TUTORIAL_VIDEO_HEIGHT=658 \
+npm run tutorials:record:cash
+```
+
+Smoke validation output separation:
+
+- `tutorials:record:*` keeps the human-paced artifacts under `test-results/tutorials`
+- `tutorials:smoke:*` writes to `test-results/tutorials-smoke` so quick validation runs do not overwrite the tutorial video intended for review
+
+Exported tutorial outputs:
+
+- `tutorials:export` reads from `test-results/tutorials`
+- exported `.mp4` files land in `test-results/tutorial-videos`
+- both source and export directories can be overridden with `TUTORIAL_SOURCE_DIR` and `TUTORIAL_EXPORT_DIR`
 
 ---
 
@@ -156,9 +265,11 @@ npm run tutorials:record:cash
 
 ## Definition of Done
 
-- [ ] Feature doc and diagrams created
-- [ ] Separate Playwright tutorial config added
-- [ ] Tutorial driver with paced interactions added
-- [ ] Cash-register tutorial scenario records successfully
-- [ ] `package.json` scripts documented
-- [ ] `WORKFLOW_INDEX.md` updated
+- [x] Feature doc and diagrams created
+- [x] Separate Playwright tutorial config added
+- [x] Tutorial driver with paced interactions added
+- [x] Cash-register tutorial scenario records successfully
+- [x] Checkout tutorial scenario records successfully
+- [x] Products tutorial scenario records successfully
+- [x] `package.json` scripts documented
+- [x] `WORKFLOW_INDEX.md` updated
