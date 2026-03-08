@@ -5,6 +5,7 @@ import {
 } from "@/modules/access-control/infrastructure/session/actorSessionCookie";
 import type { CashMovementResponseDTO } from "../../src/modules/cash-management/presentation/dtos/cash-movement-response.dto";
 import type { CashRegisterSessionDetailResponseDTO } from "../../src/modules/cash-management/presentation/dtos/cash-register-session-response.dto";
+import { createTutorialActorSnapshot } from "./support/tutorial-actor-snapshot";
 import { createTutorialDriver } from "./support/tutorial-driver";
 
 test.use({
@@ -20,6 +21,11 @@ const registerId = "cash-register-main";
 const registerName = "Caja principal";
 const actorId = "user_manager_maxi";
 const actorDisplayName = "Maxi";
+const tutorialActorSnapshot = createTutorialActorSnapshot({
+  actorId,
+  displayName: actorDisplayName,
+  assignedRegisterIds: [registerId],
+});
 
 function stripMovements(
   session: CashRegisterSessionDetailResponseDTO,
@@ -67,6 +73,26 @@ async function createCashRegisterTutorialRoutes(page: Page): Promise<void> {
     const url = new URL(request.url());
     const pathname = url.pathname;
     const method = request.method();
+
+    if (method === "GET" && pathname === "/api/v1/me") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(tutorialActorSnapshot),
+      });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/v1/products") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [],
+        }),
+      });
+      return;
+    }
 
     if (method === "GET" && pathname === "/api/v1/cash-registers") {
       await route.fulfill({
@@ -232,11 +258,11 @@ test("records a paced cash-register tutorial for open movement and close", async
   ]);
 
   await page.goto("/cash-register");
+  await expect(page.getByTestId("open-cash-session-modal-button")).toBeVisible();
+  await page.getByTestId("open-cash-session-modal-button").click();
+  await expect(page.getByTestId("cash-session-overview-modal")).toBeVisible();
+
   const cashSessionPanel = page.getByTestId("cash-session-panel");
-  if ((await cashSessionPanel.count()) === 0) {
-    await page.getByTestId("open-cash-session-modal-button").click();
-    await expect(page.getByTestId("cash-session-overview-modal")).toBeVisible();
-  }
   await expect(cashSessionPanel).toBeVisible();
 
   const tutorial = createTutorialDriver(page);

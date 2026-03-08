@@ -60,6 +60,10 @@ const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const shouldReuseExistingServer =
   !process.env.CI && process.env.POS_BACKEND_MODE !== "supabase";
 const tutorialSlowMoMs = readPositiveIntegerEnv("TUTORIAL_SLOW_MO_MS", 150);
+const tutorialVideoWidth = readPositiveIntegerEnv("TUTORIAL_VIDEO_WIDTH", 1000);
+const tutorialVideoHeight = readPositiveIntegerEnv("TUTORIAL_VIDEO_HEIGHT", 658);
+const tutorialOutputDir =
+  process.env.TUTORIAL_OUTPUT_DIR?.trim() || "./test-results/tutorials";
 
 export default defineConfig({
   testDir: "./tests/tutorials",
@@ -69,12 +73,18 @@ export default defineConfig({
   retries: 0,
   timeout: 180_000,
   reporter: [["list"], ["html", { open: "never" }]],
-  outputDir: "./test-results/tutorials",
+  outputDir: tutorialOutputDir,
   use: {
     baseURL: externalBaseUrl ?? defaultBaseUrl,
     trace: "off",
     screenshot: "off",
-    video: "on",
+    video: {
+      mode: "on",
+      size: {
+        width: tutorialVideoWidth,
+        height: tutorialVideoHeight,
+      },
+    },
     viewport: { width: 1366, height: 900 },
     headless: process.env.TUTORIAL_HEADED === "1" ? false : true,
     launchOptions: {

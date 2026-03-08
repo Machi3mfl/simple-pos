@@ -27,7 +27,13 @@
     "test:e2e:release-gate:real": "bash tests/scripts/run-e2e-release-gate-real.sh",
     "test:e2e:ui:real:modules": "bash tests/scripts/run-e2e-ui-real-modules.sh",
     "tutorials:record": "bash tests/scripts/run-tutorial-recordings.sh",
-    "tutorials:record:cash": "bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/cash-register-open-close.tutorial.spec.ts"
+    "tutorials:record:cash": "bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/cash-register-open-close.tutorial.spec.ts",
+    "tutorials:record:checkout": "bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/checkout-cash-and-on-account.tutorial.spec.ts",
+    "tutorials:record:products": "bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/products-search-edit-stock.tutorial.spec.ts",
+    "tutorials:export": "bash tests/scripts/export-tutorial-videos.sh",
+    "tutorials:smoke:cash": "TUTORIAL_OUTPUT_DIR=./test-results/tutorials-smoke TUTORIAL_SLOW_MO_MS=0 TUTORIAL_STEP_DELAY_MS=0 TUTORIAL_TYPING_DELAY_MS=0 TUTORIAL_SUCCESS_HOLD_MS=0 TUTORIAL_NAVIGATION_HOLD_MS=0 TUTORIAL_INTRO_HOLD_MS=0 bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/cash-register-open-close.tutorial.spec.ts",
+    "tutorials:smoke:checkout": "TUTORIAL_OUTPUT_DIR=./test-results/tutorials-smoke TUTORIAL_SLOW_MO_MS=0 TUTORIAL_STEP_DELAY_MS=0 TUTORIAL_TYPING_DELAY_MS=0 TUTORIAL_SUCCESS_HOLD_MS=0 TUTORIAL_NAVIGATION_HOLD_MS=0 TUTORIAL_INTRO_HOLD_MS=0 bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/checkout-cash-and-on-account.tutorial.spec.ts",
+    "tutorials:smoke:products": "TUTORIAL_OUTPUT_DIR=./test-results/tutorials-smoke TUTORIAL_SLOW_MO_MS=0 TUTORIAL_STEP_DELAY_MS=0 TUTORIAL_TYPING_DELAY_MS=0 TUTORIAL_SUCCESS_HOLD_MS=0 TUTORIAL_NAVIGATION_HOLD_MS=0 TUTORIAL_INTRO_HOLD_MS=0 bash tests/scripts/run-tutorial-recordings.sh tests/tutorials/products-search-edit-stock.tutorial.spec.ts"
   },
   "dependencies": {
     "@radix-ui/react-popover": "^1.1.15",

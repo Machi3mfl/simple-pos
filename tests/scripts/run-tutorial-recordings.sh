@@ -15,22 +15,24 @@ echo "[3/4] Loading Supabase local environment"
 supabase_env_output="$(supabase_cli status -o env)"
 supabase_env_exports="$(
   printf '%s\n' "$supabase_env_output" \
-    | grep -E '^(API_URL|SERVICE_ROLE_KEY)=' \
+    | grep -E '^(ANON_KEY|API_URL|SERVICE_ROLE_KEY)=' \
     | sed 's/^/export /'
 )"
 
 if [[ -z "$supabase_env_exports" ]]; then
-  echo "Could not parse API_URL/SERVICE_ROLE_KEY from 'supabase status -o env' output."
+  echo "Could not parse ANON_KEY/API_URL/SERVICE_ROLE_KEY from 'supabase status -o env' output."
   exit 1
 fi
 
 eval "$supabase_env_exports"
 
+: "${ANON_KEY:?ANON_KEY was not loaded from supabase status output.}"
 : "${API_URL:?API_URL was not loaded from supabase status output.}"
 : "${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY was not loaded from supabase status output.}"
 
 export POS_BACKEND_MODE=supabase
 export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+export NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 export POS_ALLOW_GUEST_WORKSPACES=1
 
