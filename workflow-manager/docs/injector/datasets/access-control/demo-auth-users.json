@@ -33,6 +33,42 @@
       "email": "putri@simple-pos.test",
       "password": "Putri123!",
       "purpose": "Validar operacion diaria de caja y checkout."
+    },
+    {
+      "priority": 4,
+      "appUserId": "user_collections_marta",
+      "displayName": "Marta",
+      "roleCodes": ["collections_clerk"],
+      "email": "marta@simple-pos.test",
+      "password": "Marta123!",
+      "purpose": "Validar seguimiento de deudas y registracion de cobranzas."
+    },
+    {
+      "priority": 5,
+      "appUserId": "user_supervisor_bruno",
+      "displayName": "Bruno",
+      "roleCodes": ["shift_supervisor"],
+      "email": "bruno@simple-pos.test",
+      "password": "Bruno123!",
+      "purpose": "Validar aprobaciones operativas, desvíos y aperturas históricas."
+    },
+    {
+      "priority": 6,
+      "appUserId": "user_catalog_lucia",
+      "displayName": "Lucía",
+      "roleCodes": ["catalog_manager"],
+      "email": "lucia@simple-pos.test",
+      "password": "Lucia123!",
+      "purpose": "Validar catálogo, precios y ajustes de stock."
+    },
+    {
+      "priority": 7,
+      "appUserId": "user_exec_ana",
+      "displayName": "Ana",
+      "roleCodes": ["executive_readonly"],
+      "email": "ana@simple-pos.test",
+      "password": "Ana12345!",
+      "purpose": "Validar reporting ejecutivo y provisión de credenciales de solo lectura."
     }
   ]
 }

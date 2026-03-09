@@ -26,6 +26,9 @@ const DEFAULT_ONBOARDING_ADMIN_APP_USER_ID = "user_admin_bootstrap";
 const DEFAULT_ONBOARDING_ADMIN_NAME = "System Admin";
 const DEFAULT_ONBOARDING_ADMIN_EMAIL = "admin@simple-pos.local";
 const DEFAULT_ONBOARDING_ADMIN_PASSWORD_LENGTH = 20;
+const DEFAULT_DEMO_REGISTER_ID = "front-counter";
+const FALLBACK_PRODUCT_IMAGE_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WnSUs8AAAAASUVORK5CYII=";
 
 const COLORS = {
   reset: "\u001b[0m",
@@ -352,6 +355,132 @@ async function requestApp(env, method, apiPath, { jsonBody, accessToken } = {}) 
   });
 }
 
+async function getActiveCashSession(env, registerId, accessToken) {
+  const { response, data, text } = await requestApp(
+    env,
+    "GET",
+    `/api/v1/cash-registers/${registerId}/active-session`,
+    { accessToken },
+  );
+
+  if (!response.ok) {
+    abort(
+      `Could not resolve active cash session for ${registerId} (${response.status}): ${text}`,
+    );
+  }
+
+  return data?.session ?? null;
+}
+
+async function closeCashSession(env, sessionId, countedClosingAmount, accessToken, closingNotes) {
+  const { response, text } = await requestApp(
+    env,
+    "POST",
+    `/api/v1/cash-register-sessions/${sessionId}/close`,
+    {
+      jsonBody: {
+        countedClosingAmount,
+        closingNotes,
+      },
+      accessToken,
+    },
+  );
+
+  if (!response.ok) {
+    abort(`Could not close cash session ${sessionId} (${response.status}): ${text}`);
+  }
+}
+
+async function reconcileActiveCashSessionForInjector(env, registerId, accessToken) {
+  const activeSession = await getActiveCashSession(env, registerId, accessToken);
+  if (!activeSession) {
+    return;
+  }
+
+  if (activeSession.status === "closing_review_required") {
+    const { response, text } = await requestApp(
+      env,
+      "POST",
+      `/api/v1/cash-register-sessions/${activeSession.id}/approve-closeout`,
+      {
+        jsonBody: {
+          approvalNotes: "injector cleanup",
+        },
+        accessToken,
+      },
+    );
+
+    if (!response.ok) {
+      abort(
+        `Could not approve pending cash closeout ${activeSession.id} (${response.status}): ${text}`,
+      );
+    }
+    return;
+  }
+
+  await closeCashSession(
+    env,
+    activeSession.id,
+    Number(activeSession.expectedBalanceAmount ?? 0),
+    accessToken,
+    "injector cleanup",
+  );
+}
+
+async function ensureOpenCashSessionForInjector(env, registerId, accessToken, businessDate) {
+  await reconcileActiveCashSessionForInjector(env, registerId, accessToken);
+  const existingSession = await getActiveCashSession(env, registerId, accessToken);
+  if (existingSession) {
+    return {
+      sessionId: existingSession.id,
+      openedByInjector: false,
+    };
+  }
+
+  const { response, data, text } = await requestApp(
+    env,
+    "POST",
+    "/api/v1/cash-register-sessions",
+    {
+      jsonBody: {
+        cashRegisterId: registerId,
+        businessDate,
+        openingFloatAmount: 0,
+        openingNotes: "injector operational seed",
+      },
+      accessToken,
+    },
+  );
+
+  if (!response.ok) {
+    abort(`Could not open cash session for ${registerId} (${response.status}): ${text}`);
+  }
+
+  return {
+    sessionId: data?.id,
+    openedByInjector: true,
+  };
+}
+
+async function closeCashSessionIfInjectorOwned(env, registerId, sessionContext, accessToken) {
+  if (!sessionContext?.openedByInjector || !sessionContext.sessionId) {
+    return;
+  }
+
+  const activeSession = await getActiveCashSession(env, registerId, accessToken);
+  if (!activeSession || activeSession.id !== sessionContext.sessionId) {
+    return;
+  }
+
+  await closeCashSession(
+    env,
+    activeSession.id,
+    Number(activeSession.expectedBalanceAmount ?? 0),
+    accessToken,
+    "injector auto-close",
+  );
+}
+
 async function requireAppReachable(env) {
   try {
     const controller = AbortSignal.timeout(4000);
@@ -400,16 +529,133 @@ async function findAuthUserByEmail(env, email) {
   );
 }
 
+function resolveDemoRegisterIds(roleCodes) {
+  const normalizedRoleCodes = ensureArray(roleCodes);
+  if (
+    normalizedRoleCodes.includes("cashier") ||
+    normalizedRoleCodes.includes("shift_supervisor") ||
+    normalizedRoleCodes.includes("business_manager")
+  ) {
+    return [DEFAULT_DEMO_REGISTER_ID];
+  }
+
+  return [];
+}
+
+async function ensureDemoAppUser(env, userRecord) {
+  const desiredDisplayName = userRecord.displayName.trim();
+  const rows = await listRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]]);
+  let appUser = rows[0] ?? null;
+
+  if (!appUser) {
+    const inserted = await insertRows(env, "app_users", {
+      id: userRecord.appUserId,
+      auth_user_id: null,
+      display_name: desiredDisplayName,
+      actor_kind: "human",
+      is_active: true,
+      created_at: new Date().toISOString(),
+    });
+    appUser = inserted[0] ?? null;
+  } else {
+    const shouldUpdate =
+      appUser.display_name !== desiredDisplayName ||
+      appUser.actor_kind !== "human" ||
+      appUser.is_active !== true;
+
+    if (shouldUpdate) {
+      const updated = await patchRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]], {
+        display_name: desiredDisplayName,
+        actor_kind: "human",
+        is_active: true,
+      });
+      appUser = updated[0] ?? appUser;
+    }
+  }
+
+  if (!appUser?.id) {
+    abort(`Failed to reconcile app user ${userRecord.appUserId}.`);
+  }
+
+  const desiredRoleCodes = Array.from(new Set(ensureArray(userRecord.roleCodes)));
+  const desiredRoleRows = [];
+  for (const roleCode of desiredRoleCodes) {
+    const roleRows = await listRows(env, "roles", [["code", `eq.${roleCode}`]]);
+    const roleRow = roleRows[0] ?? null;
+    if (!roleRow?.id) {
+      abort(`Role ${roleCode} was not found while reconciling ${userRecord.appUserId}.`);
+    }
+    desiredRoleRows.push(roleRow);
+  }
+
+  const currentAssignments = await listRows(env, "user_role_assignments", [
+    ["user_id", `eq.${userRecord.appUserId}`],
+  ]);
+  const currentRoleIds = new Set(
+    currentAssignments
+      .map((assignment) => assignment.role_id)
+      .filter((roleId) => typeof roleId === "string" && roleId.length > 0),
+  );
+  const desiredRoleIds = new Set(desiredRoleRows.map((roleRow) => roleRow.id));
+
+  for (const assignment of currentAssignments) {
+    if (!desiredRoleIds.has(assignment.role_id)) {
+      await deleteRows(env, "user_role_assignments", [["id", `eq.${assignment.id}`]]);
+    }
+  }
+
+  for (const roleRow of desiredRoleRows) {
+    if (!currentRoleIds.has(roleRow.id)) {
+      await insertRows(env, "user_role_assignments", {
+        id: `ura_${crypto.randomUUID()}`,
+        user_id: userRecord.appUserId,
+        role_id: roleRow.id,
+        assigned_by_user_id: userRecord.appUserId,
+      });
+    }
+  }
+
+  const desiredRegisterIds = new Set(resolveDemoRegisterIds(desiredRoleCodes));
+  const currentRegisterAssignments = await listRows(env, "cash_register_user_assignments", [
+    ["user_id", `eq.${userRecord.appUserId}`],
+  ]);
+
+  for (const assignment of currentRegisterAssignments) {
+    if (!desiredRegisterIds.has(assignment.cash_register_id)) {
+      await deleteRows(env, "cash_register_user_assignments", [["id", `eq.${assignment.id}`]]);
+    }
+  }
+
+  for (const registerId of desiredRegisterIds) {
+    const registerRows = await listRows(env, "cash_registers", [["id", `eq.${registerId}`]]);
+    if (!registerRows[0]?.id) {
+      abort(
+        `Cash register ${registerId} was not found while reconciling ${userRecord.appUserId}.`,
+      );
+    }
+
+    const alreadyAssigned = currentRegisterAssignments.some(
+      (assignment) => assignment.cash_register_id === registerId,
+    );
+    if (!alreadyAssigned) {
+      await insertRows(env, "cash_register_user_assignments", {
+        id: `crua_${crypto.randomUUID()}`,
+        cash_register_id: registerId,
+        user_id: userRecord.appUserId,
+        assigned_by_user_id: userRecord.appUserId,
+      });
+    }
+  }
+
+  return appUser;
+}
+
 async function ensureDemoAuthUsers(env, authManifest) {
   const adminClient = createServiceRoleClient(env);
   logInfo(`Reconciling ${authManifest.users.length} demo auth users.`);
 
   for (const userRecord of [...authManifest.users].sort((left, right) => left.priority - right.priority)) {
-    const appUserRows = await listRows(env, "app_users", [["id", `eq.${userRecord.appUserId}`]]);
-    const appUser = appUserRows[0];
-    if (!appUser) {
-      abort(`App user ${userRecord.appUserId} was not found. Run POS-002 seeds first.`);
-    }
+    const appUser = await ensureDemoAppUser(env, userRecord);
 
     const normalizedEmail = userRecord.email.trim().toLowerCase();
     const currentAuthUserId =
@@ -563,6 +809,34 @@ async function signInDemoSystemAdmin(env, authManifest) {
   if (!signInResponse.data.session?.access_token || signInResponse.error) {
     abort(
       `Failed to sign in demo system admin (${systemAdminRecord.email}): ${signInResponse.error?.message ?? "unknown error"}`,
+    );
+  }
+
+  return signInResponse.data.session.access_token;
+}
+
+async function signInDemoUserByRole(env, authManifest, preferredRoleCodes) {
+  const demoUserRecord = preferredRoleCodes
+    .map((roleCode) =>
+      authManifest.users.find((user) => ensureArray(user.roleCodes).includes(roleCode)) ?? null,
+    )
+    .find((user) => user !== null);
+
+  if (!demoUserRecord) {
+    abort(
+      `Could not find a demo auth user for any of these roles: ${preferredRoleCodes.join(", ")}`,
+    );
+  }
+
+  const anonClient = createAnonClient(env);
+  const signInResponse = await anonClient.auth.signInWithPassword({
+    email: demoUserRecord.email,
+    password: demoUserRecord.password,
+  });
+
+  if (!signInResponse.data.session?.access_token || signInResponse.error) {
+    abort(
+      `Failed to sign in demo user ${demoUserRecord.appUserId} (${demoUserRecord.email}): ${signInResponse.error?.message ?? "unknown error"}`,
     );
   }
 
@@ -838,8 +1112,8 @@ async function injectProducts(env, productDataset, accessToken) {
   await requireAppReachable(env);
   logInfo(`Injecting ${productDataset.length} demo products from Carrefour.`);
 
-  const payload = {
-    items: productDataset.map((product) => ({
+  const buildProductImportItems = (records, overrides = new Map()) =>
+    records.map((product) => ({
       providerId: product.providerId,
       sourceProductId: product.sourceProductId,
       name: product.name,
@@ -851,9 +1125,13 @@ async function injectProducts(env, productDataset, accessToken) {
       initialStock: product.initialStock,
       minStock: product.minStock,
       cost: product.cost,
-      sourceImageUrl: product.sourceImageUrl,
+      sourceImageUrl:
+        overrides.get(product.sourceProductId) ?? product.sourceImageUrl,
       productUrl: product.productUrl,
-    })),
+    }));
+
+  const payload = {
+    items: buildProductImportItems(productDataset),
   };
 
   const { response, data, text } = await requestApp(
@@ -871,9 +1149,62 @@ async function injectProducts(env, productDataset, accessToken) {
   }
 
   const invalidItems = ensureArray(data?.invalidItems);
-  const hardFailures = invalidItems.filter((item) => item.code !== "already_imported");
+  const imageSourceFailures = invalidItems.filter(
+    (item) => item.code === "invalid_image_source",
+  );
+  const hardFailures = invalidItems.filter(
+    (item) =>
+      item.code !== "already_imported" &&
+      item.code !== "invalid_image_source",
+  );
   if (hardFailures.length > 0) {
     abort(`Product sourcing import returned invalid items: ${JSON.stringify(hardFailures, null, 2)}`);
+  }
+
+  if (imageSourceFailures.length > 0) {
+    logWarn(
+      `Retrying ${imageSourceFailures.length} products with a placeholder image because the external source returned an invalid image.`,
+    );
+
+    const retryOverrides = new Map(
+      imageSourceFailures.map((item) => [
+        item.sourceProductId,
+        FALLBACK_PRODUCT_IMAGE_DATA_URL,
+      ]),
+    );
+    const retryPayload = {
+      items: buildProductImportItems(
+        productDataset.filter((product) => retryOverrides.has(product.sourceProductId)),
+        retryOverrides,
+      ),
+    };
+
+    const {
+      response: retryResponse,
+      data: retryData,
+      text: retryText,
+    } = await requestApp(
+      env,
+      "POST",
+      "/api/v1/product-sourcing/import",
+      {
+        jsonBody: retryPayload,
+        accessToken,
+      },
+    );
+
+    if (!retryResponse.ok) {
+      abort(`Product sourcing retry failed (${retryResponse.status}): ${retryText}`);
+    }
+
+    const retryInvalidItems = ensureArray(retryData?.invalidItems).filter(
+      (item) => item.code !== "already_imported",
+    );
+    if (retryInvalidItems.length > 0) {
+      abort(
+        `Product sourcing retry returned invalid items: ${JSON.stringify(retryInvalidItems, null, 2)}`,
+      );
+    }
   }
 
   for (const productRecord of productDataset) {
@@ -906,16 +1237,23 @@ async function findStockMovementByReason(env, reason) {
 
 async function clearDemoDebtPayments(env, debtPaymentDataset) {
   let removed = 0;
+  let removedCashMovements = 0;
   for (const paymentRecord of debtPaymentDataset) {
     const paymentEntry = await getPaymentByDemoKey(env, paymentRecord.key);
     if (!paymentEntry) {
       continue;
     }
+    const deletedCashMovements = await deleteRows(env, "cash_movements", [
+      ["debt_ledger_entry_id", `eq.${paymentEntry.id}`],
+    ]);
+    removedCashMovements += deletedCashMovements.length;
     const deleted = await deleteRows(env, "debt_ledger", [["id", `eq.${paymentEntry.id}`]]);
     removed += deleted.length;
   }
-  if (removed > 0) {
-    logInfo(`Removed ${removed} demo debt payment entries.`);
+  if (removed + removedCashMovements > 0) {
+    logInfo(
+      `Removed ${removed} demo debt payment entries and ${removedCashMovements} automatic cash movements.`,
+    );
   }
 }
 
@@ -925,21 +1263,26 @@ async function clearDemoSales(env, salesDataset, debtPaymentDataset) {
   let removedSales = 0;
   let removedLedger = 0;
   let removedMovements = 0;
+  let removedCashMovements = 0;
 
   for (const saleRecord of salesDataset) {
-    for (const line of saleRecord.items) {
-      const movementReason = `demo_sale:${saleRecord.key}:${line.productRef}`;
-      const movement = await findStockMovementByReason(env, movementReason);
-      if (movement) {
-        const deletedMovements = await deleteRows(env, "stock_movements", [["id", `eq.${movement.id}`]]);
-        removedMovements += deletedMovements.length;
-      }
-    }
-
     const sale = await getSaleByOccurredAt(env, saleRecord.occurredAt);
     if (!sale) {
       continue;
     }
+
+    const automaticStockMovements = await listRows(env, "stock_movements", [
+      ["reason", `eq.Salida por venta ${sale.id}`],
+    ]);
+    for (const movement of automaticStockMovements) {
+      const deletedMovements = await deleteRows(env, "stock_movements", [["id", `eq.${movement.id}`]]);
+      removedMovements += deletedMovements.length;
+    }
+
+    const deletedCashMovements = await deleteRows(env, "cash_movements", [
+      ["sale_id", `eq.${sale.id}`],
+    ]);
+    removedCashMovements += deletedCashMovements.length;
 
     const ledgerEntries = await listRows(env, "debt_ledger", [["order_id", `eq.${sale.id}`]]);
     for (const entry of ledgerEntries) {
@@ -969,9 +1312,16 @@ async function clearDemoSales(env, salesDataset, debtPaymentDataset) {
     removedCustomers += deletedCustomers.length;
   }
 
-  if (removedSales + removedLedger + removedMovements + removedCustomers > 0) {
+  if (
+    removedSales +
+      removedLedger +
+      removedMovements +
+      removedCashMovements +
+      removedCustomers >
+    0
+  ) {
     logInfo(
-      `Removed ${removedSales} demo sales, ${removedMovements} demo outbound movements, ${removedLedger} ledger rows and ${removedCustomers} demo customers.`,
+      `Removed ${removedSales} demo sales, ${removedMovements} automatic stock movements, ${removedCashMovements} automatic cash movements, ${removedLedger} ledger rows and ${removedCustomers} demo customers.`,
     );
   }
 }
@@ -1013,96 +1363,80 @@ async function injectSales(
   const productIdByKey = await resolveProductIdsByKey(env, productDataset);
   await clearDemoSales(env, salesDataset, debtPaymentDataset);
   await resetDemoInventoryBaseline(env, productDataset);
+  const cashSessionContext = await ensureOpenCashSessionForInjector(
+    env,
+    DEFAULT_DEMO_REGISTER_ID,
+    accessToken,
+  );
 
   logInfo(`Injecting ${salesDataset.length} demo sales.`);
 
-  for (const saleRecord of salesDataset) {
-    const requiresExplicitCustomerCreation =
-      saleRecord.paymentMethod === "on_account" &&
-      typeof saleRecord.customerName === "string" &&
-      saleRecord.customerName.trim().length > 0;
+  try {
+    for (const saleRecord of salesDataset) {
+      const requiresExplicitCustomerCreation =
+        saleRecord.paymentMethod === "on_account" &&
+        typeof saleRecord.customerName === "string" &&
+        saleRecord.customerName.trim().length > 0;
 
-    const payload = {
-      items: saleRecord.items.map((line) => ({
-        productId: productIdByKey.get(line.productRef),
-        quantity: line.quantity,
-      })),
-      paymentMethod: saleRecord.paymentMethod,
-      ...(saleRecord.customerName ? { customerName: saleRecord.customerName } : {}),
-      ...(saleRecord.paymentMethod === "on_account"
-        ? { initialPaymentAmount: saleRecord.initialPaymentAmount ?? 0 }
-        : {}),
-      ...(requiresExplicitCustomerCreation ? { createCustomerIfMissing: true } : {}),
-    };
-
-    const { response, data, text } = await requestApp(env, "POST", "/api/v1/sales", {
-      jsonBody: payload,
-      accessToken,
-    });
-    if (!response.ok) {
-      abort(`Sale injection failed for ${saleRecord.key} (${response.status}): ${text}`);
-    }
-
-    const saleId = data?.saleId;
-    if (!saleId) {
-      abort(`Sale response for ${saleRecord.key} did not return saleId.`);
-    }
-
-    await patchRows(env, "sales", [["id", `eq.${saleId}`]], {
-      created_at: saleRecord.occurredAt,
-    });
-    await patchRows(env, "sale_items", [["sale_id", `eq.${saleId}`]], {
-      created_at: saleRecord.occurredAt,
-    });
-
-    const saleRows = await listRows(env, "sales", [["id", `eq.${saleId}`]]);
-    const customerId = saleRows[0]?.customer_id ?? null;
-    if (customerId) {
-      const customer = await listRows(env, "customers", [["id", `eq.${customerId}`]]);
-      if (customer[0]) {
-        await patchRows(env, "customers", [["id", `eq.${customerId}`]], {
-          created_at: saleRecord.occurredAt,
-        });
-      }
-      const ledgerRows = await listRows(env, "debt_ledger", [["order_id", `eq.${saleId}`]]);
-      for (const ledgerRow of ledgerRows) {
-        await patchRows(env, "debt_ledger", [["id", `eq.${ledgerRow.id}`]], {
-          occurred_at: saleRecord.occurredAt,
-        });
-      }
-    }
-
-    for (const line of saleRecord.items) {
-      const movementReason = `demo_sale:${saleRecord.key}:${line.productRef}`;
-      const movementPayload = {
-        productId: productIdByKey.get(line.productRef),
-        movementType: "outbound",
-        quantity: line.quantity,
-        reason: movementReason,
+      const payload = {
+        items: saleRecord.items.map((line) => ({
+          productId: productIdByKey.get(line.productRef),
+          quantity: line.quantity,
+        })),
+        paymentMethod: saleRecord.paymentMethod,
+        cashRegisterId: DEFAULT_DEMO_REGISTER_ID,
+        ...(saleRecord.customerName ? { customerName: saleRecord.customerName } : {}),
+        ...(saleRecord.paymentMethod === "on_account"
+          ? { initialPaymentAmount: saleRecord.initialPaymentAmount ?? 0 }
+          : {}),
+        ...(requiresExplicitCustomerCreation ? { createCustomerIfMissing: true } : {}),
       };
-      const movementResponse = await requestApp(
-        env,
-        "POST",
-        "/api/v1/stock-movements",
-        {
-          jsonBody: movementPayload,
-          accessToken,
-        },
-      );
-      if (!movementResponse.response.ok) {
-        abort(`Outbound stock movement failed for ${saleRecord.key}/${line.productRef} (${movementResponse.response.status}): ${movementResponse.text}`);
-      }
 
-      const movementId = movementResponse.data?.movementId;
-      if (!movementId) {
-        abort(`Outbound stock movement response for ${saleRecord.key}/${line.productRef} did not return movementId.`);
-      }
-
-      await patchRows(env, "stock_movements", [["id", `eq.${movementId}`]], {
-        occurred_at: saleRecord.occurredAt,
-        reason: movementReason,
+      const { response, data, text } = await requestApp(env, "POST", "/api/v1/sales", {
+        jsonBody: payload,
+        accessToken,
       });
+      if (!response.ok) {
+        abort(`Sale injection failed for ${saleRecord.key} (${response.status}): ${text}`);
+      }
+
+      const saleId = data?.saleId;
+      if (!saleId) {
+        abort(`Sale response for ${saleRecord.key} did not return saleId.`);
+      }
+
+      await patchRows(env, "sales", [["id", `eq.${saleId}`]], {
+        created_at: saleRecord.occurredAt,
+      });
+      await patchRows(env, "sale_items", [["sale_id", `eq.${saleId}`]], {
+        created_at: saleRecord.occurredAt,
+      });
+
+      const saleRows = await listRows(env, "sales", [["id", `eq.${saleId}`]]);
+      const customerId = saleRows[0]?.customer_id ?? null;
+      if (customerId) {
+        const customer = await listRows(env, "customers", [["id", `eq.${customerId}`]]);
+        if (customer[0]) {
+          await patchRows(env, "customers", [["id", `eq.${customerId}`]], {
+            created_at: saleRecord.occurredAt,
+          });
+        }
+        const ledgerRows = await listRows(env, "debt_ledger", [["order_id", `eq.${saleId}`]]);
+        for (const ledgerRow of ledgerRows) {
+          await patchRows(env, "debt_ledger", [["id", `eq.${ledgerRow.id}`]], {
+            occurred_at: saleRecord.occurredAt,
+          });
+        }
+      }
+
     }
+  } finally {
+    await closeCashSessionIfInjectorOwned(
+      env,
+      DEFAULT_DEMO_REGISTER_ID,
+      cashSessionContext,
+      accessToken,
+    );
   }
 
   logOk("Sales injected successfully.");
@@ -1123,45 +1457,60 @@ async function getSaleIdByKey(env, salesDataset, saleKey) {
 async function injectDebtPayments(env, salesDataset, debtPaymentDataset, accessToken) {
   await requireAppReachable(env);
   await clearDemoDebtPayments(env, debtPaymentDataset);
+  const cashSessionContext = await ensureOpenCashSessionForInjector(
+    env,
+    DEFAULT_DEMO_REGISTER_ID,
+    accessToken,
+  );
   logInfo(`Injecting ${debtPaymentDataset.length} demo debt payments.`);
 
-  for (const paymentRecord of debtPaymentDataset) {
-    const customer = await getCustomerByName(env, paymentRecord.customerName);
-    if (!customer) {
-      abort(`Customer ${paymentRecord.customerName} was not found. Inject sales first.`);
+  try {
+    for (const paymentRecord of debtPaymentDataset) {
+      const customer = await getCustomerByName(env, paymentRecord.customerName);
+      if (!customer) {
+        abort(`Customer ${paymentRecord.customerName} was not found. Inject sales first.`);
+      }
+
+      const orderId = await getSaleIdByKey(env, salesDataset, paymentRecord.saleRef);
+      const payload = {
+        customerId: customer.id,
+        amount: paymentRecord.amount,
+        paymentMethod: "cash",
+        cashRegisterId: DEFAULT_DEMO_REGISTER_ID,
+        orderId,
+        notes: `demo:${paymentRecord.key}`,
+      };
+
+      const { response, data, text } = await requestApp(
+        env,
+        "POST",
+        "/api/v1/debt-payments",
+        {
+          jsonBody: payload,
+          accessToken,
+        },
+      );
+      if (!response.ok) {
+        abort(`Debt payment injection failed for ${paymentRecord.key} (${response.status}): ${text}`);
+      }
+
+      const paymentId = data?.paymentId;
+      if (!paymentId) {
+        abort(`Debt payment response for ${paymentRecord.key} did not return paymentId.`);
+      }
+
+      await patchRows(env, "debt_ledger", [["id", `eq.${paymentId}`]], {
+        occurred_at: paymentRecord.occurredAt,
+        notes: `demo:${paymentRecord.key}`,
+      });
     }
-
-    const orderId = await getSaleIdByKey(env, salesDataset, paymentRecord.saleRef);
-    const payload = {
-      customerId: customer.id,
-      amount: paymentRecord.amount,
-      paymentMethod: "cash",
-      orderId,
-      notes: `demo:${paymentRecord.key}`,
-    };
-
-    const { response, data, text } = await requestApp(
+  } finally {
+    await closeCashSessionIfInjectorOwned(
       env,
-      "POST",
-      "/api/v1/debt-payments",
-      {
-        jsonBody: payload,
-        accessToken,
-      },
+      DEFAULT_DEMO_REGISTER_ID,
+      cashSessionContext,
+      accessToken,
     );
-    if (!response.ok) {
-      abort(`Debt payment injection failed for ${paymentRecord.key} (${response.status}): ${text}`);
-    }
-
-    const paymentId = data?.paymentId;
-    if (!paymentId) {
-      abort(`Debt payment response for ${paymentRecord.key} did not return paymentId.`);
-    }
-
-    await patchRows(env, "debt_ledger", [["id", `eq.${paymentId}`]], {
-      occurred_at: paymentRecord.occurredAt,
-      notes: `demo:${paymentRecord.key}`,
-    });
   }
 
   logOk("Debt payments injected successfully.");
@@ -1230,6 +1579,12 @@ async function clearProjectData(env) {
     "sync_events",
     "idempotency_key",
   );
+  const deletedCashMovements = await deleteAllRowsByNotNull(env, "cash_movements", "id");
+  const deletedCashSessions = await deleteAllRowsByNotNull(
+    env,
+    "cash_register_sessions",
+    "id",
+  );
   const deletedDebtLedger = await deleteAllRowsByNotNull(env, "debt_ledger", "id");
   const deletedSales = await deleteAllRowsByNotNull(env, "sales", "id");
   const deletedCustomers = await deleteAllRowsByNotNull(env, "customers", "id");
@@ -1249,7 +1604,7 @@ async function clearProjectData(env) {
   }
 
   logInfo(
-    `Project data cleared: ${deletedProducts} products, ${deletedSales} sales, ${deletedDebtLedger} debt ledger rows, ${deletedCustomers} customers, ${deletedMappings} category mappings, ${deletedSyncEvents} sync events, ${productImageFiles.length} managed product images, ${sourcingImageFiles.length} sourced images.`,
+    `Project data cleared: ${deletedProducts} products, ${deletedSales} sales, ${deletedDebtLedger} debt ledger rows, ${deletedCashMovements} cash movements, ${deletedCashSessions} cash sessions, ${deletedCustomers} customers, ${deletedMappings} category mappings, ${deletedSyncEvents} sync events, ${productImageFiles.length} managed product images, ${sourcingImageFiles.length} sourced images.`,
   );
 }
 
@@ -1701,11 +2056,19 @@ async function main() {
     await ensureDemoAuthUsers(env, datasets.authUsers);
     return signInDemoSystemAdmin(env, datasets.authUsers);
   };
+  const getBusinessAccessToken = async (preferredRoleCodes) => {
+    assertDemoAuthUsersSafety(env);
+    await ensureDemoAuthUsers(env, datasets.authUsers);
+    return signInDemoUserByRole(env, datasets.authUsers, preferredRoleCodes);
+  };
 
   switch (command) {
     case "all":
       {
-        const accessToken = await getSystemAdminAccessToken();
+        const accessToken = await getBusinessAccessToken([
+          "business_manager",
+          "shift_supervisor",
+        ]);
         await injectProducts(env, datasets.products, accessToken);
         await injectSales(
           env,
@@ -1730,7 +2093,14 @@ async function main() {
       await cleanupDemoUsers(env, datasets.authUsers);
       break;
     case "products":
-      await injectProducts(env, datasets.products, await getSystemAdminAccessToken());
+      await injectProducts(
+        env,
+        datasets.products,
+        await getBusinessAccessToken([
+          "catalog_manager",
+          "business_manager",
+        ]),
+      );
       break;
     case "sales":
       await injectSales(
@@ -1738,7 +2108,11 @@ async function main() {
         datasets.products,
         datasets.sales,
         datasets.debtPayments,
-        await getSystemAdminAccessToken(),
+        await getBusinessAccessToken([
+          "business_manager",
+          "shift_supervisor",
+          "cashier",
+        ]),
       );
       break;
     case "debt-payments":
@@ -1746,7 +2120,10 @@ async function main() {
         env,
         datasets.sales,
         datasets.debtPayments,
-        await getSystemAdminAccessToken(),
+        await getBusinessAccessToken([
+          "business_manager",
+          "collections_clerk",
+        ]),
       );
       break;
     case "onboarding-admin":

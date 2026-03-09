@@ -41,8 +41,9 @@ Nota: `Sincronizacion` usa `localStorage` del navegador. Este injector siembra b
 
 - Los productos se crean a traves de `POST /api/v1/product-sourcing/import`.
 - Las imagenes se descargan desde `sourceImageUrl` y quedan guardadas en Supabase Storage (`product-sourcing-images`).
+- Si una imagen externa deja de existir, el injector reintenta ese producto con una imagen placeholder para no bloquear toda la demo local.
 - Las migraciones base crean el catalogo de roles/permisos, pero no usuarios demo.
-- Antes de llamar APIs protegidas, el injector reconcilia los usuarios auth demo y entra como `system_admin`.
+- Antes de llamar APIs protegidas, el injector reconcilia los usuarios auth demo y entra con un operador demo que tenga los permisos de negocio requeridos por cada flujo.
 - Las ventas se crean via `POST /api/v1/sales`.
 - Las ventas en cuenta corriente confirman `createCustomerIfMissing` cuando el dataset referencia un cliente por nombre y todavia no existe.
 - Los movimientos de stock de salida se crean via `POST /api/v1/stock-movements`.
@@ -72,7 +73,7 @@ Requeridas:
 Notas:
 
 - estas 2 variables tambien las usa la app Next.js en runtime, pero aca se consumen para seeding
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` no es globalmente requerida por el injector, pero si es necesaria para comandos que inician sesion del `system_admin` demo (`all`, `products`, `sales`, `debt-payments`)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` no es globalmente requerida por el injector, pero si es necesaria para comandos que inician sesion de operadores demo (`all`, `products`, `sales`, `debt-payments`)
 
 Opcionales:
 
@@ -156,6 +157,26 @@ Para iterar por entidad:
 2. `sales`
 3. `debt-payments`
 
+## Desarrollo local rápido
+
+Si querés resetear todo y volver a un estado listo para desarrollar con usuarios demo:
+
+```bash
+npm run supabase:reset:demo-auth
+```
+
+Si además querés arrancar Next.js con el env ya fresco:
+
+```bash
+npm run dev:demo
+```
+
+Importante:
+
+- `supabase:reset` reescribe `.env.local` con keys locales nuevas
+- si `next dev` ya estaba corriendo en `localhost:3001`, tenés que reiniciarlo o va a seguir usando las keys viejas en memoria
+- cuando eso pasa, el login puede fallar con un mensaje de credenciales inválidas aunque el usuario demo exista correctamente
+
 ## Datasets
 
 ```text
@@ -183,10 +204,23 @@ Incluye especialmente el `system_admin`:
 - email: `soporte@simple-pos.test`
 - password: `Soporte123!`
 
+Tambien incluye operadores demo para:
+
+- `business_manager`
+- `cashier`
+- `collections_clerk`
+- `shift_supervisor`
+- `catalog_manager`
+- `executive_readonly`
+
 Importante:
 
 - estas credenciales son solo para desarrollo local
+- `auth-users` ahora tambien crea o reconcilia los `app_users` demo, sus roles y la asignacion operativa de caja requerida por el POS
 - `all`, `products`, `sales` y `debt-payments` reprovisionan automaticamente estos accesos antes de usar las APIs protegidas
+- `products` entra con `catalog_manager` o `business_manager`
+- `sales` entra con `business_manager`, `shift_supervisor` o `cashier`
+- `debt-payments` entra con `business_manager` o `collections_clerk`
 - pueden requerir reprovision desde `/users-admin` despues de `npm run supabase:reset`
 - para retirar estos accesos demo de un entorno existente: `cleanup-demo-users`
 
@@ -251,4 +285,4 @@ Seguridad:
 
 - La cola offline de `Sincronizacion` vive en `localStorage`, asi que no puede sembrarse desde este injector backend-only.
 - En `Ventas`, algunas chips de categorias son atajos visuales estaticos y pueden seguir visibles aunque no haya productos cargados.
-- El snapshot de productos Carrefour es curado y versionado. Si Carrefour cambia catalogo o imagenes, el dataset sigue siendo valido como referencia, pero una reinyeccion puede depender de que el `sourceImageUrl` siga respondiendo.
+- El snapshot de productos Carrefour es curado y versionado. Si Carrefour cambia catalogo o imagenes, el dataset sigue siendo valido como referencia; cuando una imagen externa falla, el injector degrada a un placeholder para mantener la importacion operativa en local.
