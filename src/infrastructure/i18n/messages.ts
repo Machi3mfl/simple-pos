@@ -56,6 +56,8 @@ const spanishMessages = {
       "Si necesitás validar roles o dar soporte operativo, entrá al bridge temporal de soporte y desde ahí elegí el operador a revisar.",
     loginInvalidCredentials:
       "No se pudo iniciar sesión. Revisá el correo y la contraseña.",
+    loginLocalEnvRestartHint:
+      "El login local parece estar desincronizado con Supabase. Si acabás de correr `supabase:reset`, reiniciá Next.js y probá de nuevo.",
     loginUnmappedProfile:
       "El login es válido, pero todavía no está vinculado a un perfil operativo del sistema.",
     loginNoWorkspace:
@@ -318,6 +320,8 @@ const spanishMessages = {
       reviewRequiredTitle: "Cierre pendiente de revisión",
       reviewRequiredDescription:
         "La diferencia supera la tolerancia operativa y necesita aprobación de un rol de mayor confianza.",
+      businessDateLabel: "Fecha operativa",
+      businessDatePlaceholder: "Seleccionar fecha operativa",
       openingFloatLabel: "Cambio inicial",
       openingNotesLabel: "Notas de apertura",
       closingCountedLabel: "Total contado",

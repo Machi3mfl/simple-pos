@@ -63,6 +63,45 @@ function buildSuccessResponse(payload: {
   return response;
 }
 
+function buildFallbackActorResponse(
+  actorId: string,
+  bridgeAccess: {
+    readonly supportControllerActorId?: string;
+  },
+  canBootstrapSupportActor: boolean,
+  request: NextRequest,
+): NextResponse | null {
+  const actor = findFallbackActorById(actorId);
+  if (!actor) {
+    return null;
+  }
+
+  const responseBody = {
+    actorId: actor.user.getId(),
+    displayName: actor.user.getDisplayName(),
+    roleCodes: actor.roleCodes,
+    roleNames: actor.roleNames,
+    assignedRegisterIds: actor.assignedRegisterIds,
+  };
+  const parsedResponse = assumeUserSessionResponseDTOSchema.safeParse(responseBody);
+  if (!parsedResponse.success) {
+    return errorResponse(500, {
+      code: "response_contract_error",
+      message: "La respuesta fallback de selección de operador viola el contrato.",
+    });
+  }
+
+  return buildSuccessResponse(
+    {
+      ...parsedResponse.data,
+      supportControllerActorId:
+        bridgeAccess.supportControllerActorId ??
+        (canBootstrapSupportActor ? parsedResponse.data.actorId : undefined),
+    },
+    request,
+  );
+}
+
 export async function POST(request: NextRequest): Promise<Response> {
   const bridgeAccess = await resolveSupportBridgeAccess(request);
   if (!bridgeAccess.bridgeEnabled) {
@@ -115,10 +154,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { assumeSelectableActorUseCase } = createAccessControlRuntime();
     const actor = await assumeSelectableActorUseCase.execute(parsedBody.data.userId);
     if (!actor) {
-      return errorResponse(404, {
-        code: "actor_not_found",
-        message: "No encontramos ese operador activo.",
-      });
+      return (
+        buildFallbackActorResponse(
+          parsedBody.data.userId,
+          bridgeAccess,
+          canBootstrapSupportActor,
+          request,
+        ) ??
+        errorResponse(404, {
+          code: "actor_not_found",
+          message: "No encontramos ese operador activo.",
+        })
+      );
     }
 
     const parsedResponse = assumeUserSessionResponseDTOSchema.safeParse(actor);
@@ -139,37 +186,17 @@ export async function POST(request: NextRequest): Promise<Response> {
       request,
     );
   } catch {
-    const actor = findFallbackActorById(parsedBody.data.userId);
-    if (!actor) {
-      return errorResponse(404, {
+    return (
+      buildFallbackActorResponse(
+        parsedBody.data.userId,
+        bridgeAccess,
+        canBootstrapSupportActor,
+        request,
+      ) ??
+      errorResponse(404, {
         code: "actor_not_found",
         message: "No encontramos ese operador activo.",
-      });
-    }
-
-    const responseBody = {
-      actorId: actor.user.getId(),
-      displayName: actor.user.getDisplayName(),
-      roleCodes: actor.roleCodes,
-      roleNames: actor.roleNames,
-      assignedRegisterIds: actor.assignedRegisterIds,
-    };
-    const parsedResponse = assumeUserSessionResponseDTOSchema.safeParse(responseBody);
-    if (!parsedResponse.success) {
-      return errorResponse(500, {
-        code: "response_contract_error",
-        message: "La respuesta fallback de selección de operador viola el contrato.",
-      });
-    }
-
-    return buildSuccessResponse(
-      {
-        ...parsedResponse.data,
-        supportControllerActorId:
-          bridgeAccess.supportControllerActorId ??
-          (canBootstrapSupportActor ? parsedResponse.data.actorId : undefined),
-      },
-      request,
+      })
     );
   }
 }

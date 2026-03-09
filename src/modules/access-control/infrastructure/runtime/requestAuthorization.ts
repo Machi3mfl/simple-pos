@@ -45,6 +45,25 @@ export async function resolveActorSnapshotForRequest(
     });
   };
 
+  const buildFallbackSnapshot = (actorId: string) => {
+    const fallbackActor = findFallbackActorById(actorId);
+    if (!fallbackActor) {
+      return null;
+    }
+
+    return {
+      actor: {
+        actorId: fallbackActor.user.getId(),
+        displayName: fallbackActor.user.getDisplayName(),
+        actorKind: fallbackActor.user.getActorKind(),
+        roleCodes: fallbackActor.roleCodes,
+        roleNames: fallbackActor.roleNames,
+        assignedRegisterIds: fallbackActor.assignedRegisterIds,
+      },
+      permissionSnapshot: buildPermissionSnapshot(fallbackActor),
+    } satisfies Omit<CurrentActorSnapshot, "session">;
+  };
+
   try {
     const controllerSnapshot = requestActor.authUserId
       ? await resolveCurrentActorSnapshot({
@@ -68,6 +87,19 @@ export async function resolveActorSnapshotForRequest(
       if (assumedSnapshot) {
         return {
           ...assumedSnapshot,
+          session: {
+            resolutionSource: "assumed_user",
+            authUserId: requestActor.authUserId,
+            canAssumeUserBridge: requestActor.canAssumeUserBridge,
+            supportControllerActorId: requestActor.supportActorId,
+          },
+        };
+      }
+
+      const fallbackAssumedSnapshot = buildFallbackSnapshot(requestActor.actorId);
+      if (fallbackAssumedSnapshot) {
+        return {
+          ...fallbackAssumedSnapshot,
           session: {
             resolutionSource: "assumed_user",
             authUserId: requestActor.authUserId,
@@ -143,24 +175,16 @@ export async function resolveActorSnapshotForRequest(
   }
 
   if (requestActor.actorId) {
-    const fallbackActor = findFallbackActorById(requestActor.actorId);
-    if (fallbackActor) {
+    const fallbackSnapshot = buildFallbackSnapshot(requestActor.actorId);
+    if (fallbackSnapshot) {
       return {
-        actor: {
-          actorId: fallbackActor.user.getId(),
-          displayName: fallbackActor.user.getDisplayName(),
-          actorKind: fallbackActor.user.getActorKind(),
-          roleCodes: fallbackActor.roleCodes,
-          roleNames: fallbackActor.roleNames,
-          assignedRegisterIds: fallbackActor.assignedRegisterIds,
-        },
+        ...fallbackSnapshot,
         session: {
           resolutionSource: requestActor.resolutionSource,
           authUserId: requestActor.authUserId,
           canAssumeUserBridge: requestActor.canAssumeUserBridge,
           supportControllerActorId: requestActor.supportActorId,
         },
-        permissionSnapshot: buildPermissionSnapshot(fallbackActor),
       };
     }
   }

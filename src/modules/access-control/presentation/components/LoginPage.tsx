@@ -53,6 +53,22 @@ async function waitForActorSessionSnapshot(params: {
   return null;
 }
 
+function resolveLoginErrorMessage(params: {
+  readonly invalidCredentialsMessage: string;
+  readonly localEnvRestartHint: string;
+}): string {
+  const isLocalDevHost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+
+  if (process.env.NODE_ENV !== "production" && isLocalDevHost) {
+    return `${params.invalidCredentialsMessage} ${params.localEnvRestartHint}`;
+  }
+
+  return params.invalidCredentialsMessage;
+}
+
 export function LoginPage(): JSX.Element {
   const { messages } = useI18n();
   const router = useRouter();
@@ -103,7 +119,14 @@ export function LoginPage(): JSX.Element {
       });
 
       if (error) {
-        throw new Error(messages.accessControl.loginInvalidCredentials);
+        throw new Error(
+          resolveLoginErrorMessage({
+            invalidCredentialsMessage:
+              messages.accessControl.loginInvalidCredentials,
+            localEnvRestartHint:
+              messages.accessControl.loginLocalEnvRestartHint,
+          }),
+        );
       }
 
       await fetch("/api/v1/me/assume-user", {

@@ -15,14 +15,17 @@ export class GetCurrentActorSnapshotUseCase {
   async execute(
     input: GetCurrentActorSnapshotInput,
   ): Promise<ResolvedActorSnapshot | null> {
-    const actorAccess =
-      (input.authUserId
-        ? await this.actorAccessRepository.findByAuthUserId(input.authUserId)
-        : null) ??
-      (input.actorId
-        ? await this.actorAccessRepository.findByUserId(input.actorId)
-        : null) ??
-      (await this.actorAccessRepository.findDefaultActor());
+    let actorAccess = input.authUserId
+      ? await this.actorAccessRepository.findByAuthUserId(input.authUserId)
+      : null;
+
+    if (!actorAccess && input.actorId) {
+      actorAccess = await this.actorAccessRepository.findByUserId(input.actorId);
+    }
+
+    if (!actorAccess && !input.authUserId && !input.actorId) {
+      actorAccess = await this.actorAccessRepository.findDefaultActor();
+    }
 
     if (!actorAccess || !actorAccess.user.isEnabled()) {
       return null;
