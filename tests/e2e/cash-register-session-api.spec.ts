@@ -79,6 +79,7 @@ test.describe("cash register session api", () => {
       await openResponse.json(),
     );
     expect(openedSession.status).toBe("open");
+    expect(openedSession.businessDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(openedSession.expectedBalanceAmount).toBe(15000);
     expect(openedSession.openedByDisplayName.length).toBeGreaterThan(0);
 
@@ -146,6 +147,61 @@ test.describe("cash register session api", () => {
       await clearedActiveSessionResponse.json(),
     );
     expect(clearedActiveSessionBody.session).toBeNull();
+  });
+
+  test("allows historical cash session open only for actors with backdate permission", async ({
+    supportRequest,
+  }) => {
+    const historicalDate = "2026-03-01";
+
+    await assumeActorViaSupportBridge(supportRequest, "user_manager_maxi");
+
+    const registersResponse = await supportRequest.get("/api/v1/cash-registers");
+    expect(registersResponse.status()).toBe(200);
+    const registersBody = listCashRegistersResponseDTOSchema.parse(
+      await registersResponse.json(),
+    );
+    const register = registersBody.items[0];
+    expect(register).toBeDefined();
+
+    await closeActiveSessionIfNeeded(supportRequest, register!.id);
+
+    await assumeActorViaSupportBridge(supportRequest, "user_cashier_putri");
+    const cashierHistoricalOpen = await supportRequest.post("/api/v1/cash-register-sessions", {
+      data: {
+        cashRegisterId: register!.id,
+        businessDate: historicalDate,
+        openingFloatAmount: 900,
+      },
+    });
+    expect(cashierHistoricalOpen.status()).toBe(403);
+
+    await assumeActorViaSupportBridge(supportRequest, "user_manager_maxi");
+    const managerHistoricalOpen = await supportRequest.post("/api/v1/cash-register-sessions", {
+      data: {
+        cashRegisterId: register!.id,
+        businessDate: historicalDate,
+        openingFloatAmount: 900,
+        openingNotes: "carga histórica",
+      },
+    });
+    expect(managerHistoricalOpen.status()).toBe(201);
+    const historicalSession = cashRegisterSessionResponseDTOSchema.parse(
+      await managerHistoricalOpen.json(),
+    );
+    expect(historicalSession.businessDate).toBe(historicalDate);
+    expect(historicalSession.openingNotes).toBe("carga histórica");
+
+    const closeResponse = await supportRequest.post(
+      `/api/v1/cash-register-sessions/${historicalSession.id}/close`,
+      {
+        data: {
+          countedClosingAmount: historicalSession.expectedBalanceAmount,
+          closingNotes: "cleanup historical session",
+        },
+      },
+    );
+    expect(closeResponse.status()).toBe(200);
   });
 
   test("sends closeout with high discrepancy to review and requires supervisor approval", async ({

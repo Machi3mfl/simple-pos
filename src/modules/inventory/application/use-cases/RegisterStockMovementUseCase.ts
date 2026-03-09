@@ -10,6 +10,7 @@ export interface RegisterStockMovementUseCaseInput {
   readonly movementType: InventoryMovementType;
   readonly quantity: number;
   readonly unitCost?: number;
+  readonly occurredAt?: Date;
   readonly reason?: string;
 }
 
@@ -58,7 +59,7 @@ export class RegisterStockMovementUseCase {
       movementType: effect.movementType,
       quantity: effect.quantity,
       unitCostApplied: effect.unitCostApplied,
-      occurredAt: new Date(),
+      occurredAt: input.occurredAt ?? new Date(),
       stockOnHandAfter: effect.stockOnHandAfter,
       weightedAverageUnitCostAfter: effect.weightedAverageUnitCostAfter,
       inventoryValueAfter: effect.inventoryValueAfter,

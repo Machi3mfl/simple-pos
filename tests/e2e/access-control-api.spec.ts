@@ -47,6 +47,9 @@ test.describe("access control api", () => {
       cashierMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
     ).toBe(false);
     expect(
+      cashierMe.permissionSnapshot.workspaces.cashRegister.canBackdateSessionOpen,
+    ).toBe(false);
+    expect(
       cashierMe.permissionSnapshot.workspaces.cashRegister.canApproveDiscrepancyClose,
     ).toBe(false);
 
@@ -77,6 +80,9 @@ test.describe("access control api", () => {
       supervisorMe.permissionSnapshot.workspaces.cashRegister.canRecordManualCashMovement,
     ).toBe(true);
     expect(
+      supervisorMe.permissionSnapshot.workspaces.cashRegister.canBackdateSessionOpen,
+    ).toBe(true);
+    expect(
       supervisorMe.permissionSnapshot.workspaces.cashRegister
         .canApproveDiscrepancyClose,
     ).toBe(true);
@@ -98,6 +104,10 @@ test.describe("access control api", () => {
     expect(catalogManagerMe.session.resolutionSource).toBe("assumed_user");
     expect(catalogManagerMe.permissionSnapshot.workspaces.products.canView).toBe(true);
     expect(catalogManagerMe.permissionSnapshot.workspaces.cashRegister.canView).toBe(false);
+    expect(
+      catalogManagerMe.permissionSnapshot.workspaces.cashRegister
+        .canBackdateSessionOpen,
+    ).toBe(false);
     expect(
       catalogManagerMe.permissionSnapshot.workspaces.cashRegister
         .canApproveDiscrepancyClose,

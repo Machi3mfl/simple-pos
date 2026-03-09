@@ -30,6 +30,7 @@ export interface CreateSaleUseCaseInput {
   readonly customerName?: string;
   readonly createCustomerIfMissing?: boolean;
   readonly initialPaymentAmount?: number;
+  readonly occurredAt?: Date;
   readonly cashRegisterId?: string;
   readonly actorId?: string;
   readonly accessibleRegisterIds?: readonly string[];
@@ -57,11 +58,12 @@ export class CreateSaleUseCase {
 
   async execute(input: CreateSaleUseCaseInput): Promise<CreateSaleUseCaseOutput> {
     const pricedItems = await this.resolveSaleItems(input.items);
+    const occurredAt = input.occurredAt ?? new Date();
     const sale = Sale.create({
       id: crypto.randomUUID(),
       items: pricedItems,
       paymentMethod: input.paymentMethod,
-      createdAt: new Date(),
+      createdAt: occurredAt,
     });
 
     if (input.paymentMethod === "on_account") {
@@ -93,6 +95,7 @@ export class CreateSaleUseCase {
     await this.saleRepository.save(sale);
     await this.saleInventoryRecorder.recordSaleInventory({
       saleId: sale.getId(),
+      occurredAt: sale.getCreatedAt(),
       items: sale.getItems().map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

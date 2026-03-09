@@ -13,6 +13,7 @@ export type CashRegisterSessionStatus =
 export interface CashRegisterSessionPrimitives {
   readonly id: string;
   readonly cashRegisterId: string;
+  readonly businessDate: string;
   readonly status: CashRegisterSessionStatus;
   readonly openingFloatAmount: number;
   readonly expectedBalanceAmount: number;
@@ -41,6 +42,7 @@ export class CashRegisterSession {
   static open(input: {
     readonly id: string;
     readonly cashRegisterId: string;
+    readonly businessDate: string;
     readonly openingFloatAmount: number;
     readonly openedAt: Date;
     readonly openedByUserId: string;
@@ -52,6 +54,12 @@ export class CashRegisterSession {
 
     if (input.cashRegisterId.trim().length === 0) {
       throw new CashManagementDomainError("La sesión de caja debe indicar una caja.");
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.businessDate.trim())) {
+      throw new CashManagementDomainError(
+        "La sesión de caja debe registrar una fecha operativa válida.",
+      );
     }
 
     if (input.openedByUserId.trim().length === 0) {
@@ -69,6 +77,7 @@ export class CashRegisterSession {
     return new CashRegisterSession({
       id: input.id.trim(),
       cashRegisterId: input.cashRegisterId.trim(),
+      businessDate: input.businessDate.trim(),
       status: "open",
       openingFloatAmount: roundedOpeningFloat,
       expectedBalanceAmount: roundedOpeningFloat,
@@ -107,6 +116,10 @@ export class CashRegisterSession {
 
   getCashRegisterId(): string {
     return this.props.cashRegisterId;
+  }
+
+  getBusinessDate(): string {
+    return this.props.businessDate;
   }
 
   getStatus(): CashRegisterSessionStatus {

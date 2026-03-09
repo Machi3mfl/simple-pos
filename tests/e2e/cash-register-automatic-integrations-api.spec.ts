@@ -139,3 +139,58 @@ test("records cash sale and debt cash payment into the active register session",
     ),
   ).toBe(true);
 });
+
+test("propagates the historical session business date to automatic cash sales", async ({
+  request,
+}) => {
+  const historicalDate = "2026-03-01";
+  const registersResponse = await request.get("/api/v1/cash-registers");
+  expect(registersResponse.status()).toBe(200);
+  const registersBody = listCashRegistersResponseDTOSchema.parse(
+    await registersResponse.json(),
+  );
+  const register = registersBody.items[0];
+  expect(register).toBeDefined();
+
+  await closeActiveSessionIfNeeded(request, register!.id);
+
+  const openResponse = await request.post("/api/v1/cash-register-sessions", {
+    data: {
+      cashRegisterId: register!.id,
+      businessDate: historicalDate,
+      openingFloatAmount: 500,
+      openingNotes: "backfill test",
+    },
+  });
+  expect(openResponse.status()).toBe(201);
+
+  const marker = Date.now();
+  const product = await createCatalogProduct(request, {
+    name: `Historical auto product ${marker}`,
+    price: 175,
+  });
+
+  const cashSaleResponse = await request.post("/api/v1/sales", {
+    data: {
+      items: [{ productId: product.id, quantity: 1 }],
+      paymentMethod: "cash",
+      cashRegisterId: register!.id,
+    },
+  });
+  expect(cashSaleResponse.status()).toBe(201);
+  const cashSaleBody = (await cashSaleResponse.json()) as {
+    readonly createdAt: string;
+  };
+  expect(cashSaleBody.createdAt.startsWith(historicalDate)).toBe(true);
+
+  const activeSession = activeCashRegisterSessionResponseDTOSchema.parse(
+    await (
+      await request.get(`/api/v1/cash-registers/${register!.id}/active-session`)
+    ).json(),
+  );
+  expect(activeSession.session?.businessDate).toBe(historicalDate);
+  const historicalCashSaleMovement = activeSession.session?.movements.find(
+    (movement) => movement.movementType === "cash_sale",
+  );
+  expect(historicalCashSaleMovement?.occurredAt.startsWith(historicalDate)).toBe(true);
+});

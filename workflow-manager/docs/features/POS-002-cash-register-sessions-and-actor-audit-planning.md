@@ -126,6 +126,12 @@ Delivered so far:
     - `POST /api/v1/access-control/cash-registers`
     - `PUT /api/v1/access-control/cash-registers/{id}`
     - `PUT /api/v1/access-control/users/{id}/cash-registers`
+- `Slice 12`:
+  - `POST /api/v1/cash-register-sessions` now accepts an optional `businessDate` and persists it on the session read model
+  - `/cash-register` now exposes the business-date picker only when the actor holds `cash.session.open.backdate`
+  - `POST /api/v1/sales` now reuses the active drawer business date automatically, so guided historical backfill keeps sales, automatic cash movements, debt accrual, and stock egress on the intended operational day
+  - the runtime now rejects future business dates and blocks unauthorized actors from opening or using historical drawer sessions
+  - historical writes keep a separate DB-side `recorded_at` trail for sales, debt ledger rows, and stock movements, so operational backfill does not erase actual ingestion audit
 
 Still pending:
 
@@ -507,6 +513,7 @@ Permission examples that should exist independently of role names:
 
 - `checkout.sale.create`
 - `cash.session.open`
+- `cash.session.open.backdate`
 - `cash.session.close`
 - `cash.session.close.override_discrepancy`
 - `cash.movement.manual.record`

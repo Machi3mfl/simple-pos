@@ -13,6 +13,7 @@ export const cashRegisterSessionResponseDTOSchema = z
   .object({
     id: z.string().min(1),
     cashRegisterId: z.string().min(1),
+    businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     status: cashRegisterSessionStatusDTOSchema,
     openingFloatAmount: z.number().finite(),
     expectedBalanceAmount: z.number().finite(),

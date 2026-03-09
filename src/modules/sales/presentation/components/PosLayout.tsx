@@ -680,6 +680,10 @@ export function PosLayout({
                       canOpenSession={
                         permissionSnapshot?.workspaces.cashRegister.canOpenSession ?? false
                       }
+                      canBackdateSessionOpen={
+                        permissionSnapshot?.workspaces.cashRegister
+                          .canBackdateSessionOpen ?? false
+                      }
                       canCloseSession={
                         permissionSnapshot?.workspaces.cashRegister.canCloseSession ?? false
                       }

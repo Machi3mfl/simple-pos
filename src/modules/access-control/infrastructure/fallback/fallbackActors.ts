@@ -60,6 +60,7 @@ export const fallbackActorAccessRecords: readonly ActorAccessRecord[] = [
     permissionCodes: [
       "checkout.sale.create",
       "cash.session.open",
+      "cash.session.open.backdate",
       "cash.session.close",
       "cash.session.close.override_discrepancy",
       "cash.movement.manual.record",
@@ -95,6 +96,7 @@ export const fallbackActorAccessRecords: readonly ActorAccessRecord[] = [
     permissionCodes: [
       "checkout.sale.create",
       "cash.session.open",
+      "cash.session.open.backdate",
       "cash.session.close",
       "cash.session.close.override_discrepancy",
       "cash.movement.manual.record",

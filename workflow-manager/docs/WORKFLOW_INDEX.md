@@ -49,6 +49,7 @@ Mobile-friendly navigation map for the full project workflow.
    - [TASK-008](./tasks/008-task-products-bulk-price-update-parity-ready.md)
    - [TASK-009](./tasks/009-task-products-batch-import-ux-decision-ready.md)
    - [TASK-010](./tasks/010-task-products-route-convergence-and-legacy-retirement-ready.md)
+   - [TASK-011](./tasks/011-task-cash-session-business-date-backfill-ready.md)
 
 ---
 

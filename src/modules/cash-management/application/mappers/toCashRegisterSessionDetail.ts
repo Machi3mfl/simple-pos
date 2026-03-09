@@ -25,6 +25,7 @@ export interface CashMovementSummary {
 export interface CashRegisterSessionDetail {
   readonly id: string;
   readonly cashRegisterId: string;
+  readonly businessDate: string;
   readonly status: string;
   readonly openingFloatAmount: number;
   readonly expectedBalanceAmount: number;
@@ -100,6 +101,7 @@ export async function toCashRegisterSessionDetail(
   return {
     id: primitives.id,
     cashRegisterId: primitives.cashRegisterId,
+    businessDate: primitives.businessDate,
     status: primitives.status,
     openingFloatAmount: primitives.openingFloatAmount,
     expectedBalanceAmount: primitives.expectedBalanceAmount,

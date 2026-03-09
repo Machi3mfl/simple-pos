@@ -15,8 +15,11 @@ sequenceDiagram
   participant Authz as AuthorizationService
 
   Cashier->>UI: Open register and enter opening float
+  opt Actor has historical-date permission
+    Cashier->>UI: Select business date for guided backfill
+  end
   UI->>CashAPI: POST /api/v1/cash-register-sessions
-  CashAPI->>CashUC: openSession(registerId, openingFloat, actor)
+  CashAPI->>CashUC: openSession(registerId, businessDate, openingFloat, actor)
   CashUC->>SessionRepo: ensure no open session exists
   CashUC->>SessionRepo: save session(status=open, expected=openFloat)
   CashUC->>MovementRepo: append opening_float
@@ -25,6 +28,7 @@ sequenceDiagram
   loop During the day
     alt Cash sale
       UI->>SalesAPI: POST /api/v1/sales (paymentMethod=cash)
+      SalesAPI->>SessionRepo: resolve active drawer businessDate
       SalesAPI->>CashUC: recordCashSale(sessionId, saleId, total, actor)
       CashUC->>SessionRepo: update expected balance
       CashUC->>MovementRepo: append cash_sale

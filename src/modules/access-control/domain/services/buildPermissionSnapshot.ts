@@ -52,6 +52,10 @@ export function buildPermissionSnapshot(
         canView: canViewCashRegister,
         canCreateSale: hasPermission(permissionSet, "checkout.sale.create"),
         canOpenSession: hasPermission(permissionSet, "cash.session.open"),
+        canBackdateSessionOpen: hasPermission(
+          permissionSet,
+          "cash.session.open.backdate",
+        ),
         canCloseSession: hasPermission(permissionSet, "cash.session.close"),
         canRecordManualCashMovement: hasPermission(
           permissionSet,

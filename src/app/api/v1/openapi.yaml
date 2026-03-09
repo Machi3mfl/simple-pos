@@ -1227,13 +1227,15 @@ components:
 
     PermissionSnapshotWorkspaceCashRegister:
       type: object
-      required: [canView, canCreateSale, canOpenSession, canCloseSession, canRecordManualCashMovement, canApproveDiscrepancyClose]
+      required: [canView, canCreateSale, canOpenSession, canBackdateSessionOpen, canCloseSession, canRecordManualCashMovement, canApproveDiscrepancyClose]
       properties:
         canView:
           type: boolean
         canCreateSale:
           type: boolean
         canOpenSession:
+          type: boolean
+        canBackdateSessionOpen:
           type: boolean
         canCloseSession:
           type: boolean
@@ -1640,6 +1642,7 @@ components:
         [
           id,
           cashRegisterId,
+          businessDate,
           status,
           openingFloatAmount,
           expectedBalanceAmount,
@@ -1652,6 +1655,9 @@ components:
           type: string
         cashRegisterId:
           type: string
+        businessDate:
+          type: string
+          format: date
         status:
           type: string
           enum: [open, closing_review_required, closed, voided]
@@ -1805,6 +1811,9 @@ components:
       properties:
         cashRegisterId:
           type: string
+        businessDate:
+          type: string
+          format: date
         openingFloatAmount:
           type: number
           minimum: 0

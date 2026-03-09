@@ -6,6 +6,7 @@ import type { CashRegisterSessionRepository } from "../../domain/repositories/Ca
 interface CashRegisterSessionRow {
   readonly id: string;
   readonly cash_register_id: string;
+  readonly business_date: string;
   readonly status: "open" | "closing_review_required" | "closed" | "voided";
   readonly opening_float_amount: number | string;
   readonly expected_balance_amount: number | string;
@@ -82,6 +83,7 @@ export class SupabaseCashRegisterSessionRepository
     const payload = {
       id: primitives.id,
       cash_register_id: primitives.cashRegisterId,
+      business_date: primitives.businessDate,
       status: primitives.status,
       opening_float_amount: primitives.openingFloatAmount,
       expected_balance_amount: primitives.expectedBalanceAmount,
@@ -116,6 +118,7 @@ export class SupabaseCashRegisterSessionRepository
     return CashRegisterSession.rehydrate({
       id: row.id,
       cashRegisterId: row.cash_register_id,
+      businessDate: row.business_date,
       status: row.status,
       openingFloatAmount: parseNumeric(row.opening_float_amount) ?? 0,
       expectedBalanceAmount: parseNumeric(row.expected_balance_amount) ?? 0,

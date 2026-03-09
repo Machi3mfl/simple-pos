@@ -6,6 +6,7 @@ import { resolveActorDisplayName } from "./resolveActorDisplayName";
 export interface CashRegisterSessionSummary {
   readonly id: string;
   readonly cashRegisterId: string;
+  readonly businessDate: string;
   readonly status: string;
   readonly openingFloatAmount: number;
   readonly expectedBalanceAmount: number;
@@ -53,6 +54,7 @@ export async function toCashRegisterSessionSummary(
   return {
     id: primitives.id,
     cashRegisterId: primitives.cashRegisterId,
+    businessDate: primitives.businessDate,
     status: primitives.status,
     openingFloatAmount: primitives.openingFloatAmount,
     expectedBalanceAmount: primitives.expectedBalanceAmount,

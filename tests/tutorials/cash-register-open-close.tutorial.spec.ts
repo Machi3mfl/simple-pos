@@ -127,6 +127,7 @@ async function createCashRegisterTutorialRoutes(page: Page): Promise<void> {
       activeSession = {
         id: "cash-session-tutorial",
         cashRegisterId: registerId,
+        businessDate: new Date().toISOString().slice(0, 10),
         status: "open",
         openingFloatAmount,
         expectedBalanceAmount: openingFloatAmount,
@@ -139,7 +140,7 @@ async function createCashRegisterTutorialRoutes(page: Page): Promise<void> {
       await route.fulfill({
         status: 201,
         contentType: "application/json",
-        body: JSON.stringify(stripMovements(activeSession)),
+        body: JSON.stringify(stripMovements(activeSession!)),
       });
       return;
     }

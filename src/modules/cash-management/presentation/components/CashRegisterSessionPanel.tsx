@@ -3,10 +3,12 @@
 import { Landmark } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { DatePicker } from "@/components/ui/date-picker";
 import { FloatingModalCloseButton } from "@/components/ui/floating-modal-close-button";
 import { Input } from "@/components/ui/input";
 import { showErrorToast, showInfoToast, showSuccessToast } from "@/hooks/use-app-toast";
 import { useI18n } from "@/infrastructure/i18n/I18nProvider";
+import { formatOperationalDate } from "@/lib/date/operationalDate";
 import { getFormControlValidationProps } from "@/lib/form-controls";
 import { fetchJsonNoStore } from "@/lib/http/fetchJsonNoStore";
 import {
@@ -47,6 +49,7 @@ interface CashRegisterSessionPanelProps {
   readonly currentActorId?: string;
   readonly refreshToken?: number;
   readonly canOpenSession: boolean;
+  readonly canBackdateSessionOpen: boolean;
   readonly canCloseSession: boolean;
   readonly canRecordManualCashMovement: boolean;
   readonly canApproveDiscrepancyClose: boolean;
@@ -93,6 +96,22 @@ function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
+function formatBusinessDate(value: string): string {
+  const [yearToken, monthToken, dayToken] = value.split("-");
+  const year = Number(yearToken);
+  const month = Number(monthToken);
+  const day = Number(dayToken);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+}
+
 function resolveMovementAmountClassName(direction: "inbound" | "outbound"): string {
   return direction === "inbound" ? "text-emerald-700" : "text-amber-700";
 }
@@ -104,6 +123,7 @@ export function CashRegisterSessionPanel({
   currentActorId,
   refreshToken = 0,
   canOpenSession,
+  canBackdateSessionOpen,
   canCloseSession,
   canRecordManualCashMovement,
   canApproveDiscrepancyClose,
@@ -115,6 +135,9 @@ export function CashRegisterSessionPanel({
     useState<ActiveCashRegisterSessionResponseDTO["session"]>(null);
   const [openingFloatAmount, setOpeningFloatAmount] = useState<string>("0");
   const [openingNotes, setOpeningNotes] = useState<string>("");
+  const [businessDate, setBusinessDate] = useState<string>(() =>
+    formatOperationalDate(new Date()),
+  );
   const [countedClosingAmount, setCountedClosingAmount] = useState<string>("");
   const [closingNotes, setClosingNotes] = useState<string>("");
   const [movementType, setMovementType] = useState<ManualMovementType>("cash_paid_in");
@@ -251,6 +274,23 @@ export function CashRegisterSessionPanel({
   const isMovementAmountInvalid =
     shouldShowMovementFieldErrors &&
     (!Number.isFinite(movementAmountValue) || movementAmountValue <= 0);
+  const todayBusinessDate = useMemo(() => formatOperationalDate(new Date()), []);
+
+  useEffect(() => {
+    if (businessDate.length > 0) {
+      return;
+    }
+
+    setBusinessDate(todayBusinessDate);
+  }, [businessDate, todayBusinessDate]);
+
+  useEffect(() => {
+    if (canBackdateSessionOpen || businessDate === todayBusinessDate) {
+      return;
+    }
+
+    setBusinessDate(todayBusinessDate);
+  }, [businessDate, canBackdateSessionOpen, todayBusinessDate]);
 
   const loadActiveSession = useCallback(
     async (registerId: string): Promise<void> => {
@@ -347,6 +387,7 @@ export function CashRegisterSessionPanel({
         },
         body: JSON.stringify({
           cashRegisterId: selectedRegister.id,
+          businessDate,
           openingFloatAmount: openingFloatValue,
           openingNotes: openingNotes.trim() || undefined,
         }),
@@ -385,6 +426,7 @@ export function CashRegisterSessionPanel({
     }
   }, [
     cashSessionMessages,
+    businessDate,
     loadActiveSession,
     loadRegisters,
     openingNotes,
@@ -754,7 +796,11 @@ export function CashRegisterSessionPanel({
                       {selectedRegister.name}
                     </p>
                     <p className="text-sm text-slate-500">
-                        {cashSessionMessages.openedByLabel}:{" "}
+                      {cashSessionMessages.businessDateLabel}:{" "}
+                      {formatBusinessDate(activeSession.businessDate)}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      {cashSessionMessages.openedByLabel}:{" "}
                       {activeSession.openedByDisplayName}
                     </p>
                     <p className="text-sm text-slate-500">
@@ -1008,7 +1054,32 @@ export function CashRegisterSessionPanel({
           </div>
         ) : (
           <div className="mt-4 rounded-[1.65rem] border border-slate-200 bg-[#f8fafc] p-4">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto] lg:items-end">
+            <div
+              className={[
+                "grid gap-3 lg:items-end",
+                canBackdateSessionOpen
+                  ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_auto]"
+                  : "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]",
+              ].join(" ")}
+            >
+              {canBackdateSessionOpen ? (
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {cashSessionMessages.businessDateLabel}
+                  </label>
+                  <DatePicker
+                    value={businessDate}
+                    onChange={setBusinessDate}
+                    placeholder={cashSessionMessages.businessDatePlaceholder}
+                    testId="cash-session-business-date-input"
+                    max={todayBusinessDate}
+                    allowClear={false}
+                    className="mt-2"
+                    buttonClassName="min-h-[52px] rounded-2xl border-slate-200 bg-white text-[1rem]"
+                  />
+                </div>
+              ) : null}
+
               <div>
                 <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   {cashSessionMessages.openingFloatLabel}

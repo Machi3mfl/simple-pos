@@ -73,6 +73,7 @@ test("opens, records manual movements, and closes a cash register session from t
   await expect(page.getByTestId("open-operator-selector-button")).toContainText("Maxi");
   await page.goto("/cash-register");
   await expect(page.getByTestId("cash-session-panel")).toBeVisible();
+  await expect(page.getByTestId("cash-session-business-date-input")).toBeVisible();
 
   await page.getByTestId("cash-session-opening-float-input").fill("1234.50");
   await page.getByTestId("cash-session-open-button").click();
@@ -114,6 +115,7 @@ test("sends cashier closeout with high discrepancy to supervisor review and allo
 
   await page.goto("/cash-register");
   await selectOperator(page, "user_cashier_putri");
+  await expect(page.getByTestId("cash-session-business-date-input")).toHaveCount(0);
 
   await page.getByTestId("cash-session-opening-float-input").fill("1000");
   await page.getByTestId("cash-session-open-button").click();

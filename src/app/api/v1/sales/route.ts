@@ -3,6 +3,10 @@ import { ZodError } from "zod";
 
 import { getSupabaseServerClient } from "@/infrastructure/config/supabaseServer";
 import {
+  combineOperationalDateWithCurrentTime,
+  formatOperationalDate,
+} from "@/lib/date/operationalDate";
+import {
   actorHasAnyPermission,
   forbiddenPermissionResponse,
   resolveActorSnapshotForRequest,
@@ -16,6 +20,7 @@ import { RecordAutomaticCashMovementUseCase } from "@/modules/cash-management/ap
 import { CashManagementDomainError } from "@/modules/cash-management/domain/errors/CashManagementDomainError";
 import { SupabaseCashMovementRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashMovementRepository";
 import { SupabaseCashRegisterSessionRepository } from "@/modules/cash-management/infrastructure/repositories/SupabaseCashRegisterSessionRepository";
+import type { CashRegisterSessionRepository } from "@/modules/cash-management/domain/repositories/CashRegisterSessionRepository";
 import type { DebtLedgerRepository } from "@/modules/accounts-receivable/domain/repositories/DebtLedgerRepository";
 import { SupabaseDebtLedgerRepository } from "@/modules/accounts-receivable/infrastructure/repositories/SupabaseDebtLedgerRepository";
 import { FindOrCreateCustomerUseCase } from "@/modules/customers/application/use-cases/FindOrCreateCustomerUseCase";
@@ -46,6 +51,7 @@ interface ApiErrorResponse {
 
 function createSaleRuntime(): {
   createSaleUseCase: CreateSaleUseCase;
+  cashRegisterSessionRepository: CashRegisterSessionRepository;
 } {
   const supabaseClient = getSupabaseServerClient();
   const productRepository: ProductRepository = new SupabaseProductRepository(supabaseClient);
@@ -90,6 +96,7 @@ function createSaleRuntime(): {
       cashSaleRecorder,
       saleInventoryRecorder,
     ),
+    cashRegisterSessionRepository,
   };
 }
 
@@ -108,7 +115,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const { createSaleUseCase } = createSaleRuntime();
+  const { createSaleUseCase, cashRegisterSessionRepository } = createSaleRuntime();
   let payload: unknown;
 
   try {
@@ -135,8 +142,32 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
+    let occurredAt: Date | undefined;
+    if (parsedBody.data.cashRegisterId) {
+      const activeSession = await cashRegisterSessionRepository.findOpenByRegisterId(
+        parsedBody.data.cashRegisterId,
+      );
+      if (activeSession) {
+        const now = new Date();
+        if (
+          activeSession.getBusinessDate() !== formatOperationalDate(now) &&
+          !actorSnapshot.permissionSnapshot.workspaces.cashRegister.canBackdateSessionOpen
+        ) {
+          return forbiddenPermissionResponse(
+            "El operador actual no puede registrar ventas en una caja histórica.",
+          );
+        }
+
+        occurredAt = combineOperationalDateWithCurrentTime(
+          activeSession.getBusinessDate(),
+          now,
+        );
+      }
+    }
+
     const result = await createSaleUseCase.execute({
       ...parsedBody.data,
+      occurredAt,
       actorId: actorSnapshot.actor.actorId,
       accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
     });

@@ -66,13 +66,14 @@
 | TASK-008 | done | Preview/apply repricing now runs inside `/products` with audit summary preserved |
 | TASK-009 | done | Paste-and-apply bulk import accepted intentionally and made explicit in the UI |
 | TASK-010 | done | Legacy `/catalog` and `/inventory` were removed from the operational route model; converged suite updated |
+| TASK-011 | done | Higher-trust operators can open historical cash sessions and backfilled sales inherit the drawer business date |
 
 ---
 
 ## 4. Task Audit Result
 
-- `workflow-manager/docs/tasks/` currently contains ten task documents: `TASK-001` through `TASK-010`.
-- `TASK-001` through `TASK-010` are marked `done` and their referenced outputs still exist in the repository.
+- `workflow-manager/docs/tasks/` currently contains eleven task documents: `TASK-001` through `TASK-011`.
+- `TASK-001` through `TASK-011` are marked `done` and their referenced outputs still exist in the repository.
 - `PRODUCTS-003` is now closed after route convergence moved the remaining admin flows fully into `/products`.
 - Recent extension work remains traceable through `PRODUCTS-001`, `PRODUCTS-002`, `PRODUCTS-003`, and `I18N-001`.
 
@@ -141,6 +142,10 @@ Open planning item:
     - `/` now lands on `/login`, runtime workspaces now require real authentication, and `GET /api/v1/app-users` plus `POST /api/v1/me/assume-user` are now restricted to authenticated support-controlled flows
     - support impersonation now persists the support controller across assumed operators after login, the rail clears the support cookie before returning to `/login`, and the injector now reprovisions demo auth users so protected demo seeding remains usable
     - Playwright now provisions demo auth users in `globalSetup`, uses authenticated fixtures as the default runtime path, and no longer relies on `POS_ALLOW_GUEST_WORKSPACES` in the E2E webServer command
+    - `Slice 12` historical business-date backfill is also implemented
+    - `/cash-register` now exposes a date picker only for actors holding `cash.session.open.backdate`, while `cashier` keeps the same today-only open flow
+    - `POST /api/v1/cash-register-sessions` now persists `businessDate`, rejects future dates, and blocks unauthorized historical opens
+    - `POST /api/v1/sales` now reuses the active drawer business date automatically, so historical guided backfill keeps sales, automatic cash movements, and stock egress on the intended operational day
     - every planned slice now carries an explicit UI checkpoint so the workflow can be exercised visually before expanding the backend scope
   - main artifacts:
     - `workflow-manager/docs/features/POS-002-cash-register-sessions-and-actor-audit-planning.md`

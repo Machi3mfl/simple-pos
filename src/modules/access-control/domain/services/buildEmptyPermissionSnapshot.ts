@@ -17,6 +17,7 @@ export function buildEmptyPermissionSnapshot(): PermissionSnapshot {
         canView: false,
         canCreateSale: false,
         canOpenSession: false,
+        canBackdateSessionOpen: false,
         canCloseSession: false,
         canRecordManualCashMovement: false,
         canApproveDiscrepancyClose: false,

@@ -16,6 +16,7 @@ export class SaleInventoryRecorderAdapter implements SaleInventoryRecorder {
         productId: item.productId,
         movementType: "outbound",
         quantity: item.quantity,
+        occurredAt: input.occurredAt,
         reason: `Salida por venta ${input.saleId}`,
       });
     }

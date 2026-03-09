@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  combineOperationalDateWithCurrentTime,
+  formatOperationalDate,
+  isFutureOperationalDate,
+} from "@/lib/date/operationalDate";
 import { resolveActorSnapshotForRequest } from "@/modules/access-control/infrastructure/runtime/requestAuthorization";
 import {
   CashManagementDomainError,
@@ -67,8 +72,36 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   try {
     const { openCashRegisterSessionUseCase } = createCashManagementRuntime();
+    const now = new Date();
+    const businessDate =
+      parsedBody.data.businessDate?.trim() || formatOperationalDate(now);
+    if (isFutureOperationalDate(businessDate, now)) {
+      return errorResponse(400, {
+        code: "validation_error",
+        message: "La fecha operativa no puede estar en el futuro.",
+        details: [
+          {
+            field: "businessDate",
+            message: "Seleccioná hoy o una fecha anterior.",
+          },
+        ],
+      });
+    }
+
+    if (
+      businessDate !== formatOperationalDate(now) &&
+      !actorSnapshot.permissionSnapshot.workspaces.cashRegister.canBackdateSessionOpen
+    ) {
+      return errorResponse(403, {
+        code: "forbidden",
+        message: "El operador actual no puede abrir caja con fecha operativa histórica.",
+      });
+    }
+
     const session = await openCashRegisterSessionUseCase.execute({
       ...parsedBody.data,
+      businessDate,
+      openedAt: combineOperationalDateWithCurrentTime(businessDate, now),
       actorId: actorSnapshot.actor.actorId,
       accessibleRegisterIds: actorSnapshot.actor.assignedRegisterIds,
     });

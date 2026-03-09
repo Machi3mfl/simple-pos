@@ -15,8 +15,10 @@ import { toCashRegisterSessionSummary, type CashRegisterSessionSummary } from ".
 
 export interface OpenCashRegisterSessionUseCaseInput {
   readonly cashRegisterId: string;
+  readonly businessDate: string;
   readonly openingFloatAmount: number;
   readonly openingNotes?: string;
+  readonly openedAt: Date;
   readonly actorId: string;
   readonly accessibleRegisterIds?: readonly string[];
 }
@@ -56,12 +58,12 @@ export class OpenCashRegisterSessionUseCase {
       throw new CashRegisterSessionAlreadyOpenError(input.cashRegisterId);
     }
 
-    const openedAt = new Date();
     const session = CashRegisterSession.open({
       id: crypto.randomUUID(),
       cashRegisterId: input.cashRegisterId,
+      businessDate: input.businessDate,
       openingFloatAmount: input.openingFloatAmount,
-      openedAt,
+      openedAt: input.openedAt,
       openedByUserId: input.actorId,
       openingNotes: input.openingNotes,
     });
@@ -74,7 +76,7 @@ export class OpenCashRegisterSessionUseCase {
       amount: input.openingFloatAmount,
       reasonCode: "opening_float",
       notes: input.openingNotes,
-      occurredAt: openedAt,
+      occurredAt: input.openedAt,
       performedByUserId: input.actorId,
     });
 

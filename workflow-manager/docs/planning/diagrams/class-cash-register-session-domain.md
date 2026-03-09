@@ -16,6 +16,11 @@ class Timestamp {
   +iso: string
 }
 
+class DateOnly {
+  <<value-object>>
+  +value: string
+}
+
 class ActorId {
   <<value-object>>
   +value: string
@@ -106,6 +111,7 @@ namespace CashManagement {
     <<aggregate-root>>
     +id: string
     +registerId: string
+    +businessDate: DateOnly
     +status: SessionStatus
     +openingFloat: Money
     +expectedBalance: Money

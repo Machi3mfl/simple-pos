@@ -1,5 +1,6 @@
 export interface RecordSaleInventoryInput {
   readonly saleId: string;
+  readonly occurredAt: Date;
   readonly items: readonly {
     readonly productId: string;
     readonly quantity: number;
