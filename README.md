@@ -85,6 +85,19 @@ Remote migrations support 2 drivers:
 5. Run migrations.
 6. Bootstrap admin using `onboarding-admin` if needed.
 
+## Railway Hibernate / Resume
+
+For periods where the project is idle but should remain recoverable, use the Railway hibernation runbook:
+
+- [`workflow-manager/docs/runbooks/003-runbook-railway-hibernate-and-resume-ready.md`](./workflow-manager/docs/runbooks/003-runbook-railway-hibernate-and-resume-ready.md)
+
+This covers:
+
+- how to stop all active Railway services without deleting the project
+- how to confirm the stack is offline
+- how to bring the app and supporting Supabase services back online
+- what still incurs cost while services are offline (`postgres-volume`, `s3-volume`, other storage)
+
 ## Remote Migration Script
 
 Default (psql sync):

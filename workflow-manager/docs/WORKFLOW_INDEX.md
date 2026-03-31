@@ -16,7 +16,8 @@ Mobile-friendly navigation map for the full project workflow.
 8. [NFR Validation Evidence](./planning/008-nfr-validation-evidence-ready.md)
 9. [Daily Execution Runbook (Iteration 0/1)](./runbooks/001-runbook-iteration-0-1-daily-execution-ready.md)
 10. [Release Gate Runbook (Iteration 6 real backend)](./runbooks/002-runbook-release-gate-real-backend-ready.md)
-11. Feature set:
+11. [Railway Hibernate / Resume Runbook](./runbooks/003-runbook-railway-hibernate-and-resume-ready.md)
+12. Feature set:
    - [POS-001](./features/POS-001-ui-pos-mockup-and-checkout-draft.md)
    - [POS-002](./features/POS-002-cash-register-sessions-and-actor-audit-planning.md)
      - [POS-002 Cash Domain Diagram](./planning/diagrams/class-cash-register-session-domain.md)
@@ -36,9 +37,9 @@ Mobile-friendly navigation map for the full project workflow.
      - [TRAINING-001 Tutorial Suite Class Diagram](./planning/diagrams/class-tutorial-recording-suite.md)
      - [TRAINING-001 Cash Tutorial Sequence](./planning/diagrams/sequence-tutorial-recording-cash-register.md)
      - [TRAINING-001 Tutorial Production Activity](./planning/diagrams/activity-tutorial-video-production.md)
-12. PoC set:
+13. PoC set:
    - [POC-001](./pocs/001-poc-product-sourcing-vtex-search-feasibility-ready.md)
-13. Task artifacts:
+14. Task artifacts:
    - [TASK-001](./tasks/001-task-class-diagram-mvp-domains-ready.md)
    - [TASK-002](./tasks/002-task-flow-diagrams-checkout-stock-debt-sync-ready.md)
    - [TASK-003](./tasks/003-task-openapi-v1-skeleton-and-dto-baseline-ready.md)
